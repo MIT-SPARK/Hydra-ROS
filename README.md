@@ -33,9 +33,9 @@ If you find this code relevant for your work, please consider citing us. A bibte
 
 ### General Requirements
 
-Hydra has been tested on Ubuntu 20.04 and ROS Noetic
+Hydra has been tested on Ubuntu 20.04 and ROS Noetic.
 
-:warning: Ubuntu 18.04 and ROS Melodic are no longer actively tested
+:warning: Ubuntu 18.04 and ROS Melodic are no longer actively tested.
 
 You can follow the instructions [here](http://wiki.ros.org/ROS/Installation) to install ROS if you haven't already.
 Then, make sure you have some general requirements:
