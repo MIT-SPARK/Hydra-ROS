@@ -46,6 +46,7 @@ catkin_package(
   std_msgs
   geometry_msgs
   visualization_msgs
+  hydra
   hydra_msgs
   pcl_ros
   tf2_eigen
@@ -54,7 +55,7 @@ catkin_package(
   voxblox_ros
   pose_graph_tools
   kimera_semantics_ros
-  DEPENDS spark_dsg hydra
+  DEPENDS spark_dsg
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
