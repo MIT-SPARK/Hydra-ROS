@@ -3,6 +3,7 @@
 This repository contains the ROS interface for [Hydra](https://github.com/MIT-SPARK/Hydra) and is based on the follwoing papers:
   - ["Hydra: A Real-time Spatial Perception System for 3D Scene Graph Construction and Optimization"](http://www.roboticsproceedings.org/rss18/p050.pdf)
   - ["Foundations of Spatial Perception for Robotics: Hierarchical Representations and Real-time Systems"](https://arxiv.org/abs/2305.07154)
+
 If you find this code relevant for your work, please consider citing us. A bibtex entry is provided below:
 ```
 @article{hughes2022hydra,
@@ -40,8 +41,6 @@ You can follow the instructions [here](http://wiki.ros.org/ROS/Installation) to 
 Then, make sure you have some general requirements:
 ```
 sudo apt install python3-rosdep python3-catkin-tools python3-vcstool
-
-# for melodic: sudo apt install python-rosdep python-catkin-tools python3-vcstool
 ```
 
 Finally, if you haven't set up rosdep yet:
@@ -64,7 +63,7 @@ catkin config --skiplist hdf5_map_io mesh_msgs_hdf5 label_manager mesh_tools \
                          rviz_map_plugin minkindr_python
 
 cd src
-git clone git@github.com:MIT-SPARK/Hydra-ROS.git hydra_ros
+git clone git@github.com:MIT-SPARK/Hydra.git hydra
 vcs import . < hydra/install/hydra.rosinstall
 
 rosdep install --from-paths . --ignore-src -r -y
