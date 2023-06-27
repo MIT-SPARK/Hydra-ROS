@@ -53,6 +53,7 @@ int main(int argc, char* argv[]) {
 
   ros::NodeHandle nh("~");
   const auto dsg_output_path = hydra::configureTimers(nh);
+  hydra::parseObjectNamesFromRos(nh);
 
   int robot_id = 0;
   nh.getParam("robot_id", robot_id);

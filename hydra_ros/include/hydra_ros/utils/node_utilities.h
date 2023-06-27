@@ -69,4 +69,6 @@ void saveTimingInformation(const std::string& output_path);
 
 void spinAndWait(const ros::NodeHandle& nh);
 
+void parseObjectNamesFromRos(const ros::NodeHandle& node_handle);
+
 }  // namespace hydra

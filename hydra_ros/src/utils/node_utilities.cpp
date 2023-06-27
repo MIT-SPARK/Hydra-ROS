@@ -36,6 +36,7 @@
 
 #include <glog/logging.h>
 #include <hydra/utils/timing_utilities.h>
+#include <hydra/common/hydra_config.h>
 
 namespace hydra {
 
@@ -136,6 +137,29 @@ void saveTimingInformation(const std::string& dsg_output_path) {
   timer.logAllElapsed(dsg_output_path);
   timer.logStats(dsg_output_path);
   LOG(INFO) << "[DSG Node] Saved timing information to " << dsg_output_path;
+}
+
+void parseObjectNamesFromRos(const ros::NodeHandle& node_handle) {
+  XmlRpc::XmlRpcValue label_names;
+  node_handle.getParam("label_names", label_names);
+  if (label_names.getType() != XmlRpc::XmlRpcValue::TypeArray) {
+    LOG(WARNING) << "Failed to parse object label names";
+  }
+
+  std::map<uint8_t, std::string> name_map;
+  for (int i = 0; i < label_names.size(); ++i) {
+    const auto& label_name_pair = label_names[i];
+    if (label_name_pair.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
+      LOG(WARNING) << "Label names not formatted correctly";
+      continue;
+    }
+
+    const auto label = static_cast<int>(label_name_pair["label"]);
+    const auto name = static_cast<std::string>(label_name_pair["name"]);
+    name_map.emplace(label, name);
+  }
+
+  HydraConfig::instance().setLabelToNameMap(name_map);
 }
 
 }  // namespace hydra
