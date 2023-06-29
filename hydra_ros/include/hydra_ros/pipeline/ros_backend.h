@@ -55,7 +55,8 @@ class RosBackend : public BackendModule {
              const RobotPrefixConfig& prefix,
              const SharedDsgInfo::Ptr& dsg,
              const SharedDsgInfo::Ptr& backend_dsg,
-             const SharedModuleState::Ptr& state);
+             const SharedModuleState::Ptr& state,
+             const LogSetup::Ptr& log_setup);
 
   ~RosBackend();
 

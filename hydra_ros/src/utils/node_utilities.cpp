@@ -35,8 +35,8 @@
 #include "hydra_ros/utils/node_utilities.h"
 
 #include <glog/logging.h>
-#include <hydra/utils/timing_utilities.h>
 #include <hydra/common/hydra_config.h>
+#include <hydra/utils/timing_utilities.h>
 
 namespace hydra {
 
@@ -95,22 +95,6 @@ void spinUntilExitRequested() {
   ROS_WARN("Exiting!");
 }
 
-std::string configureTimers(const ros::NodeHandle& nh) {
-  std::string dsg_output_path = "";
-  nh.getParam("log_path", dsg_output_path);
-
-  nh.getParam("timing_disabled", ElapsedTimeRecorder::instance().timing_disabled);
-  nh.getParam("disable_timer_output", ElapsedTimeRecorder::instance().disable_output);
-
-  bool log_timing_incrementally = false;
-  nh.getParam("log_timing_incrementally", log_timing_incrementally);
-  if (log_timing_incrementally && dsg_output_path != "") {
-    ElapsedTimeRecorder::instance().setupIncrementalLogging(dsg_output_path);
-  }
-
-  return dsg_output_path;
-}
-
 void spinAndWait(const ros::NodeHandle& nh) {
   const auto exit_mode = getExitMode(nh);
   switch (exit_mode) {
@@ -127,16 +111,34 @@ void spinAndWait(const ros::NodeHandle& nh) {
   }
 }
 
-void saveTimingInformation(const std::string& dsg_output_path) {
-  if (dsg_output_path.empty()) {
+void saveTimingInformation(const LogSetup& log_config) {
+  if (!log_config.valid()) {
     return;
   }
 
-  LOG(INFO) << "[DSG Node] saving timing information to " << dsg_output_path;
+  LOG(INFO) << "[DSG Node] saving timing information to " << log_config.getLogDir();
   const ElapsedTimeRecorder& timer = ElapsedTimeRecorder::instance();
-  timer.logAllElapsed(dsg_output_path);
-  timer.logStats(dsg_output_path);
-  LOG(INFO) << "[DSG Node] Saved timing information to " << dsg_output_path;
+  timer.logAllElapsed(log_config);
+  timer.logStats(log_config.getTimerFilepath());
+  LOG(INFO) << "[DSG Node] saved timing information";
+}
+
+void configureTimers(const ros::NodeHandle& nh, const LogSetup::Ptr& log_setup) {
+  ElapsedTimeRecorder& timer = ElapsedTimeRecorder::instance();
+  nh.getParam("timing_disabled", timer.timing_disabled);
+  nh.getParam("disable_timer_output", timer.disable_output);
+  if (timer.timing_disabled) {
+    return;
+  }
+
+  if (!log_setup || !log_setup->valid()) {
+    return;
+  }
+
+  log_setup->registerExitCallback(&saveTimingInformation);
+  if (log_setup->config().log_timing_incrementally) {
+    timer.setupIncrementalLogging(log_setup);
+  }
 }
 
 void parseObjectNamesFromRos(const ros::NodeHandle& node_handle) {

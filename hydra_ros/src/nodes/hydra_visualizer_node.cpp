@@ -155,12 +155,6 @@ struct VisualizerNode {
     std::cout << "mesh timing stats: "
               << hydra::timing::ElapsedTimeRecorder::instance().getStats("receive_mesh")
               << std::endl;
-
-    if (config_.output_path.empty()) {
-      return;
-    }
-
-    timing::ElapsedTimeRecorder::instance().logAllElapsed(config_.output_path);
   }
 
   void loadGraph() {

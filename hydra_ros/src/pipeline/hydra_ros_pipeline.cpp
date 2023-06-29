@@ -60,8 +60,10 @@ DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, HydraRosConfig)
 
 namespace hydra {
 
-HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle, int robot_id)
-    : nh(node_handle), prefix(robot_id) {
+HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
+                                   int robot_id,
+                                   const LogSetup::Ptr& log_setup)
+    : nh(node_handle), prefix(robot_id), log_setup(log_setup) {
   config = load_config<hydra::HydraRosConfig>(nh);
 
   // TODO(nathan) parse and use at some point
@@ -78,11 +80,12 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle, int robot
   if (config.do_reconstruction) {
     const auto frontend_config = load_config<FrontendConfig>(nh);
     frontend = std::make_shared<FrontendModule>(
-        prefix, frontend_config, frontend_dsg, shared_state);
+        prefix, frontend_config, frontend_dsg, shared_state, log_setup);
     reconstruction =
         std::make_shared<RosReconstruction>(nh, prefix, frontend->getQueue());
   } else {
-    frontend = std::make_shared<RosFrontend>(nh, prefix, frontend_dsg, shared_state);
+    frontend = std::make_shared<RosFrontend>(
+        nh, prefix, frontend_dsg, shared_state, log_setup);
   }
 
   if (config.enable_frontend_output) {
@@ -103,11 +106,16 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle, int robot
   const auto backend_config = load_config<BackendConfig>(nh);
   if (config.use_ros_backend) {
     backend = std::make_shared<RosBackend>(
-        nh, prefix, frontend_dsg, backend_dsg, shared_state);
+        nh, prefix, frontend_dsg, backend_dsg, shared_state, log_setup);
   } else {
     const auto pgmo_config = load_config<kimera_pgmo::KimeraPgmoConfig>(nh, "pgmo");
-    backend = std::make_shared<BackendModule>(
-        prefix, backend_config, pgmo_config, frontend_dsg, backend_dsg, shared_state);
+    backend = std::make_shared<BackendModule>(prefix,
+                                              backend_config,
+                                              pgmo_config,
+                                              frontend_dsg,
+                                              backend_dsg,
+                                              shared_state,
+                                              log_setup);
   }
 
   backend_visualizer =
@@ -176,23 +184,25 @@ void HydraRosPipeline::stop() {
   }
 }
 
-void HydraRosPipeline::save(const std::string& output_path) {
-  if (!output_path.empty()) {
-    if (reconstruction) {
-      reconstruction->save(output_path + "/topology/");
-    }
+void HydraRosPipeline::save(const LogSetup& logs) {
+  if (!logs.valid()) {
+    return;
+  }
 
-    if (frontend) {
-      frontend->save(output_path + "/frontend/");
-    }
+  if (reconstruction) {
+    reconstruction->save(logs);
+  }
 
-    if (backend) {
-      backend->save(output_path + "/backend/");
-    }
+  if (frontend) {
+    frontend->save(logs);
+  }
 
-    if (lcd) {
-      lcd->save(output_path + "/lcd/");
-    }
+  if (backend) {
+    backend->save(logs);
+  }
+
+  if (lcd) {
+    lcd->save(logs);
   }
 }
 

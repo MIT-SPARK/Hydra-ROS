@@ -34,12 +34,12 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/frontend_module.h>
+#include <hydra_msgs/ActiveLayer.h>
+#include <hydra_msgs/ActiveMesh.h>
 #include <kimera_pgmo/MeshFrontend.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-#include <hydra_msgs/ActiveMesh.h>
-#include <hydra_msgs/ActiveLayer.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 #include <ros/ros.h>
@@ -86,7 +86,8 @@ struct RosFrontend : public FrontendModule {
   RosFrontend(const ros::NodeHandle& nh,
               const RobotPrefixConfig& prefix,
               const SharedDsgInfo::Ptr& dsg,
-              const SharedModuleState::Ptr& state);
+              const SharedModuleState::Ptr& state,
+              const LogSetup::Ptr& log_setup);
 
   ~RosFrontend();
 

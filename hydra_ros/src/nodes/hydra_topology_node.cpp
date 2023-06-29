@@ -37,6 +37,7 @@
 
 #include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/pipeline/ros_reconstruction.h"
+#include "hydra_ros/utils/node_utilities.h"
 
 DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, LogConfig);
 namespace hydra {
@@ -56,7 +57,8 @@ int main(int argc, char* argv[]) {
   ros::NodeHandle nh("~");
 
   const auto log_config = hydra::load_config<hydra::LogConfig>(nh, "", false);
-  hydra::LogSetup logs(log_config);
+  auto logs = std::make_shared<hydra::LogSetup>(log_config);
+  hydra::configureTimers(nh, logs);
 
   const hydra::RobotPrefixConfig prefix(nh.param<int>("robot_id", 0));
   hydra::RosReconstruction module(nh, prefix);
@@ -65,7 +67,6 @@ int main(int argc, char* argv[]) {
   ros::spin();
 
   module.stop();
-  module.save(logs.getLogDir());
-
+  module.save(*logs);
   return 0;
 }

@@ -43,8 +43,10 @@ using message_filters::Subscriber;
 RosFrontend::RosFrontend(const ros::NodeHandle& nh,
                          const RobotPrefixConfig& prefix,
                          const SharedDsgInfo::Ptr& dsg,
-                         const SharedModuleState::Ptr& state)
-    : FrontendModule(prefix, load_config<FrontendConfig>(nh), dsg, state), nh_(nh) {
+                         const SharedModuleState::Ptr& state,
+                         const LogSetup::Ptr& log_setup)
+    : FrontendModule(prefix, load_config<FrontendConfig>(nh), dsg, state, log_setup),
+      nh_(nh) {
   ros_config_ = load_config<ROSFrontendConfig>(nh);
 
   pose_graph_sub_ = nh_.subscribe(
@@ -104,8 +106,8 @@ void RosFrontend::inputCallback(const ActiveLayer::ConstPtr& places,
     input->current_position = *latest_position;
   }
 
-  //input->places = places;
-  //input->mesh = mesh;
+  // input->places = places;
+  // input->mesh = mesh;
   input->timestamp_ns = places->header.stamp.toNSec();
 
   // send all cached messages to frontend

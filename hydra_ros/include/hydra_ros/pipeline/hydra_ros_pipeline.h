@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/common/shared_module_state.h>
+#include <hydra/utils/log_utilities.h>
 #include <hydra/loop_closure/loop_closure_module.h>
 #include <pose_graph_tools/BowQueries.h>
 
@@ -52,13 +53,13 @@ struct HydraRosConfig {
 };
 
 struct HydraRosPipeline {
-  explicit HydraRosPipeline(const ros::NodeHandle& nh, int robot_id = 0);
+  explicit HydraRosPipeline(const ros::NodeHandle& nh, int robot_id = 0, const LogSetup::Ptr& log_setup = nullptr);
 
   void start();
 
   void stop();
 
-  void save(const std::string& output_path);
+  void save(const LogSetup& logs);
 
   void bowCallback(const pose_graph_tools::BowQueries::ConstPtr& msg);
 
@@ -81,6 +82,8 @@ struct HydraRosPipeline {
   std::shared_ptr<BackendModule> backend;
   std::shared_ptr<RosBackendVisualizer> backend_visualizer;
   std::shared_ptr<LoopClosureModule> lcd;
+
+  LogSetup::Ptr log_setup;
 
   std::unique_ptr<DsgSender> dsg_sender;
   ros::Publisher mesh_graph_pub;

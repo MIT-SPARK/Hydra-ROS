@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/common/dsg_types.h>
+#include <hydra/utils/log_utilities.h>
 #include <ros/ros.h>
 #include <ros/topic_manager.h>
 #include <std_srvs/Empty.h>
@@ -63,11 +64,9 @@ void spinWhileClockPresent();
 
 void spinUntilExitRequested();
 
-std::string configureTimers(const ros::NodeHandle& nh);
-
-void saveTimingInformation(const std::string& output_path);
-
 void spinAndWait(const ros::NodeHandle& nh);
+
+void configureTimers(const ros::NodeHandle& nh, const LogSetup::Ptr& setup);
 
 void parseObjectNamesFromRos(const ros::NodeHandle& node_handle);
 

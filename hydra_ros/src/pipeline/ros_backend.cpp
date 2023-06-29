@@ -47,13 +47,15 @@ RosBackend::RosBackend(const ros::NodeHandle& nh,
                        const RobotPrefixConfig& prefix,
                        const SharedDsgInfo::Ptr& dsg,
                        const SharedDsgInfo::Ptr& backend_dsg,
-                       const SharedModuleState::Ptr& state)
+                       const SharedModuleState::Ptr& state,
+                       const LogSetup::Ptr& log_setup)
     : BackendModule(prefix,
                     load_config<BackendConfig>(nh),
                     load_config<kimera_pgmo::KimeraPgmoConfig>(nh, "pgmo"),
                     dsg,
                     backend_dsg,
-                    state),
+                    state,
+                    log_setup),
       nh_(nh) {
   pose_graph_sub_ = nh_.subscribe(
       "pose_graph_incremental", 10000, &RosBackend::poseGraphCallback, this);
