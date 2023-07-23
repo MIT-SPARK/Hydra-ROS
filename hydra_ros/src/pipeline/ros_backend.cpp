@@ -118,7 +118,9 @@ void RosBackendVisualizer::publishOutputs(const DynamicSceneGraph& graph,
   // TODO(nathan) consider serializing to bytes before sending
   dsg_sender_->sendGraph(graph, stamp);
 
-  if (config_.use_zmq_interface && timestamp_ns - last_zmq_pub_time_ > 9000000000) {
+  if (config_.use_zmq_interface) {
+    // TODO(nathan) handle this better
+    //&& timestamp_ns - last_zmq_pub_time_ > 9000000000
     zmq_sender_->send(graph);
     last_zmq_pub_time_ = timestamp_ns;
   }
