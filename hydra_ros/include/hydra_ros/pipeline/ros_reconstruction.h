@@ -47,6 +47,8 @@
 
 namespace hydra {
 
+enum class ExtrinsicsLookupMode { USE_KIMERA, USE_TF, USE_ROS_PARAMS };
+
 struct RosReconstructionConfig {
   bool visualize_reconstruction = true;
   std::string topology_visualizer_ns = "~";
@@ -54,9 +56,21 @@ struct RosReconstructionConfig {
   bool enable_output_queue = false;
   double pointcloud_separation_s = 0.1;
   double tf_wait_duration_s = 0.1;
-  std::string kimera_extrinsics_file = "";
   double tf_buffer_size_s = 30.0;
+  ExtrinsicsLookupMode extrinsics_mode = ExtrinsicsLookupMode::USE_ROS_PARAMS;
+  std::string kimera_extrinsics_file = "";
+  std::string sensor_frame = "";
 };
+
+}  // namespace hydra
+
+DECLARE_CONFIG_ENUM(hydra,
+                    ExtrinsicsLookupMode,
+                    {ExtrinsicsLookupMode::USE_KIMERA, "USE_KIMERA"},
+                    {ExtrinsicsLookupMode::USE_TF, "USE_TF"},
+                    {ExtrinsicsLookupMode::USE_ROS_PARAMS, "USE_ROS_PARAMS"})
+
+namespace hydra {
 
 template <typename Visitor>
 void visit_config(const Visitor& v, RosReconstructionConfig& config) {
@@ -66,8 +80,19 @@ void visit_config(const Visitor& v, RosReconstructionConfig& config) {
   v.visit("enable_reconstruction_output_queue", config.enable_output_queue);
   v.visit("pointcloud_separation_s", config.pointcloud_separation_s);
   v.visit("tf_wait_duration_s", config.tf_wait_duration_s);
-  v.visit("kimera_extrinsics_file", config.kimera_extrinsics_file);
   v.visit("tf_buffer_size_s", config.tf_buffer_size_s);
+  v.visit("extrinsics_mode", config.extrinsics_mode);
+  switch (config.extrinsics_mode) {
+    case ExtrinsicsLookupMode::USE_KIMERA:
+      v.visit("kimera_extrinsics_file", config.kimera_extrinsics_file);
+      break;
+    case ExtrinsicsLookupMode::USE_TF:
+      v.visit("sensor_frame", config.sensor_frame);
+      break;
+    case ExtrinsicsLookupMode::USE_ROS_PARAMS:
+    default:
+      break;
+  }
 }
 
 }  // namespace hydra

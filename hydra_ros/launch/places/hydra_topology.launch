@@ -3,7 +3,7 @@
 
     <arg name="config"/>
     <arg name="extrinsics"/>
-    <arg name="sensor_frame"/>
+    <arg name="robot_frame"/>
     <arg name="world_frame" default="world"/>
     <arg name="use_pose_graph"/>
     <arg name="pointcloud_topic" default="/semantic_pointcloud"/>
@@ -50,7 +50,7 @@
         <rosparam command="load" file="$(arg config)"/>
         <!-- input data -->
         <remap from="~pointcloud" to="$(arg pointcloud_topic)"/>
-        <param name="robot_frame" value="$(arg sensor_frame)"/>
+        <param name="robot_frame" value="$(arg robot_frame)"/>
         <param name="world_frame" value="$(arg world_frame)"/>
         <!-- general config -->
         <param name="log_path" value="$(arg dsg_path)"/>

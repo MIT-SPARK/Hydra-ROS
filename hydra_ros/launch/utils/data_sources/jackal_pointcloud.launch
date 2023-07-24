@@ -8,7 +8,7 @@
     <arg name="use_prerecorded_semantics" default="false"/>
     <arg name="use_semantics" default="true"/>
     <arg name="use_gt_frame" default="false"/>
-    <arg name="sensor_frame" default="$(arg robot_name)/base"/>
+    <arg name="robot_frame" default="$(arg robot_name)/base"/>
 
     <arg name="rgb_info_topic" default="/$(arg robot_name)/forward/color/camera_info"/>
     <arg name="rgb_topic" default="/$(arg robot_name)/forward/color/image_raw"/>
@@ -29,7 +29,7 @@
 
     <include file="$(find semantic_recolor)/launch/semantic_recolor_pointcloud.launch" pass_all_args="true"
              if="$(arg use_semantics)">
-        <arg name="verbose" value="false"/>
+        <arg name="verbose" value="true"/>
         <arg name="rgb_image_transport" value="compressed" if="$(arg need_compressed)"/>
         <arg name="rgb_image_transport" value="raw" unless="$(arg need_compressed)"/>
     </include>

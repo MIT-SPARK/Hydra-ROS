@@ -12,8 +12,8 @@
 
     <arg name="pointcloud_topic" value="/$(arg robot_name)/semantic_pointcloud"/>
     <arg name="use_gt_frame" default="false"/>
-    <arg name="sensor_frame" default="$(arg robot_name)/base" if="$(arg use_gt_frame)"/>
-    <arg name="sensor_frame" default="base_link" unless="$(arg use_gt_frame)"/>
+    <arg name="robot_frame" default="$(arg robot_name)/base" if="$(arg use_gt_frame)"/>
+    <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
     <arg name="world_frame" default="$(arg robot_name)/map"/>
 
     <include file="$(find hydra_ros)/launch/utils/data_sources/jackal_pointcloud.launch"
@@ -23,8 +23,8 @@
         <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
         <arg name="reconstruction_config" default="$(find hydra)/config/simmons_jackal/reconstruction_config.yaml"/>
-        <arg name="use_kimera_extrinsics" value="true"/>
-        <arg name="extrinsics" default="$(find hydra_vio_configs)/config/robots/$(arg robot_name)/LeftCameraParams.yaml"/>
+        <arg name="extrinsics_mode" value="USE_KIMERA"/>
+        <arg name="kimera_extrinsics_file" default="$(find hydra_vio_configs)/config/robots/$(arg robot_name)/LeftCameraParams.yaml"/>
         <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
         <arg name="rviz_file" default="$(arg robot_name).rviz"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>

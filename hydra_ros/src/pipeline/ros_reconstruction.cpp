@@ -66,11 +66,52 @@ inline geometry_msgs::Pose tfToPose(const geometry_msgs::Transform& transform) {
   return pose;
 }
 
-std::string showQuaternion(const Eigen::Quaterniond& q) {
-  std::stringstream ss;
-  ss << "{w: " << q.w() << ", x: " << q.x() << ", y: " << q.y() << ", z: " << q.z()
-     << "}";
-  return ss.str();
+// this is technically not threadsafe w.r.t. to spinning in another thread.
+// but this gets called in the constructor, so should be fine for now
+bool lookupExtrinsicsFromTf(const RosReconstructionConfig& ros_config,
+                            const tf2_ros::Buffer& buffer,
+                            ReconstructionConfig& config) {
+  ros::WallRate tf_wait_rate(1.0 / ros_config.tf_wait_duration_s);
+
+  bool have_transform = false;
+  std::string err_str;
+  LOG(INFO) << "Looking up extrinsics via TF: " << config.robot_frame << " -> "
+            << ros_config.sensor_frame;
+  while (ros::ok()) {
+    if (buffer.canTransform(config.robot_frame,
+                            ros_config.sensor_frame,
+                            ros::Time(),
+                            ros::Duration(0),
+                            &err_str)) {
+      have_transform = true;
+      break;
+    }
+
+    tf_wait_rate.sleep();
+    ros::spinOnce();
+  }
+
+  if (!have_transform) {
+    LOG(ERROR) << "Failed to look up: " << config.robot_frame << " to "
+               << ros_config.sensor_frame;
+    return false;
+  }
+
+  geometry_msgs::TransformStamped transform;
+  try {
+    transform = buffer.lookupTransform(
+        config.robot_frame, ros_config.sensor_frame, ros::Time());
+  } catch (const tf2::TransformException& ex) {
+    LOG(ERROR) << "Failed to look up: " << config.robot_frame << " to "
+               << ros_config.sensor_frame;
+    return false;
+  }
+
+  geometry_msgs::Pose curr_pose = tfToPose(transform.transform);
+  tf2::convert(curr_pose.position, config.body_t_camera);
+  tf2::convert(curr_pose.orientation, config.body_R_camera);
+  config.body_R_camera.normalize();
+  return true;
 }
 
 bool RosReconstruction::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
@@ -108,22 +149,25 @@ RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
   ros_config_ = load_config<RosReconstructionConfig>(nh);
 
   buffer_.reset(new tf2_ros::Buffer(ros::Duration(ros_config_.tf_buffer_size_s)));
+  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
 
-  if (!ros_config_.kimera_extrinsics_file.empty()) {
-    const auto node = YAML::LoadFile(ros_config_.kimera_extrinsics_file);
-    const auto elements = node["T_BS"]["data"].as<std::vector<double>>();
-    CHECK_EQ(elements.size(), 16u) << "Invalid transform!";
-    Eigen::Matrix4d body_T_camera;
-    for (size_t r = 0; r < 4; r++) {
-      for (size_t c = 0; c < 4; c++) {
-        body_T_camera(r, c) = elements.at(4 * r + c);
-      }
-    }
-    config_.body_R_camera = Eigen::Quaterniond(body_T_camera.block<3, 3>(0, 0));
-    config_.body_t_camera = body_T_camera.block<3, 1>(0, 3);
-    LOG(WARNING) << "Loaded extrinsics from Kimera: R="
-                 << showQuaternion(config_.body_R_camera)
-                 << ", t=" << config_.body_t_camera.transpose();
+  bool extrinsics_valid = true;
+  switch (ros_config_.extrinsics_mode) {
+    case ExtrinsicsLookupMode::USE_KIMERA:
+      extrinsics_valid =
+          loadExtrinsicsFromKimera(config_, ros_config_.kimera_extrinsics_file);
+      break;
+    case ExtrinsicsLookupMode::USE_TF:
+      extrinsics_valid = lookupExtrinsicsFromTf(ros_config_, *buffer_, config_);
+      break;
+    case ExtrinsicsLookupMode::USE_ROS_PARAMS:
+    default:
+      break;
+  }
+
+  if (!extrinsics_valid) {
+    LOG(ERROR)
+        << "Could not load extrinsics! Falling back to parsed extrinsics from ROS!";
   }
 
   LOG(WARNING) << "Using pointcloud and TF as input!";
@@ -131,7 +175,6 @@ RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
       "pointcloud", 10, &RosReconstruction::handlePointcloud, this);
   pose_graph_sub_ =
       nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
-  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
   pointcloud_thread_.reset(new std::thread(&RosReconstruction::pointcloudSpin, this));
 
   if (!ros_config_.enable_output_queue && !output_queue) {
@@ -240,9 +283,9 @@ void RosReconstruction::pointcloudSpin() {
     }
 
     if (!have_transform) {
-      ROS_WARN_STREAM("Failed to get tf from "
-                      << config_.robot_frame << " to " << config_.world_frame << " @ "
-                      << curr_time.toNSec() << " [ns]. Reason: " << err_str);
+      LOG(WARNING) << "Failed to get tf from " << config_.robot_frame << " to "
+                   << config_.world_frame << " @ " << curr_time.toNSec()
+                   << " [ns]. Reason: " << err_str;
       continue;
     }
 
@@ -253,7 +296,6 @@ void RosReconstruction::pointcloudSpin() {
     } catch (const tf2::TransformException& ex) {
       LOG(ERROR) << "Failed to look up: " << config_.world_frame << " to "
                  << config_.robot_frame;
-      ROS_WARN_STREAM(ex.what());
       return;
     }
 

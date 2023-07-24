@@ -40,8 +40,10 @@
     <arg name="graph_viz_config" default="graph_visualization_config.yaml"/>
     <arg name="graph_viz_config_file" value="$(arg graph_viz_config_dir)/$(arg graph_viz_config)"/>
 
-    <arg name="use_kimera_extrinsics" default="false"/>
-    <arg name="extrinsics" if="$(arg do_reconstruction)"/>
+    <arg name="extrinsics_mode" default="USE_ROS_PARAMS"/>
+    <arg name="extrinsics" if="$(eval arg('extrinsics_mode') == 'USE_ROS_PARAMS')"/>
+    <arg name="kimera_extrinsics_file" if="$(eval arg('extrinsics_mode') == 'USE_KIMERA')"/>
+    <arg name="sensor_frame" if="$(eval arg('extrinsics_mode') == 'USE_TF')"/>
 
     <arg name="lcd_use_bow_vectors" default="true"/>
     <arg name="enable_dsg_lcd" default="false"/>
@@ -92,11 +94,12 @@
         <rosparam file="$(arg backend_config_path)"/>
         <rosparam file="$(arg lcd_config_path)"/>
         <rosparam file="$(arg reconstruction_config)" if="$(arg do_reconstruction)"/>
-        <rosparam file="$(arg extrinsics)" if="$(eval arg('do_reconstruction') and not arg('use_kimera_extrinsics'))"/>
         <rosparam file="$(arg ros_params_file)"/>
 
-        <param name="kimera_extrinsics_file" value="$(arg extrinsics)"
-               if="$(eval arg('do_reconstruction') and arg('use_kimera_extrinsics'))"/>
+        <param name="extrinsics_mode" value="$(arg extrinsics_mode)"/>
+        <rosparam file="$(arg extrinsics)" if="$(eval arg('extrinsics_mode') == 'USE_ROS_PARAMS')"/>
+        <param name="kimera_extrinsics_file" value="$(arg kimera_extrinsics_file)" if="$(eval arg('extrinsics_mode') == 'USE_KIMERA')"/>
+        <param name="sensor_frame" value="$(arg sensor_frame)" if="$(eval arg('extrinsics_mode') == 'USE_TF')"/>
 
         <param name="visualize_reconstruction" value="$(arg visualize_reconstruction)"/>
         <param name="publish_reconstruction_mesh" value="$(arg visualize_reconstruction)"/>
@@ -115,7 +118,7 @@
         <param name="semantic_label_file" value="$(arg semantic_map_path)"/>
         <param name="robot_id" value="$(arg robot_id)"/>
         <param name="world_frame" value="$(arg world_frame)"/>
-        <param name="robot_frame" value="$(arg sensor_frame)"/>
+        <param name="robot_frame" value="$(arg robot_frame)"/>
         <param name="show_stats" value="$(arg show_topology_stats)"/>
         <param name="validate_vertices" value="$(arg validate_vertices)"/>
 

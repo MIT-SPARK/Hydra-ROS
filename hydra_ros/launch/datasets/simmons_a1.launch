@@ -11,8 +11,8 @@
 
     <arg name="pointcloud_topic" value="/semantic_pointcloud"/>
     <arg name="use_gt_frame" default="false"/>
-    <arg name="sensor_frame" default="base" if="$(arg use_gt_frame)"/>
-    <arg name="sensor_frame" default="base_link" unless="$(arg use_gt_frame)"/>
+    <arg name="robot_frame" default="base" if="$(arg use_gt_frame)"/>
+    <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
     <arg name="world_frame" default="world"/>
 
     <include file="$(find hydra_ros)/launch/utils/data_sources/a1_pointcloud.launch"
@@ -22,8 +22,8 @@
         <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/simmons_a1"/>
         <arg name="reconstruction_config" default="$(find hydra)/config/simmons_topology_config.yaml"/>
-        <arg name="use_kimera_extrinsics" value="true"/>
-        <arg name="extrinsics" default="$(find hydra_vio_configs)/config/robots/a1_center_external/LeftCameraParams.yaml"/>
+        <arg name="extrinsics_mode" value="USE_KIMERA"/>
+        <arg name="kimera_extrinsics_file" default="$(find hydra_vio_configs)/config/robots/a1_center_external/LeftCameraParams.yaml"/>
         <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
         <arg name="rviz_file" default="a1.rviz"/>
         <arg name="rviz_file_td" default="a1_topdown.rviz"/>

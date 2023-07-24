@@ -13,7 +13,7 @@
     <arg name="pointcloud_topic" value="/semantic_pointcloud"/>
     <arg name="use_gt_frame" default="false"/>
     <arg name="load_static_tfs" default="false"/>
-    <arg name="sensor_frame" default="left_cam"/>
+    <arg name="robot_frame" default="left_cam"/>
     <arg name="world_frame" default="world"/>
 
     <arg name="record_bag" default="false"/>
@@ -30,7 +30,7 @@
         <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/default_robot"/>
         <arg name="reconstruction_config" default="$(find hydra)/config/default_topology_config.yaml"/>
-        <arg name="use_kimera_extrinsics" value="false"/>
+        <arg name="extrinsics_mode" value="USE_ROS_PARAMS"/>
         <arg name="extrinsics" default="$(find hydra)/config/robots/$(arg tf_name).yaml"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
         <arg name="typology_dir" default="$(find hydra)/config/"/>

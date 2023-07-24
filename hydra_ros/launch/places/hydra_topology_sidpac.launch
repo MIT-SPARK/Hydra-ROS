@@ -16,7 +16,7 @@
     <arg name="semantic_map_path" default="$(find semantic_recolor)/config/colors/$(arg dataset_name).csv"/>
     <arg name="pointcloud_topic" default="semantic_pointcloud"/>
     <arg name="use_gt_frame" default="true"/>
-    <arg name="sensor_frame" default="left_cam"/>
+    <arg name="robot_frame" default="left_cam"/>
 
     <include file="$(find hydra_ros)/launch/utils/data_sources/sidpac_pointcloud.launch" pass_all_args="true"/>
 

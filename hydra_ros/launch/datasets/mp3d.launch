@@ -16,7 +16,7 @@
     <arg name="pointcloud_topic" default="/habitat/agent_0/pointcloud"/>
 
     <arg name="use_gt_frame" default="true"/>
-    <arg name="sensor_frame" value="rgb_camera_link"/>
+    <arg name="robot_frame" value="rgb_camera_link"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
