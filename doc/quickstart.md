@@ -8,7 +8,7 @@ Make sure to decompress the rosbag (`rosbag decompress path/to/bagfile`) before 
 
 To start Hydra:
 ```
-roslaunch hydra_ros uhumans2.launch start_visualizer:=true
+roslaunch hydra_ros uhumans2.launch
 ```
 
 Then, start the rosbag in a separate terminal:
@@ -33,16 +33,14 @@ catkin build
 First, start Kimera:
 
 ```
-roslaunch kimera_vio_ros kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 use_lcd:=false
+roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 use_lcd:=false
 ```
 
 and in a separate terminal, run:
 
 ```
 # in separate terminal
-roslaunch hydra_dsg_builder_ros uhumans2.launch \
-     start_visualizer:=true \
-     use_gt_frame:=false
+roslaunch hydra_ros uhumans2.launch use_gt_frame:=false
 ```
 
 #### Running Using VIO and External Visual Loop Closures
@@ -50,7 +48,7 @@ roslaunch hydra_dsg_builder_ros uhumans2.launch \
 First, start Kimera:
 
 ```
-roslaunch kimera_vio_ros kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
+roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
     use_lcd:=true \
     lcd_no_optimize:=true
 ```
@@ -58,9 +56,7 @@ roslaunch kimera_vio_ros kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=t
 and in a separate terminal, run the same command for Hydra:
 
 ```
-roslaunch hydra_dsg_builder uhumans2.launch \
-     start_visualizer:=true \
-     use_gt_frame:=false
+roslaunch hydra_ros uhumans2.launch use_gt_frame:=false
 ```
 
 :warning: To achieve the best results with Kimera-VIO, you should wait for the LCD vocabulary to finish loading before starting the rosbag.
@@ -70,7 +66,7 @@ roslaunch hydra_dsg_builder uhumans2.launch \
 First, start Kimera:
 
 ```
-roslaunch kimera_vio_ros kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
+roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
      use_lcd:=true \
      lcd_no_detection:=true
 ```
@@ -78,10 +74,7 @@ roslaunch kimera_vio_ros kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=t
 and in a separate terminal, run the same command for Hydra:
 
 ```
-roslaunch hydra_dsg_builder_ros uhumans2.launch \
-     start_visualizer:=true \
-     use_gt_frame:=false \
-     enable_dsg_lcd:=true
+roslaunch hydra_ros uhumans2.launch use_gt_frame:=false enable_dsg_lcd:=true
 ```
 
 :warning: To achieve the best results with Kimera-VIO, you should wait for the LCD vocabulary to finish loading before starting the rosbag.
