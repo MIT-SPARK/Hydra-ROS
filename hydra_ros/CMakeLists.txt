@@ -31,6 +31,8 @@ find_package(
              hydra
 )
 
+catkin_python_setup()
+
 generate_dynamic_reconfigure_options(
   cfg/Colormap.cfg
   cfg/DynamicLayerVisualizer.cfg
@@ -125,4 +127,13 @@ install(
 
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)
+
+catkin_install_python(
+  PROGRAMS
+  bin/dsg_republisher
+  bin/csv_to_tf
+  bin/odom_to_tf
+  DESTINATION
+  ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
