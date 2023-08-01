@@ -37,10 +37,17 @@
 #include <glog/logging.h>
 #include <hydra/common/hydra_config.h>
 #include <hydra/utils/timing_utilities.h>
+#include <ros/topic_manager.h>
+#include <rosgraph_msgs/Clock.h>
 
 namespace hydra {
 
 using timing::ElapsedTimeRecorder;
+
+bool haveClock() {
+  size_t num_pubs = ros::TopicManager::instance()->getNumPublishers("/clock");
+  return num_pubs > 0;
+}
 
 ExitMode getExitMode(const ros::NodeHandle& nh) {
   std::string exit_mode_str = "NORMAL";
@@ -59,7 +66,19 @@ ExitMode getExitMode(const ros::NodeHandle& nh) {
   }
 }
 
+void clockCallback(const rosgraph_msgs::Clock&) {}
+
 void spinWhileClockPresent() {
+  ros::NodeHandle nh;
+  bool use_sim_time = false;
+  nh.getParam("use_sim_time", use_sim_time);
+
+  ros::Subscriber clock_sub;
+  if (!use_sim_time) {
+    // required for topic manager to register publisher
+    clock_sub = nh.subscribe("/clock", 10, clockCallback);
+  }
+
   ros::WallRate r(50);
   ROS_INFO("Waiting for bag to start");
   while (ros::ok() && !haveClock()) {

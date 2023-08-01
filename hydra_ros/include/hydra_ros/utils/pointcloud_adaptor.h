@@ -33,65 +33,39 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
-#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <voxblox/core/common.h>
 
-#include <optional>
+#include <functional>
 
 namespace hydra {
 
-class DsgSender {
+class PointcloudAdaptor {
  public:
-  explicit DsgSender(const ros::NodeHandle& nh,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
+  PointcloudAdaptor(const sensor_msgs::PointCloud2& cloud);
 
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
+  bool valid() const;
 
- private:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  ros::Publisher mesh_pub_;
-  mutable std::optional<uint64_t> last_mesh_time_ns_;
+  bool hasLabels() const;
 
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
+  voxblox::Point position(const uint8_t* point_ptr) const;
+
+  voxblox::Color color(const uint8_t* point_ptr) const;
+
+  uint32_t label(const uint8_t* point_ptr) const;
+
+ protected:
+  std::function<double(const uint8_t*)> x_parser_;
+  std::function<double(const uint8_t*)> y_parser_;
+  std::function<double(const uint8_t*)> z_parser_;
+  std::function<uint32_t(const uint8_t*)> label_parser_;
+  std::function<voxblox::Color(const uint8_t*)> color_parser_;
 };
 
-class DsgReceiver {
- public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
-
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
-
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
-
-  inline DynamicSceneGraph::Ptr graph() const { return graph_; }
-
-  inline bool updated() const { return has_update_; }
-
-  inline void clearUpdated() { has_update_ = false; }
-
- private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
-
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
-
-  bool has_update_;
-  DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
-
-  std::unique_ptr<LogCallback> log_callback_;
-};
+bool fillVoxbloxPointcloud(const sensor_msgs::PointCloud2& msg,
+                           voxblox::Pointcloud& points,
+                           voxblox::Colors& colors,
+                           std::vector<uint32_t>& labels,
+                           bool labels_required);
 
 }  // namespace hydra

@@ -32,11 +32,21 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <gflags/gflags.h>
+#include <glog/logging.h>
 #include <gtest/gtest.h>
 #include <ros/ros.h>
 
 auto main(int argc, char** argv) -> int {
+  FLAGS_logtostderr = true;
+  FLAGS_alsologtostderr = true;
+  FLAGS_colorlogtostderr = true;
+  FLAGS_minloglevel = 1;
+
   ::testing::InitGoogleTest(&argc, argv);
+  //google::ParseCommandLineFlags(&argc, &argv, true);
+  google::InitGoogleLogging(argv[0]);
+
   ros::init(argc, argv, "test_hydra_ros");
 
   return RUN_ALL_TESTS();

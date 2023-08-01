@@ -61,7 +61,13 @@ int main(int argc, char* argv[]) {
   hydra::configureTimers(nh, logs);
 
   const hydra::RobotPrefixConfig prefix(nh.param<int>("robot_id", 0));
-  hydra::RosReconstruction module(nh, prefix);
+
+  auto reconstruction_config = hydra::load_config<hydra::RosReconstructionConfig>(nh);
+  if (!hydra::loadReconstructionExtrinsics(reconstruction_config)) {
+    LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
+  }
+
+  hydra::RosReconstruction module(nh, prefix, reconstruction_config);
   module.start();
 
   ros::spin();

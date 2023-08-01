@@ -45,11 +45,13 @@ namespace hydra {
 DsgSender::DsgSender(const ros::NodeHandle& nh,
                      const std::string& timer_name,
                      bool publish_mesh,
-                     double min_mesh_separation_s)
+                     double min_mesh_separation_s,
+                     bool serialize_dsg_mesh)
     : nh_(nh),
       timer_name_(timer_name),
       publish_mesh_(publish_mesh),
-      min_mesh_separation_s_(min_mesh_separation_s) {
+      min_mesh_separation_s_(min_mesh_separation_s),
+      serialize_dsg_mesh_(serialize_dsg_mesh) {
   pub_ = nh_.advertise<hydra_msgs::DsgUpdate>("dsg", 1);
   if (publish_mesh_) {
     mesh_pub_ = nh_.advertise<mesh_msgs::TriangleMeshStamped>("dsg_mesh", 1, false);
@@ -64,7 +66,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   if (pub_.getNumSubscribers()) {
     hydra_msgs::DsgUpdate msg;
     msg.header.stamp = stamp;
-    spark_dsg::writeGraph(graph, msg.layer_contents);
+    spark_dsg::writeGraph(graph, msg.layer_contents, serialize_dsg_mesh_);
     msg.full_update = true;
     pub_.publish(msg);
   }
@@ -95,10 +97,12 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   mesh_pub_.publish(msg);
 }
 
-DsgReceiver::DsgReceiver(const ros::NodeHandle& nh)
+DsgReceiver::DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh)
     : nh_(nh), has_update_(false), graph_(nullptr) {
   sub_ = nh_.subscribe("dsg", 1, &DsgReceiver::handleUpdate, this);
-  mesh_sub_ = nh_.subscribe("dsg_mesh_updates", 1, &DsgReceiver::handleMesh, this);
+  if (subscribe_to_mesh) {
+    mesh_sub_ = nh_.subscribe("dsg_mesh_updates", 1, &DsgReceiver::handleMesh, this);
+  }
 }
 
 DsgReceiver::DsgReceiver(const ros::NodeHandle& nh, const LogCallback& log_cb)

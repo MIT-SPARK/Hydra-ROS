@@ -35,27 +35,27 @@
 #include "hydra_ros/pipeline/ros_reconstruction.h"
 
 #include <geometry_msgs/TransformStamped.h>
+#include <hydra/common/hydra_config.h>
 #include <hydra/places/gvd_integrator.h>
 #include <hydra_msgs/ActiveLayer.h>
 #include <hydra_msgs/ActiveMesh.h>
 #include <hydra_msgs/QueryFreespace.h>
+#include <kimera_semantics/color.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <voxblox_msgs/Mesh.h>
-#include <voxblox_ros/conversions.h>
 #include <voxblox_ros/mesh_vis.h>
 
 #include "hydra_ros/config/ros_utilities.h"
+#include "hydra_ros/utils/image_receiver.h"
+#include "hydra_ros/utils/pointcloud_adaptor.h"
 
 namespace hydra {
 
-DECLARE_STRUCT_NAME(RosReconstructionConfig);
-DECLARE_STRUCT_NAME(ReconstructionConfig);
-
+using places::CompressionGraphExtractor;
 using pose_graph_tools::PoseGraph;
 using pose_graph_tools::PoseGraphEdge;
 using pose_graph_tools::PoseGraphNode;
-using RosPointcloud = RosReconstruction::Pointcloud;
-using places::CompressionGraphExtractor;
+using sensor_msgs::PointCloud2;
 
 inline geometry_msgs::Pose tfToPose(const geometry_msgs::Transform& transform) {
   geometry_msgs::Pose pose;
@@ -66,52 +66,101 @@ inline geometry_msgs::Pose tfToPose(const geometry_msgs::Transform& transform) {
   return pose;
 }
 
-// this is technically not threadsafe w.r.t. to spinning in another thread.
-// but this gets called in the constructor, so should be fine for now
-bool lookupExtrinsicsFromTf(const RosReconstructionConfig& ros_config,
-                            const tf2_ros::Buffer& buffer,
-                            ReconstructionConfig& config) {
-  ros::WallRate tf_wait_rate(1.0 / ros_config.tf_wait_duration_s);
+RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
+                                     const RobotPrefixConfig& prefix,
+                                     const RosReconstructionConfig& config,
+                                     const OutputQueue::Ptr& output_queue)
+    : ReconstructionModule(
+          prefix,
+          config,
+          output_queue ? output_queue : std::make_shared<OutputQueue>()),
+      nh_(nh),
+      config_(config) {
+  buffer_.reset(new tf2_ros::Buffer(ros::Duration(config_.tf_buffer_size_s)));
+  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
 
-  bool have_transform = false;
-  std::string err_str;
-  LOG(INFO) << "Looking up extrinsics via TF: " << config.robot_frame << " -> "
-            << ros_config.sensor_frame;
-  while (ros::ok()) {
-    if (buffer.canTransform(config.robot_frame,
-                            ros_config.sensor_frame,
-                            ros::Time(),
-                            ros::Duration(0),
-                            &err_str)) {
-      have_transform = true;
-      break;
+  if (config_.use_image_receiver) {
+    image_receiver_.reset(new ImageReceiver(
+        nh,
+        std::bind(&RosReconstruction::handlePointcloud, this, std::placeholders::_1),
+        config_.image_queue_size));
+    if (config_.publish_pointcloud) {
+      pcl_pub_ = nh_.advertise<sensor_msgs::PointCloud2>("pointcloud", 3);
     }
+  } else {
+    pcl_sub_ =
+        nh_.subscribe("pointcloud", 10, &RosReconstruction::handlePointcloud, this);
+  }
+  pose_graph_sub_ =
+      nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
+  pointcloud_thread_.reset(new std::thread(&RosReconstruction::pointcloudSpin, this));
 
-    tf_wait_rate.sleep();
-    ros::spinOnce();
+  if (!config_.enable_output_queue && !output_queue) {
+    // reset output queue so we don't waste memory with queued packets
+    output_queue_.reset();
   }
 
-  if (!have_transform) {
-    LOG(ERROR) << "Failed to look up: " << config.robot_frame << " to "
-               << ros_config.sensor_frame;
-    return false;
+  if (config_.visualize_reconstruction) {
+    visualizer_.reset(new TopologyServerVisualizer(config_.topology_visualizer_ns));
   }
 
-  geometry_msgs::TransformStamped transform;
-  try {
-    transform = buffer.lookupTransform(
-        config.robot_frame, ros_config.sensor_frame, ros::Time());
-  } catch (const tf2::TransformException& ex) {
-    LOG(ERROR) << "Failed to look up: " << config.robot_frame << " to "
-               << ros_config.sensor_frame;
-    return false;
+  if (config_.publish_mesh) {
+    mesh_pub_ = nh_.advertise<voxblox_msgs::Mesh>("mesh", 10);
   }
 
-  geometry_msgs::Pose curr_pose = tfToPose(transform.transform);
-  tf2::convert(curr_pose.position, config.body_t_camera);
-  tf2::convert(curr_pose.orientation, config.body_R_camera);
-  config.body_R_camera.normalize();
+  freespace_server_ = nh_.advertiseService(
+      "query_freespace", &RosReconstruction::handleFreespaceSrv, this);
+
+  output_callbacks_.push_back(
+      [this](const ReconstructionModule&, const ReconstructionOutput& output) {
+        this->visualize(output);
+      });
+}
+
+RosReconstruction::~RosReconstruction() {
+  stop();
+
+  if (pointcloud_thread_) {
+    VLOG(2) << "[Hydra Reconstruction] stopping pointcloud input thread";
+    pointcloud_thread_->join();
+    pointcloud_thread_.reset();
+    VLOG(2) << "[Hydra Reconstruction] stopped pointcloud input thread";
+  }
+
+  VLOG(2) << "[Hydra Reconstruction] pointcloud queue: " << pointcloud_queue_.size();
+}
+
+bool RosReconstruction::checkPointcloudTimestamp(const ros::Time& curr_time) {
+  VLOG(1) << "[Hydra Reconstruction] Got raw pointcloud input @ " << curr_time.toNSec()
+          << " [ns]";
+  if (last_time_received_) {
+    const auto separation_s = (curr_time - *last_time_received_).toSec();
+    if (separation_s < config_.pointcloud_separation_s) {
+      return false;
+    }
+  }
+
+  last_time_received_.reset(new ros::Time(curr_time));
+  VLOG(1) << "[Hydra Reconstruction] Got ROS input @ " << curr_time.toNSec() << " [ns]";
   return true;
+}
+
+void RosReconstruction::handlePointcloud(const PointCloud2::ConstPtr& msg) {
+  if (!checkPointcloudTimestamp(msg->header.stamp)) {
+    return;
+  }
+
+  pointcloud_queue_.push(msg);
+}
+
+void RosReconstruction::handlePoseGraph(const PoseGraph::ConstPtr& pose_graph) {
+  if (pose_graph->nodes.empty()) {
+    ROS_ERROR("Received empty pose graph!");
+    return;
+  }
+
+  std::unique_lock<std::mutex> lock(pose_graph_mutex_);
+  pose_graphs_.push_back(pose_graph);
 }
 
 bool RosReconstruction::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
@@ -138,112 +187,6 @@ bool RosReconstruction::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& 
   return true;
 }
 
-RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
-                                     const RobotPrefixConfig& prefix,
-                                     const OutputQueue::Ptr& output_queue)
-    : ReconstructionModule(
-          prefix,
-          load_config<ReconstructionConfig>(nh),
-          output_queue ? output_queue : std::make_shared<OutputQueue>()),
-      nh_(nh) {
-  ros_config_ = load_config<RosReconstructionConfig>(nh);
-
-  buffer_.reset(new tf2_ros::Buffer(ros::Duration(ros_config_.tf_buffer_size_s)));
-  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
-
-  bool extrinsics_valid = true;
-  switch (ros_config_.extrinsics_mode) {
-    case ExtrinsicsLookupMode::USE_KIMERA:
-      extrinsics_valid =
-          loadExtrinsicsFromKimera(config_, ros_config_.kimera_extrinsics_file);
-      break;
-    case ExtrinsicsLookupMode::USE_TF:
-      extrinsics_valid = lookupExtrinsicsFromTf(ros_config_, *buffer_, config_);
-      break;
-    case ExtrinsicsLookupMode::USE_ROS_PARAMS:
-    default:
-      break;
-  }
-
-  if (!extrinsics_valid) {
-    LOG(ERROR)
-        << "Could not load extrinsics! Falling back to parsed extrinsics from ROS!";
-  }
-
-  LOG(WARNING) << "Using pointcloud and TF as input!";
-  pcl_sub_ = nh_.subscribe<Pointcloud>(
-      "pointcloud", 10, &RosReconstruction::handlePointcloud, this);
-  pose_graph_sub_ =
-      nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
-  pointcloud_thread_.reset(new std::thread(&RosReconstruction::pointcloudSpin, this));
-
-  if (!ros_config_.enable_output_queue && !output_queue) {
-    // reset output queue so we don't waste memory with queued packets
-    output_queue_.reset();
-  }
-
-  if (ros_config_.visualize_reconstruction) {
-    visualizer_.reset(new TopologyServerVisualizer(ros_config_.topology_visualizer_ns));
-  }
-
-  if (ros_config_.publish_mesh) {
-    mesh_pub_ = nh_.advertise<voxblox_msgs::Mesh>("mesh", 10);
-  }
-
-  freespace_server_ = nh_.advertiseService(
-      "query_freespace", &RosReconstruction::handleFreespaceSrv, this);
-
-  output_callbacks_.push_back(
-      [this](const ReconstructionModule&, const ReconstructionOutput& output) {
-        this->visualize(output);
-      });
-}
-
-RosReconstruction::~RosReconstruction() {
-  stop();
-
-  if (pointcloud_thread_) {
-    VLOG(2) << "[Hydra Reconstruction] stopping pointcloud input thread";
-    pointcloud_thread_->join();
-    pointcloud_thread_.reset();
-    VLOG(2) << "[Hydra Reconstruction] stopped pointcloud input thread";
-  }
-
-  VLOG(2) << "[Hydra Reconstruction] pointcloud queue: " << pointcloud_queue_.size();
-}
-
-void RosReconstruction::handlePointcloud(const RosPointcloud::ConstPtr& cloud) {
-  // pcl timestamps are in microseconds
-  ros::Time curr_time;
-  curr_time.fromNSec(cloud->header.stamp * 1000);
-
-  VLOG(1) << "[Hydra Reconstruction] Got raw pointcloud input @ " << curr_time.toNSec()
-          << " [ns]";
-  if (num_poses_received_ > 0) {
-    if (last_time_received_ && ((curr_time - *last_time_received_).toSec() <
-                                ros_config_.pointcloud_separation_s)) {
-      return;
-    }
-
-    last_time_received_.reset(new ros::Time(curr_time));
-  }
-
-  VLOG(1) << "[Hydra Reconstruction] Got ROS input @ " << curr_time.toNSec() << " [ns]";
-
-  // TODO(nathan) consider setting prev_time_ here?
-  pointcloud_queue_.push(cloud);
-}
-
-void RosReconstruction::handlePoseGraph(const PoseGraph::ConstPtr& pose_graph) {
-  if (pose_graph->nodes.empty()) {
-    ROS_ERROR("Received empty pose graph!");
-    return;
-  }
-
-  std::unique_lock<std::mutex> lock(pose_graph_mutex_);
-  pose_graphs_.push_back(pose_graph);
-}
-
 void RosReconstruction::pointcloudSpin() {
   while (!should_shutdown_) {
     bool has_data = pointcloud_queue_.poll();
@@ -252,14 +195,15 @@ void RosReconstruction::pointcloudSpin() {
     }
 
     const auto cloud = pointcloud_queue_.pop();
-
-    ros::Time curr_time;
-    curr_time.fromNSec(cloud->header.stamp * 1000);
+    const auto curr_time = cloud->header.stamp;
+    if (config_.publish_pointcloud && config_.use_image_receiver) {
+      pcl_pub_.publish(cloud);
+    }
 
     VLOG(1) << "[Hydra Reconstruction] popped pointcloud input @ " << curr_time.toNSec()
             << " [ns]";
 
-    ros::WallRate tf_wait_rate(1.0 / ros_config_.tf_wait_duration_s);
+    ros::WallRate tf_wait_rate(1.0 / config_.tf_wait_duration_s);
 
     // note that this is okay in a separate thread from the callback queue because tf2
     // is threadsafe
@@ -296,16 +240,36 @@ void RosReconstruction::pointcloudSpin() {
     } catch (const tf2::TransformException& ex) {
       LOG(ERROR) << "Failed to look up: " << config_.world_frame << " to "
                  << config_.robot_frame;
-      return;
+      continue;
     }
 
     ReconstructionInput::Ptr input(new ReconstructionInput());
     input->timestamp_ns = curr_time.toNSec();
+    if (!fillVoxbloxPointcloud(*cloud,
+                               input->pointcloud,
+                               input->pointcloud_colors,
+                               input->pointcloud_labels,
+                               false)) {
+      std::stringstream ss;
+      for (const auto& field : cloud->fields) {
+        ss << "  - " << field;
+      }
+      LOG(ERROR) << "Invalid pointcloud! fields:" << std::endl << ss.str();
+      continue;
+    }
 
-    input->pointcloud.reset(new voxblox::Pointcloud());
-    input->pointcloud_colors.reset(new voxblox::Colors());
-    voxblox::convertPointcloud(
-        *cloud, nullptr, input->pointcloud.get(), input->pointcloud_colors.get());
+    if (input->pointcloud_labels.size() != input->pointcloud.size()) {
+      const auto colormap_ptr = HydraConfig::instance().getSemanticColorMap();
+      if (!colormap_ptr || !colormap_ptr->isValid()) {
+        LOG(ERROR)
+            << "Label colormap not valid, but required for pointcloud conversion!";
+      }
+
+      const auto& label_colormap = *colormap_ptr;
+      for (const auto& color : input->pointcloud_colors) {
+        input->pointcloud_labels.push_back(label_colormap.getLabelFromColor(color));
+      }
+    }
 
     geometry_msgs::Pose curr_pose = tfToPose(transform.transform);
     tf2::convert(curr_pose.position, input->world_t_body);
@@ -322,7 +286,7 @@ void RosReconstruction::pointcloudSpin() {
 }
 
 void RosReconstruction::visualize(const ReconstructionOutput& output) {
-  if (ros_config_.publish_mesh && output.mesh) {
+  if (config_.publish_mesh && output.mesh) {
     hydra_msgs::ActiveMesh::ConstPtr msg(new hydra_msgs::ActiveMesh());
     auto mesh = const_cast<hydra_msgs::ActiveMesh&>(*msg);
     mesh_pub_.publish(msg);
@@ -334,7 +298,7 @@ void RosReconstruction::visualize(const ReconstructionOutput& output) {
                            *gvd_,
                            *tsdf_,
                            output.timestamp_ns,
-                           mesh_.get());
+                           mesh_->getVoxbloxMesh().get());
     if (config_.gvd.graph_extractor.use_compression_extractor) {
       visualizer_->visualizeExtractor(output.timestamp_ns,
                                       dynamic_cast<CompressionGraphExtractor&>(

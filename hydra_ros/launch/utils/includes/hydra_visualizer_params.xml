@@ -3,6 +3,9 @@
   <arg name="visualizer_ns" default="/hydra_visualizer"/>
   <arg name="world_frame" default="world"/>
   <arg name="color_places_by_distance" default="false"/>
+  <arg name="semantic_map_path" default=""/>
+  <arg name="color_mesh_by_label" default="false"/>
+  <arg name="mesh_namespace" default="dsg_mesh"/>
 
   <group ns="$(arg visualizer_ns)">
     <param name="world_frame" value="$(arg world_frame)"/>
@@ -13,6 +16,8 @@
     <rosparam file="$(arg viz_config_dir)/buildings_layer.yaml" ns="config/layer5"/>
     <rosparam file="$(arg viz_config_dir)/agent_layer.yaml" ns="config/dynamic_layer/2"/>
     <param name="config/color_places_by_distance" value="$(arg color_places_by_distance)"/>
+    <param name="$(arg mesh_namespace)/label_colormap" value="$(arg semantic_map_path)"/>
+    <param name="$(arg mesh_namespace)/color_by_label" value="$(arg color_mesh_by_label)"/>
   </group>
 
 </launch>

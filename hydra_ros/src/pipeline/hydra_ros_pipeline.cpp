@@ -34,6 +34,8 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/pipeline/hydra_ros_pipeline.h"
 
+#include <hydra/common/hydra_config.h>
+
 #include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/pipeline/ros_lcd_registration.h"
 
@@ -66,6 +68,9 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
     : nh(node_handle), prefix(robot_id), log_setup(log_setup) {
   config = load_config<hydra::HydraRosConfig>(nh);
 
+  const auto label_space = load_config<hydra::LabelSpaceConfig>(nh);
+  HydraConfig::instance().setLabelSpaceConfig(label_space);
+
   // TODO(nathan) parse and use at some point
   const LayerId mesh_layer_id = 1;
   const std::map<LayerId, char> layer_id_map{{DsgLayers::OBJECTS, 'o'},
@@ -81,8 +86,14 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
     const auto frontend_config = load_config<FrontendConfig>(nh);
     frontend = std::make_shared<FrontendModule>(
         prefix, frontend_config, frontend_dsg, shared_state, log_setup);
-    reconstruction =
-        std::make_shared<RosReconstruction>(nh, prefix, frontend->getQueue());
+
+    auto reconstruction_config = load_config<RosReconstructionConfig>(nh);
+    if (!loadReconstructionExtrinsics(reconstruction_config)) {
+      LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
+    }
+
+    reconstruction = std::make_shared<RosReconstruction>(
+        nh, prefix, reconstruction_config, frontend->getQueue());
   } else {
     frontend = std::make_shared<RosFrontend>(
         nh, prefix, frontend_dsg, shared_state, log_setup);
@@ -91,7 +102,7 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
   if (config.enable_frontend_output) {
     ros::NodeHandle frontend_nh(nh, "frontend");
     dsg_sender.reset(new DsgSender(
-        frontend_nh, "frontend", true, config.frontend_mesh_separation_s));
+        frontend_nh, "frontend", false, config.frontend_mesh_separation_s));
     mesh_graph_pub =
         nh.advertise<pose_graph_tools::PoseGraph>("mesh_graph_incremental", 100, true);
     mesh_update_pub =
@@ -128,9 +139,10 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
 
   if (config.enable_lcd) {
     auto lcd_config = load_config<LoopClosureConfig>(nh, "");
-    lcd_config.detector.num_semantic_classes = frontend->maxSemanticLabel();
+    lcd_config.detector.num_semantic_classes = HydraConfig::instance().getTotalLabels();
     VLOG(1) << "Number of classes for LCD: "
             << lcd_config.detector.num_semantic_classes;
+
     shared_state->lcd_queue.reset(new InputQueue<LcdInput::Ptr>());
     lcd.reset(new LoopClosureModule(prefix, lcd_config, frontend_dsg, shared_state));
 

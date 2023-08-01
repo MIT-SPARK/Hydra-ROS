@@ -33,65 +33,39 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
-#include <ros/ros.h>
+#include <sensor_msgs/Image.h>
 
-#include <optional>
+#include <array>
 
 namespace hydra {
 
-class DsgSender {
- public:
-  explicit DsgSender(const ros::NodeHandle& nh,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
+struct ColorParser {
+  ColorParser(size_t red_offset,
+              size_t green_offset,
+              size_t blue_offset,
+              size_t pixel_step,
+              int64_t alpha_offset = -1);
 
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
+  std::array<uint8_t, 4> read(const uint8_t* ptr) const;
+  size_t step() const;
 
- private:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  ros::Publisher mesh_pub_;
-  mutable std::optional<uint64_t> last_mesh_time_ns_;
-
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
+  const size_t red_offset;
+  const size_t green_offset;
+  const size_t blue_offset;
+  const size_t pixel_step;
+  const int64_t alpha_offset;
 };
 
-class DsgReceiver {
- public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
+ColorParser createColorParser(const std::string& encoding);
 
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
+struct ColorAdaptor {
+  ColorAdaptor(const sensor_msgs::Image& color);
 
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
+  std::array<uint8_t, 4> read(const sensor_msgs::Image& img,
+                              uint32_t row,
+                              uint32_t col) const;
 
-  inline DynamicSceneGraph::Ptr graph() const { return graph_; }
-
-  inline bool updated() const { return has_update_; }
-
-  inline void clearUpdated() { has_update_ = false; }
-
- private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
-
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
-
-  bool has_update_;
-  DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
-
-  std::unique_ptr<LogCallback> log_callback_;
+  const ColorParser parser;
 };
 
 }  // namespace hydra

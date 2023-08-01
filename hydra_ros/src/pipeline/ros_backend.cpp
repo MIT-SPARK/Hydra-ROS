@@ -102,7 +102,7 @@ RosBackendVisualizer::RosBackendVisualizer(const ros::NodeHandle& nh,
   double min_mesh_separation_s = 0.0;
   nh_.getParam("min_mesh_separation_s", min_mesh_separation_s);
 
-  dsg_sender_.reset(new hydra::DsgSender(nh_, "backend", true, min_mesh_separation_s));
+  dsg_sender_.reset(new hydra::DsgSender(nh_, "backend", false, min_mesh_separation_s));
   if (config_.use_zmq_interface) {
     zmq_sender_.reset(
         new spark_dsg::ZmqSender(config_.zmq_send_url, config_.zmq_num_threads));

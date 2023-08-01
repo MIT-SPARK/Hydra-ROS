@@ -36,100 +36,48 @@
 #include <geometry_msgs/Pose.h>
 #include <hydra/reconstruction/reconstruction_module.h>
 #include <hydra_msgs/QueryFreespace.h>
-#include <pcl/point_types.h>
-#include <pcl_ros/point_cloud.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <tf2_ros/transform_listener.h>
 
-#include "hydra_ros/config/ros_utilities.h"
+#include "hydra_ros/pipeline/ros_reconstruction_config.h"
 #include "hydra_ros/visualizer/topology_server_visualizer.h"
 
 namespace hydra {
 
-enum class ExtrinsicsLookupMode { USE_KIMERA, USE_TF, USE_ROS_PARAMS };
-
-struct RosReconstructionConfig {
-  bool visualize_reconstruction = true;
-  std::string topology_visualizer_ns = "~";
-  bool publish_mesh = false;
-  bool enable_output_queue = false;
-  double pointcloud_separation_s = 0.1;
-  double tf_wait_duration_s = 0.1;
-  double tf_buffer_size_s = 30.0;
-  ExtrinsicsLookupMode extrinsics_mode = ExtrinsicsLookupMode::USE_ROS_PARAMS;
-  std::string kimera_extrinsics_file = "";
-  std::string sensor_frame = "";
-};
-
-}  // namespace hydra
-
-DECLARE_CONFIG_ENUM(hydra,
-                    ExtrinsicsLookupMode,
-                    {ExtrinsicsLookupMode::USE_KIMERA, "USE_KIMERA"},
-                    {ExtrinsicsLookupMode::USE_TF, "USE_TF"},
-                    {ExtrinsicsLookupMode::USE_ROS_PARAMS, "USE_ROS_PARAMS"})
-
-namespace hydra {
-
-template <typename Visitor>
-void visit_config(const Visitor& v, RosReconstructionConfig& config) {
-  v.visit("visualize_reconstruction", config.visualize_reconstruction);
-  v.visit("topology_visualizer_ns", config.topology_visualizer_ns);
-  v.visit("publish_reconstruction_mesh", config.publish_mesh);
-  v.visit("enable_reconstruction_output_queue", config.enable_output_queue);
-  v.visit("pointcloud_separation_s", config.pointcloud_separation_s);
-  v.visit("tf_wait_duration_s", config.tf_wait_duration_s);
-  v.visit("tf_buffer_size_s", config.tf_buffer_size_s);
-  v.visit("extrinsics_mode", config.extrinsics_mode);
-  switch (config.extrinsics_mode) {
-    case ExtrinsicsLookupMode::USE_KIMERA:
-      v.visit("kimera_extrinsics_file", config.kimera_extrinsics_file);
-      break;
-    case ExtrinsicsLookupMode::USE_TF:
-      v.visit("sensor_frame", config.sensor_frame);
-      break;
-    case ExtrinsicsLookupMode::USE_ROS_PARAMS:
-    default:
-      break;
-  }
-}
-
-}  // namespace hydra
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, RosReconstructionConfig);
-
-namespace hydra {
-
-using pose_graph_tools::PoseGraph;
+class ImageReceiver;
 
 class RosReconstruction : public ReconstructionModule {
  public:
-  using Pointcloud = pcl::PointCloud<pcl::PointXYZRGB>;
-  using PointcloudQueue = InputQueue<Pointcloud::ConstPtr>;
+  using PointcloudQueue = InputQueue<sensor_msgs::PointCloud2::ConstPtr>;
 
   RosReconstruction(const ros::NodeHandle& nh,
                     const RobotPrefixConfig& prefix,
+                    const RosReconstructionConfig& config,
                     const OutputQueue::Ptr& output_queue = nullptr);
 
   virtual ~RosReconstruction();
 
-  void handlePointcloud(const Pointcloud::ConstPtr& cloud);
+  void handlePointcloud(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-  void handlePoseGraph(const PoseGraph::ConstPtr& pose_graph);
+  void handlePoseGraph(const pose_graph_tools::PoseGraph::ConstPtr& pose_graph);
 
   bool handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
                           hydra_msgs::QueryFreespace::Response& res);
 
  protected:
+  bool checkPointcloudTimestamp(const ros::Time& curr_time);
+
   void pointcloudSpin();
 
   void visualize(const ReconstructionOutput& output);
 
   ros::NodeHandle nh_;
-  RosReconstructionConfig ros_config_;
+  const RosReconstructionConfig config_;
 
   ros::Subscriber pcl_sub_;
+  std::unique_ptr<ImageReceiver> image_receiver_;
   ros::Subscriber pose_graph_sub_;
   std::unique_ptr<tf2_ros::Buffer> buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
@@ -137,12 +85,14 @@ class RosReconstruction : public ReconstructionModule {
   PointcloudQueue pointcloud_queue_;
   std::unique_ptr<std::thread> pointcloud_thread_;
   std::unique_ptr<ros::Time> last_time_received_;
+
   std::mutex pose_graph_mutex_;
-  std::list<PoseGraph::ConstPtr> pose_graphs_;
+  std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
 
   // visualizer
   std::unique_ptr<TopologyServerVisualizer> visualizer_;
   ros::Publisher mesh_pub_;
+  ros::Publisher pcl_pub_;
 
   // freespace query
   ros::ServiceServer freespace_server_;

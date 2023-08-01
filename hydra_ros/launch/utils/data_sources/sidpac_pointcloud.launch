@@ -4,6 +4,7 @@
 
     <arg name="use_semantics" default="true"/>
     <arg name="use_gt_frame" default="true"/>
+    <arg name="use_image_interface" default="false"/>
     <arg name="robot_frame" default="base_link"/>
 
     <arg name="rgb_info_topic" default="/azure/rgb/camera_info"/>
@@ -17,8 +18,10 @@
     <include file="$(find hydra_ros)/launch/utils/includes/rgbd_to_pointcloud.xml" pass_all_args="true"
              unless="$(arg use_semantics)"/>
 
-    <include file="$(find semantic_recolor)/launch/semantic_recolor_pointcloud.launch" pass_all_args="true"
+    <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true"
              if="$(arg use_semantics)">
          <arg name="verbose" value="false"/>
+         <arg name="enable_pointcloud" value="true" unless="$(arg use_image_interface)"/>
+         <arg name="enable_pointcloud" value="false" if="$(arg use_image_interface)"/>
      </include>
 </launch>

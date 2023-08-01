@@ -11,5 +11,7 @@
               file="$(find hydra_ros)/tests/resources/map_config.yaml"
               ns="/map_test_config"/>
 
+    <param name="/color_label_conversion/semantic_map" value="$(find hydra_ros)/tests/resources/test_label_map.csv"/>
+
     <test pkg="hydra_ros" type="test_hydra_ros" test-name="test_hydra_ros"/>
 </launch>

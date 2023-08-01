@@ -63,6 +63,7 @@ DEFINE_double(voxel_size, 0.1, "voxel size");
 using config_parser::ConfigVisitor;
 using config_parser::YamlParser;
 using config_parser::YamlParserImpl;
+using hydra::SemanticMeshLayer;
 using hydra::TopologyServerVisualizer;
 using hydra::places::ComboIntegrator;
 using hydra::places::GvdVoxel;
@@ -77,7 +78,7 @@ using voxblox::TsdfVoxel;
 using Policy = message_filters::sync_policies::ApproximateTime<Image, Image>;
 using TimeSync = message_filters::Synchronizer<Policy>;
 using TsdfConfig = voxblox::TsdfIntegratorBase::Config;
-using MeshConfig = voxblox::MeshIntegratorConfig;
+using MeshConfig = hydra::MeshIntegratorConfig;
 using GvdConfig = hydra::places::GvdIntegratorConfig;
 
 struct ComparisonResult {
@@ -261,9 +262,9 @@ struct GvdValidator {
     tsdf_integrator = TsdfIntegratorFactory::create("fast", tsdf_config, tsdf.get());
 
     gvd.reset(new Layer<GvdVoxel>(voxel_size, voxels_per_side));
-    mesh.reset(new MeshLayer(tsdf->block_size()));
+    mesh.reset(new SemanticMeshLayer(tsdf->block_size()));
     gvd_integrator.reset(
-        new ComboIntegrator(gvd_config, tsdf.get(), gvd, mesh, &mesh_config));
+        new ComboIntegrator(gvd_config, tsdf, gvd, mesh, &mesh_config));
   }
 
   void addTfsFromBag(const rosbag::Bag& bag) {
@@ -368,9 +369,9 @@ struct GvdValidator {
     gvd_integrator->update(rgb_msg->header.stamp.toNSec(), true, true);
 
     full_gvd.reset(new Layer<GvdVoxel>(voxel_size, voxels_per_side));
-    full_mesh.reset(new MeshLayer(tsdf->block_size()));
+    full_mesh.reset(new SemanticMeshLayer(tsdf->block_size()));
     full_gvd_integrator.reset(
-        new ComboIntegrator(gvd_config, tsdf.get(), full_gvd, full_mesh, &mesh_config));
+        new ComboIntegrator(gvd_config, tsdf, full_gvd, full_mesh, &mesh_config));
 
     VLOG(2) << "";
     VLOG(2) << "====================================================================";
@@ -397,7 +398,8 @@ struct GvdValidator {
       visualizer->visualizeError(*gvd, *full_gvd, 0.0, timestamp_ns);
 
       voxblox_msgs::Mesh mesh_msg;
-      generateVoxbloxMeshMsg(mesh, voxblox::ColorMode::kLambertColor, &mesh_msg);
+      generateVoxbloxMeshMsg(
+          mesh->getVoxbloxMesh(), voxblox::ColorMode::kLambertColor, &mesh_msg);
       mesh_msg.header.frame_id = "world";
       mesh_msg.header.stamp = rgb_msg->header.stamp;
       mesh_pub.publish(mesh_msg);
@@ -491,12 +493,12 @@ struct GvdValidator {
   TsdfIntegratorBase::Ptr tsdf_integrator;
 
   Layer<GvdVoxel>::Ptr gvd;
-  MeshLayer::Ptr mesh;
+  SemanticMeshLayer::Ptr mesh;
   std::unique_ptr<ComboIntegrator> gvd_integrator;
   std::unique_ptr<TopologyServerVisualizer> visualizer;
 
   Layer<GvdVoxel>::Ptr full_gvd;
-  MeshLayer::Ptr full_mesh;
+  SemanticMeshLayer::Ptr full_mesh;
   std::unique_ptr<ComboIntegrator> full_gvd_integrator;
   std::unique_ptr<TopologyServerVisualizer> full_visualizer;
 

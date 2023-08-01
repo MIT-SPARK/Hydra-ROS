@@ -37,7 +37,6 @@
 #include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/pipeline/ros_backend.h"
 #include "hydra_ros/pipeline/ros_frontend.h"
-#include "hydra_ros/visualizer/dsg_mesh_plugins.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
 namespace hydra {

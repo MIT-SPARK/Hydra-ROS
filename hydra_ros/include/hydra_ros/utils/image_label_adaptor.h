@@ -33,65 +33,26 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
-#include <ros/ros.h>
+#include <sensor_msgs/Image.h>
 
-#include <optional>
+#include <cstdint>
+#include <memory>
 
 namespace hydra {
 
-class DsgSender {
- public:
-  explicit DsgSender(const ros::NodeHandle& nh,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
-
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
-
- private:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  ros::Publisher mesh_pub_;
-  mutable std::optional<uint64_t> last_mesh_time_ns_;
-
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
+struct LabelParser {
+  using Ptr = std::unique_ptr<LabelParser>;
+  virtual uint32_t read(const uint8_t* ptr) const = 0;
+  virtual size_t step() const = 0;
 };
 
-class DsgReceiver {
+class LabelAdaptor {
  public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
-
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
-
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
-
-  inline DynamicSceneGraph::Ptr graph() const { return graph_; }
-
-  inline bool updated() const { return has_update_; }
-
-  inline void clearUpdated() { has_update_ = false; }
+  LabelAdaptor(const sensor_msgs::Image& img);
+  uint32_t read(const sensor_msgs::Image& img, uint32_t row, uint32_t col) const;
 
  private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
-
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
-
-  bool has_update_;
-  DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
-
-  std::unique_ptr<LogCallback> log_callback_;
+  LabelParser::Ptr parser_;
 };
 
 }  // namespace hydra

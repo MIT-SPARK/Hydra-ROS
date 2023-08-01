@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Boost REQUIRED COMPONENTS timer)
-# find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(spark_dsg REQUIRED)
 find_package(GTSAM REQUIRED)
 find_package(Eigen3 REQUIRED)
@@ -70,11 +69,18 @@ add_library(
   src/pipeline/ros_frontend.cpp
   src/pipeline/ros_lcd_registration.cpp
   src/pipeline/ros_reconstruction.cpp
+  src/pipeline/ros_reconstruction_config.cpp
   src/utils/dsg_streaming_interface.cpp
+  src/utils/image_color_adaptor.cpp
+  src/utils/image_depth_adaptor.cpp
+  src/utils/image_label_adaptor.cpp
+  src/utils/image_receiver.cpp
+  src/utils/image_to_pointcloud.cpp
   src/utils/mask_nodelet.cpp
   src/utils/node_utilities.cpp
+  src/utils/pointcloud_adaptor.cpp
   src/visualizer/colormap_utilities.cpp
-  src/visualizer/dsg_mesh_plugins.cpp
+  src/visualizer/mesh_plugin.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
   src/visualizer/gvd_visualization_utilities.cpp
   src/visualizer/topology_server_visualizer.cpp

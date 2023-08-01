@@ -33,65 +33,40 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
-#include <ros/ros.h>
+#include <std_srvs/SetBool.h>
 
-#include <optional>
+#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+
+namespace kimera {
+class SemanticColorMap;
+}  // namespace kimera
 
 namespace hydra {
 
-class DsgSender {
+class MeshPlugin : public DsgVisualizerPlugin {
  public:
-  explicit DsgSender(const ros::NodeHandle& nh,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
+  using Vertices = DynamicSceneGraph::MeshVertices;
+  using Labels = std::vector<uint32_t>;
+  using LabelsPtr = std::shared_ptr<Labels>;
 
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
+  MeshPlugin(const ros::NodeHandle& nh, const std::string& name);
 
- private:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
+  virtual ~MeshPlugin();
+
+  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+ protected:
+  bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+
+  Vertices::Ptr colorVerticesByLabel(const Vertices::Ptr& vertices,
+                                     const LabelsPtr& labels) const;
+
+  bool color_by_label_;
   ros::Publisher mesh_pub_;
-  mutable std::optional<uint64_t> last_mesh_time_ns_;
-
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
-};
-
-class DsgReceiver {
- public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
-
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
-
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
-
-  inline DynamicSceneGraph::Ptr graph() const { return graph_; }
-
-  inline bool updated() const { return has_update_; }
-
-  inline void clearUpdated() { has_update_ = false; }
-
- private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
-
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
-
-  bool has_update_;
-  DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
-
-  std::unique_ptr<LogCallback> log_callback_;
+  ros::ServiceServer toggle_service_;
+  std::unique_ptr<kimera::SemanticColorMap> colormap_;
 };
 
 }  // namespace hydra

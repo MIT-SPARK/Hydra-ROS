@@ -32,66 +32,58 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
-#include <ros/ros.h>
+#include "hydra_ros/utils/image_color_adaptor.h"
 
-#include <optional>
+#include <sensor_msgs/image_encodings.h>
 
 namespace hydra {
 
-class DsgSender {
- public:
-  explicit DsgSender(const ros::NodeHandle& nh,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
+ColorParser::ColorParser(size_t red_offset,
+                         size_t green_offset,
+                         size_t blue_offset,
+                         size_t pixel_step,
+                         int64_t alpha_offset)
+    : red_offset(red_offset),
+      green_offset(green_offset),
+      blue_offset(blue_offset),
+      pixel_step(pixel_step),
+      alpha_offset(alpha_offset) {}
 
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
+std::array<uint8_t, 4> ColorParser::read(const uint8_t* ptr) const {
+  std::array<uint8_t, 4> color;
+  color[0] = *(ptr + red_offset);
+  color[1] = *(ptr + green_offset);
+  color[2] = *(ptr + blue_offset);
+  color[3] = (alpha_offset == -1) ? 255 : *(ptr + alpha_offset);
+  return color;
+}
 
- private:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  ros::Publisher mesh_pub_;
-  mutable std::optional<uint64_t> last_mesh_time_ns_;
+size_t ColorParser::step() const { return pixel_step; }
 
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
-};
+ColorParser createColorParser(const std::string& encoding) {
+  if (encoding == sensor_msgs::image_encodings::RGB8) {
+    return ColorParser(0, 1, 2, 3);
+  } else if (encoding == sensor_msgs::image_encodings::BGR8) {
+    return ColorParser(2, 1, 0, 3);
+  } else if (encoding == sensor_msgs::image_encodings::RGBA8) {
+    return ColorParser(0, 1, 2, 4, 3);
+  } else if (encoding == sensor_msgs::image_encodings::BGRA8) {
+    return ColorParser(2, 1, 0, 4, 3);
+  } else if (encoding == sensor_msgs::image_encodings::MONO8) {
+    return ColorParser(0, 0, 0, 1);
+  } else {
+    throw std::domain_error("invalid color image encoding: " + encoding);
+  }
+}
 
-class DsgReceiver {
- public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
+ColorAdaptor::ColorAdaptor(const sensor_msgs::Image& color)
+    : parser(createColorParser(color.encoding)) {}
 
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
-
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
-
-  inline DynamicSceneGraph::Ptr graph() const { return graph_; }
-
-  inline bool updated() const { return has_update_; }
-
-  inline void clearUpdated() { has_update_ = false; }
-
- private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
-
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
-
-  bool has_update_;
-  DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
-
-  std::unique_ptr<LogCallback> log_callback_;
-};
+std::array<uint8_t, 4> ColorAdaptor::read(const sensor_msgs::Image& img,
+                                          uint32_t row,
+                                          uint32_t col) const {
+  const uint8_t* rgb = &img.data[0] + row * img.step + col * parser.step();
+  return parser.read(rgb);
+}
 
 }  // namespace hydra

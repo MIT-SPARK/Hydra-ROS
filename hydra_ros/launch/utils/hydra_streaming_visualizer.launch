@@ -8,6 +8,8 @@
   <arg name="color_places_by_distance" default="$(arg show_frontend)"/>
   <arg name="mesh_plugin_type" default="PGMO"/>
   <arg name="world_frame" default="world"/>
+  <arg name="semantic_map_path" default=""/>
+  <arg name="color_mesh_by_label" default="false"/>
 
   <arg name="viz_config_dir" default="$(find hydra_ros)/config/hydra_visualizer"/>
   <arg name="visualizer_ns" default="/hydra_dsg_visualizer"/>
@@ -29,6 +31,8 @@
       <arg name="visualizer_ns" value="$(arg visualizer_ns)"/>
       <arg name="color_places_by_distance" default="$(arg color_places_by_distance)"/>
       <arg name="world_frame" value="$(arg world_frame)"/>
+      <arg name="color_mesh_by_label" value="$(arg color_mesh_by_label)"/>
+      <arg name="semantic_map_path" value="$(arg semantic_map_path)"/>
   </include>
 
   <node pkg="hydra_ros" type="hydra_visualizer_node" name="hydra_visualizer_node"

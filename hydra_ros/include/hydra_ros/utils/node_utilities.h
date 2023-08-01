@@ -36,7 +36,6 @@
 #include <hydra/common/dsg_types.h>
 #include <hydra/utils/log_utilities.h>
 #include <ros/ros.h>
-#include <ros/topic_manager.h>
 #include <std_srvs/Empty.h>
 
 namespace hydra {
@@ -54,9 +53,7 @@ struct ServiceFunctor {
   bool should_exit;
 };
 
-inline bool haveClock() {
-  return ros::TopicManager::instance()->getNumPublishers("/clock");
-}
+bool haveClock();
 
 ExitMode getExitMode(const ros::NodeHandle& nh);
 

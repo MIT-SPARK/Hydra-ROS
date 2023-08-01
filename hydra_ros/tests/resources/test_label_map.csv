@@ -1,0 +1,4 @@
+name,red,green,blue,alpha,id
+test_1,0,1,2,255,0
+test_2,3,4,5,255,1
+test_3,6,7,8,255,2

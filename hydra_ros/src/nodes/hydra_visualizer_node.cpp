@@ -41,8 +41,8 @@
 
 #include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/utils/dsg_streaming_interface.h"
-#include "hydra_ros/visualizer/dsg_mesh_plugins.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
+#include "hydra_ros/visualizer/mesh_plugin.h"
 
 using DsgVisualizer = hydra::DynamicSceneGraphVisualizer;
 using spark_dsg::getDefaultLayerIds;
@@ -50,11 +50,6 @@ using spark_dsg::getDefaultLayerIds;
 namespace hydra {
 
 struct NodeConfig {
-  enum class MeshPluginType {
-    VOXBLOX,
-    RVIZ,
-    PGMO,
-  } mesh_plugin_type = MeshPluginType::PGMO;
   bool load_graph = false;
   std::string scene_graph_filepath = "";
   std::string visualizer_ns = "/hydra_dsg_visualizer";
@@ -64,15 +59,12 @@ struct NodeConfig {
 
 template <typename Visitor>
 void visit_config(const Visitor& v, NodeConfig& config) {
-  v.visit("mesh_plugin_type", config.mesh_plugin_type);
   v.visit("load_graph", config.load_graph);
   v.visit("scene_graph_filepath", config.scene_graph_filepath);
   v.visit("visualizer_ns", config.visualizer_ns);
   v.visit("mesh_plugin_ns", config.mesh_plugin_ns);
   v.visit("output_path", config.output_path);
 }
-
-using MeshPluginEnum = NodeConfig::MeshPluginType;
 
 struct RosParamLogger : config_parser::Logger {
   inline void log_missing(const std::string& message) const override {
@@ -82,28 +74,9 @@ struct RosParamLogger : config_parser::Logger {
 
 }  // namespace hydra
 
-DECLARE_CONFIG_ENUM(hydra,
-                    MeshPluginEnum,
-                    {MeshPluginEnum::VOXBLOX, "VOXBLOX"},
-                    {MeshPluginEnum::PGMO, "PGMO"},
-                    {MeshPluginEnum::RVIZ, "RVIZ"})
-
 DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, NodeConfig)
 
 namespace hydra {
-
-std::string getSpecificMeshNs(const std::string& mesh_ns, MeshPluginEnum mesh_type) {
-  switch (mesh_type) {
-    case MeshPluginEnum::VOXBLOX:
-      return mesh_ns + "/voxblox";
-    case MeshPluginEnum::PGMO:
-      return mesh_ns + "/pgmo";
-    case MeshPluginEnum::RVIZ:
-      return mesh_ns + "/rviz";
-    default:
-      return mesh_ns;
-  }
-}
 
 struct VisualizerNode {
   VisualizerNode(const ros::NodeHandle& nh) : nh_(nh) {
@@ -113,23 +86,8 @@ struct VisualizerNode {
 
     ros::NodeHandle viz_nh(config_.visualizer_ns);
     visualizer_.reset(new DsgVisualizer(viz_nh, getDefaultLayerIds()));
-
-    auto mesh_ns = getSpecificMeshNs(config_.mesh_plugin_ns, config_.mesh_plugin_type);
-    hydra::DsgVisualizerPlugin::Ptr plugin;
-    switch (config_.mesh_plugin_type) {
-      case MeshPluginEnum::VOXBLOX:
-        plugin = std::make_shared<VoxbloxMeshPlugin>(viz_nh, mesh_ns);
-        break;
-      case MeshPluginEnum::RVIZ:
-        plugin = std::make_shared<RvizMeshPlugin>(viz_nh, mesh_ns);
-        break;
-      case MeshPluginEnum::PGMO:
-      default:
-        plugin = std::make_shared<PgmoMeshPlugin>(viz_nh, mesh_ns);
-        break;
-    }
-
-    visualizer_->addPlugin(plugin);
+    visualizer_->addPlugin(
+        std::make_shared<MeshPlugin>(viz_nh, config_.mesh_plugin_ns));
 
     if (!config_.output_path.empty()) {
       size_log_file_.reset(
