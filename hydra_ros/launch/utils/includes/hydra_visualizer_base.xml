@@ -6,7 +6,7 @@
   <arg name="publish_view_transforms" default="true"/>
   <arg name="world_frame" default="world"/>
 
-  <include file="$(find hydra_ros)/launch/utils/includes/hydra_visualizer_params.xml">
+  <include file="$(find hydra_ros)/launch/utils/includes/hydra_visualizer_params.xml" pass_all_args="true">
       <arg name="viz_config_dir" value="$(arg viz_config_dir)"/>
       <arg name="visualizer_ns" value="$(arg visualizer_ns)"/>
       <arg name="world_frame" default="$(arg world_frame)"/>
