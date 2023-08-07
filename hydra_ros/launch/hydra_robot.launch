@@ -26,8 +26,8 @@
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
+        <arg name="override_default_lcd" default="true"/>
         <arg name="config_dir" default="$(find hydra)/config/default_robot"/>
-        <arg name="reconstruction_config" default="$(find hydra)/config/default_topology_config.yaml"/>
         <arg name="extrinsics_mode" value="USE_KIMERA"/>
         <arg name="kimera_extrinsics_file" default="$(find hydra_vio_configs)/config/robots/$(arg kimera_name)/LeftCameraParams.yaml"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>

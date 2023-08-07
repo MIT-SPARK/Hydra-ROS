@@ -40,12 +40,9 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/point_cloud.h>
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
 
-#include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 #include "hydra_ros/utils/semantic_ros_publishers.h"
 
@@ -59,7 +56,8 @@ using ObjectCloudPub = SemanticRosPublishers<uint8_t, MeshSegmenter::MeshVertexC
 using MeshVertexCloud = MeshSegmenter::MeshVertexCloud;
 using LabelIndices = MeshSegmenter::LabelIndices;
 
-struct ROSFrontendConfig {
+struct RosFrontendConfig : public FrontendConfig {
+  std::string frontend_ns = "~";
   bool enable_active_mesh_pub = false;
   bool enable_segmented_mesh_pub = false;
   std::string world_frame = "world";
@@ -68,22 +66,13 @@ struct ROSFrontendConfig {
   bool use_posegraph_pos = true;
 };
 
-template <typename Visitor>
-void visit_config(const Visitor& v, ROSFrontendConfig& config) {
-  v.visit("enable_active_mesh_pub", config.enable_active_mesh_pub);
-  v.visit("enable_segmented_mesh_pub", config.enable_segmented_mesh_pub);
-  v.visit("world_frame", config.world_frame);
-  v.visit("sensor_frame", config.sensor_frame);
-  v.visit("use_latest_tf", config.use_latest_tf);
-  v.visit("use_posegraph_pos", config.use_posegraph_pos);
-}
-
-struct RosFrontend : public FrontendModule {
+class RosFrontend : public FrontendModule {
+ public:
   using Policy =
       message_filters::sync_policies::ApproximateTime<ActiveLayer, ActiveMesh>;
   using Sync = message_filters::Synchronizer<Policy>;
 
-  RosFrontend(const ros::NodeHandle& nh,
+  RosFrontend(const RosFrontendConfig& config,
               const RobotPrefixConfig& prefix,
               const SharedDsgInfo::Ptr& dsg,
               const SharedModuleState::Ptr& state,
@@ -91,6 +80,9 @@ struct RosFrontend : public FrontendModule {
 
   ~RosFrontend();
 
+  std::string printInfo() const override;
+
+ protected:
   void inputCallback(const ActiveLayer::ConstPtr& places,
                      const ActiveMesh::ConstPtr& mesh);
 
@@ -109,8 +101,9 @@ struct RosFrontend : public FrontendModule {
   std::optional<Eigen::Vector3d> getLatestPositionTf(
       const ros::Time& time_to_use) const;
 
+ protected:
+  const RosFrontendConfig config_;
   ros::NodeHandle nh_;
-  ROSFrontendConfig ros_config_;
   std::list<PoseGraph::ConstPtr> pose_graph_queue_;
 
   std::unique_ptr<message_filters::Subscriber<ActiveLayer>> places_sub_;
@@ -124,8 +117,15 @@ struct RosFrontend : public FrontendModule {
 
   ros::Publisher active_vertices_pub_;
   std::unique_ptr<ObjectCloudPub> segmented_vertices_pub_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<FrontendModule,
+                                     RosFrontend,
+                                     RosFrontendConfig,
+                                     RobotPrefixConfig,
+                                     SharedDsgInfo::Ptr,
+                                     SharedModuleState::Ptr,
+                                     LogSetup::Ptr>("RosFrontend");
 };
 
 }  // namespace hydra
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, ROSFrontendConfig)

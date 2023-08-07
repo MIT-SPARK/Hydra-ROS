@@ -32,6 +32,7 @@
         <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true"
             if="$(arg use_semantics)">
              <arg name="verbose" value="false"/>
+             <arg name="debug" value="false"/>
              <arg name="rgb_image_transport" value="compressed" if="$(arg need_compressed)"/>
              <arg name="rgb_image_transport" value="raw" unless="$(arg need_compressed)"/>
              <arg name="enable_pointcloud" value="true" unless="$(arg use_image_interface)"/>

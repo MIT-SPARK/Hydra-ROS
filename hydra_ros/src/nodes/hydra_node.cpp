@@ -32,17 +32,16 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <config_utilities/formatting/asl.h>
+#include <config_utilities/logging/log_to_glog.h>
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/settings.h>
+#include <config_utilities/validation.h>
 #include <hydra/utils/log_utilities.h>
 #include <hydra/utils/timing_utilities.h>
 
-#include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/pipeline/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, LogConfig);
-namespace hydra {
-DECLARE_STRUCT_NAME(LogConfig);
-}  // namespace hydra
 
 using hydra::timing::ElapsedTimeRecorder;
 
@@ -56,19 +55,21 @@ int main(int argc, char* argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
+  config::Settings().setLogger("glog");
+  config::Settings().print_width = 100;
+  config::Settings().print_indent = 45;
 
   ros::NodeHandle nh("~");
-
-  const auto log_config = hydra::load_config<hydra::LogConfig>(nh, "", false);
+  const auto log_config = config::fromRos<hydra::LogConfig>(nh);
   auto logs = std::make_shared<hydra::LogSetup>(log_config);
-
   hydra::configureTimers(nh, logs);
   hydra::parseObjectNamesFromRos(nh);
 
   int robot_id = 0;
   nh.getParam("robot_id", robot_id);
 
-  hydra::HydraRosPipeline hydra(nh, robot_id, logs);
+  const auto config = config::checkValid(config::fromRos<hydra::HydraRosConfig>(nh));
+  hydra::HydraRosPipeline hydra(config, nh, robot_id, logs);
   hydra.start();
 
   hydra::spinAndWait(nh);

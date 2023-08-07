@@ -20,8 +20,6 @@
     <arg name="depth_topic" default="forward/depth/image_rect_raw"/>
     <arg name="label_topic" default="semantic/image_raw"/>
 
-    <arg name="reconstruction_config_path" default="$(find hydra)/config/simmons_jackal/reconstruction_config.yaml"/>
-
     <include file="$(find hydra_ros)/launch/utils/data_sources/jackal_pointcloud.launch"
              pass_all_args="true"/>
 

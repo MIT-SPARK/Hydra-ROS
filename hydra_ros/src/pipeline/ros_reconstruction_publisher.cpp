@@ -32,42 +32,66 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <config_utilities/parsing/ros.h>
-#include <glog/logging.h>
-#include <hydra/utils/log_utilities.h>
+#include <geometry_msgs/TransformStamped.h>
+#include <hydra/common/hydra_config.h>
+#include <hydra/places/gvd_integrator.h>
+#include <hydra_msgs/ActiveLayer.h>
+#include <hydra_msgs/ActiveMesh.h>
+#include <hydra_msgs/QueryFreespace.h>
+#include <kimera_semantics/color.h>
+#include <tf2_eigen/tf2_eigen.h>
+#include <voxblox_msgs/Mesh.h>
+#include <voxblox_ros/mesh_vis.h>
 
 #include "hydra_ros/pipeline/ros_reconstruction.h"
-#include "hydra_ros/utils/node_utilities.h"
+#include "hydra_ros/utils/image_receiver.h"
+#include "hydra_ros/utils/pointcloud_adaptor.h"
 
-int main(int argc, char* argv[]) {
-  ros::init(argc, argv, "hydra_topology_node");
+namespace hydra {
 
-  FLAGS_minloglevel = 3;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+/*  output_callbacks_.push_back(*/
+/*[this](const ReconstructionModule&, const ReconstructionOutput& output) {*/
+/*this->visualize(output);*/
+/*});*/
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-
-  ros::NodeHandle nh("~");
-
-  const auto log_config = config::fromRos<hydra::LogConfig>(nh);
-  auto logs = std::make_shared<hydra::LogSetup>(log_config);
-
-  hydra::configureTimers(nh, logs);
-  const hydra::RobotPrefixConfig prefix(nh.param<int>("robot_id", 0));
-
-  auto reconstruction_config = config::fromRos<hydra::RosReconstructionConfig>(nh);
-  if (!hydra::loadReconstructionExtrinsics(reconstruction_config)) {
-    LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
+RosReconstructionPublisher::RosReconstructionPublisher(const ros::NodeHandle& nh)
+    : nh_(nh) {
+  if (config_.publish_mesh) {
+    mesh_pub_ = nh_.advertise<voxblox_msgs::Mesh>("mesh", 10);
   }
 
-  hydra::RosReconstruction module(reconstruction_config, nh, prefix);
-  module.start();
+  bool visualize_reconstruction = true;
+  std::string topology_visualizer_ns = "~";
+  field(conf.visualize_reconstruction, "visualize_reconstruction");
+  field(conf.topology_visualizer_ns, "topology_visualizer_ns");
 
-  ros::spin();
-
-  module.stop();
-  module.save(*logs);
-  return 0;
+  if (config_.visualize_reconstruction) {
+    visualizer_.reset(new TopologyServerVisualizer(config_.topology_visualizer_ns));
+  }
 }
+
+RosReconstructionPublisher::~RosReconstructionPublisher() { stop(); }
+
+void RosReconstructionPublisher::visualize(const ReconstructionOutput& output) {
+  if (config_.publish_mesh && output.mesh) {
+    hydra_msgs::ActiveMesh::ConstPtr msg(new hydra_msgs::ActiveMesh());
+    auto mesh = const_cast<hydra_msgs::ActiveMesh&>(*msg);
+    mesh_pub_.publish(msg);
+  }
+
+  if (visualizer_) {
+    visualizer_->visualize(gvd_integrator_->getGraph(),
+                           gvd_integrator_->getGvdGraph(),
+                           *gvd_,
+                           *tsdf_,
+                           output.timestamp_ns,
+                           mesh_->getVoxbloxMesh().get());
+    if (config_.gvd.graph_extractor.use_compression_extractor) {
+      visualizer_->visualizeExtractor(output.timestamp_ns,
+                                      dynamic_cast<CompressionGraphExtractor&>(
+                                          gvd_integrator_->getGraphExtractor()));
+    }
+  }
+}
+
+}  // namespace hydra

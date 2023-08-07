@@ -6,28 +6,25 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(Boost REQUIRED COMPONENTS timer)
-find_package(spark_dsg REQUIRED)
-find_package(GTSAM REQUIRED)
-find_package(Eigen3 REQUIRED)
-find_package(yaml-cpp REQUIRED)
+find_package(OpenCV REQUIRED)
 # TODO(nathan) find hydra independently
+# TODO(nathan) think about private deps
 find_package(
   catkin REQUIRED
-  COMPONENTS roscpp
-             dynamic_reconfigure
-             std_msgs
+  COMPONENTS dynamic_reconfigure
              geometry_msgs
-             visualization_msgs
+             hydra
              hydra_msgs
+             image_transport
+             kimera_pgmo
              pcl_ros
+             pose_graph_tools
+             roscpp
+             std_msgs
              tf2_eigen
              tf2_ros
-             kimera_pgmo
+             visualization_msgs
              voxblox_ros
-             pose_graph_tools
-             kimera_semantics_ros
-             hydra
 )
 
 catkin_python_setup()
@@ -42,31 +39,32 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   CATKIN_DEPENDS
-  roscpp
   dynamic_reconfigure
-  std_msgs
   geometry_msgs
-  visualization_msgs
   hydra
   hydra_msgs
+  image_transport
+  kimera_pgmo
   pcl_ros
+  pose_graph_tools
+  roscpp
+  std_msgs
   tf2_eigen
   tf2_ros
-  kimera_pgmo
+  visualization_msgs
   voxblox_ros
-  pose_graph_tools
-  kimera_semantics_ros
-  DEPENDS spark_dsg
+  DEPENDS
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
 
 add_library(
   ${PROJECT_NAME}
-  src/config/ros_parser.cpp
   src/pipeline/hydra_ros_pipeline.cpp
   src/pipeline/ros_backend.cpp
+  src/pipeline/ros_backend_publisher.cpp
   src/pipeline/ros_frontend.cpp
+  src/pipeline/ros_frontend_publisher.cpp
   src/pipeline/ros_lcd_registration.cpp
   src/pipeline/ros_reconstruction.cpp
   src/pipeline/ros_reconstruction_config.cpp
@@ -83,16 +81,19 @@ add_library(
   src/visualizer/mesh_plugin.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
   src/visualizer/gvd_visualization_utilities.cpp
-  src/visualizer/topology_server_visualizer.cpp
+  src/visualizer/reconstruction_visualizer.cpp
   src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp
 )
-target_include_directories(${PROJECT_NAME} PUBLIC include ${catkin_INCLUDE_DIRS})
+target_include_directories(
+  ${PROJECT_NAME}
+  PUBLIC include ${catkin_INCLUDE_DIRS}
+  PRIVATE ${OpenCV_INCLUDE_DIRS}
+)
 target_link_libraries(
   ${PROJECT_NAME}
-  ${catkin_LIBRARIES}
-  spark_dsg::spark_dsg
-  gtsam
+  PUBLIC ${catkin_LIBRARIES}
+  PRIVATE ${OpenCV_LIBRARIES}
 )
 add_dependencies(
   ${PROJECT_NAME} ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS}
@@ -102,30 +103,37 @@ add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
 target_link_libraries(dsg_optimizer_node ${PROJECT_NAME})
 
 add_executable(gvd_validator_node src/nodes/gvd_validator_node.cpp)
-target_link_libraries(gvd_validator_node PUBLIC ${PROJECT_NAME} yaml-cpp)
+target_link_libraries(gvd_validator_node ${PROJECT_NAME})
 
 add_executable(hydra_ros_node src/nodes/hydra_node.cpp)
-target_link_libraries(hydra_ros_node PUBLIC ${PROJECT_NAME})
+target_link_libraries(hydra_ros_node ${PROJECT_NAME})
 
 add_executable(hydra_topology_node src/nodes/hydra_topology_node.cpp)
-target_link_libraries(hydra_topology_node PUBLIC ${PROJECT_NAME} Boost::boost)
+target_link_libraries(hydra_topology_node ${PROJECT_NAME})
 
 add_executable(hydra_visualizer_node src/nodes/hydra_visualizer_node.cpp)
-target_link_libraries(hydra_visualizer_node PUBLIC ${PROJECT_NAME})
+target_link_libraries(hydra_visualizer_node ${PROJECT_NAME})
 
 add_executable(rotate_tf_node src/nodes/rotate_tf_node.cpp)
-target_link_libraries(rotate_tf_node PUBLIC ${PROJECT_NAME})
+target_include_directories(rotate_tf_node PUBLIC ${catkin_INCLUDE_DIRS})
+target_link_libraries(rotate_tf_node PUBLIC ${catkin_LIBRARIES})
 
 add_executable(scene_graph_logger_node src/nodes/scene_graph_logger_node.cpp)
-target_link_libraries(scene_graph_logger_node PUBLIC ${PROJECT_NAME})
+target_link_libraries(scene_graph_logger_node ${PROJECT_NAME})
 
 if(CATKIN_ENABLE_TESTING)
   add_subdirectory(tests)
 endif()
 
-# TODO(nathan) handle install
 install(
-  TARGETS ${PROJECT_NAME} hydra_ros_node
+  TARGETS ${PROJECT_NAME}
+          dsg_optimizer_node
+          gvd_validator_node
+          hydra_ros_node
+          hydra_topology_node
+          hydra_visualizer_node
+          rotate_tf_node
+          scene_graph_logger_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
@@ -134,6 +142,8 @@ install(
 install(DIRECTORY include/${PROJECT_NAME}/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 )
+
+install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
 
 catkin_install_python(
   PROGRAMS

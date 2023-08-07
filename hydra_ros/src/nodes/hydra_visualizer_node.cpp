@@ -32,6 +32,9 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/printing.h>
 #include <glog/logging.h>
 #include <hydra/utils/timing_utilities.h>
 #include <ros/ros.h>
@@ -39,7 +42,6 @@
 
 #include <fstream>
 
-#include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 #include "hydra_ros/visualizer/mesh_plugin.h"
@@ -57,31 +59,19 @@ struct NodeConfig {
   std::string output_path = "";
 };
 
-template <typename Visitor>
-void visit_config(const Visitor& v, NodeConfig& config) {
-  v.visit("load_graph", config.load_graph);
-  v.visit("scene_graph_filepath", config.scene_graph_filepath);
-  v.visit("visualizer_ns", config.visualizer_ns);
-  v.visit("mesh_plugin_ns", config.mesh_plugin_ns);
-  v.visit("output_path", config.output_path);
+void declare_config(NodeConfig& config) {
+  using namespace config;
+  name("VisualizerNodeConfig");
+  field(config.load_graph, "load_graph");
+  field(config.scene_graph_filepath, "scene_graph_filepath");
+  field(config.visualizer_ns, "visualizer_ns");
+  field(config.mesh_plugin_ns, "mesh_plugin_ns");
+  field(config.output_path, "output_path");
 }
-
-struct RosParamLogger : config_parser::Logger {
-  inline void log_missing(const std::string& message) const override {
-    ROS_INFO_STREAM(message);
-  }
-};
-
-}  // namespace hydra
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, NodeConfig)
-
-namespace hydra {
 
 struct VisualizerNode {
   VisualizerNode(const ros::NodeHandle& nh) : nh_(nh) {
-    auto logger = std::make_shared<RosParamLogger>();
-    config_ = config_parser::load_from_ros_nh<hydra::NodeConfig>(nh_, "", logger);
+    config_ = config::fromRos<hydra::NodeConfig>(nh);
     ROS_INFO_STREAM("Config: " << std::endl << config_);
 
     ros::NodeHandle viz_nh(config_.visualizer_ns);

@@ -34,24 +34,21 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/pipeline/ros_reconstruction.h"
 
+#include <config_utilities/printing.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <hydra/common/hydra_config.h>
 #include <hydra/places/gvd_integrator.h>
-#include <hydra_msgs/ActiveLayer.h>
-#include <hydra_msgs/ActiveMesh.h>
 #include <hydra_msgs/QueryFreespace.h>
 #include <kimera_semantics/color.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <voxblox_msgs/Mesh.h>
 #include <voxblox_ros/mesh_vis.h>
 
-#include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/utils/image_receiver.h"
 #include "hydra_ros/utils/pointcloud_adaptor.h"
 
 namespace hydra {
 
-using places::CompressionGraphExtractor;
 using pose_graph_tools::PoseGraph;
 using pose_graph_tools::PoseGraphEdge;
 using pose_graph_tools::PoseGraphNode;
@@ -66,16 +63,16 @@ inline geometry_msgs::Pose tfToPose(const geometry_msgs::Transform& transform) {
   return pose;
 }
 
-RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
+RosReconstruction::RosReconstruction(const RosReconstructionConfig& config,
+                                     const ros::NodeHandle& nh,
                                      const RobotPrefixConfig& prefix,
-                                     const RosReconstructionConfig& config,
                                      const OutputQueue::Ptr& output_queue)
     : ReconstructionModule(
-          prefix,
           config,
+          prefix,
           output_queue ? output_queue : std::make_shared<OutputQueue>()),
-      nh_(nh),
-      config_(config) {
+      config_(config),
+      nh_(nh) {
   buffer_.reset(new tf2_ros::Buffer(ros::Duration(config_.tf_buffer_size_s)));
   tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
 
@@ -100,21 +97,8 @@ RosReconstruction::RosReconstruction(const ros::NodeHandle& nh,
     output_queue_.reset();
   }
 
-  if (config_.visualize_reconstruction) {
-    visualizer_.reset(new TopologyServerVisualizer(config_.topology_visualizer_ns));
-  }
-
-  if (config_.publish_mesh) {
-    mesh_pub_ = nh_.advertise<voxblox_msgs::Mesh>("mesh", 10);
-  }
-
   freespace_server_ = nh_.advertiseService(
       "query_freespace", &RosReconstruction::handleFreespaceSrv, this);
-
-  output_callbacks_.push_back(
-      [this](const ReconstructionModule&, const ReconstructionOutput& output) {
-        this->visualize(output);
-      });
 }
 
 RosReconstruction::~RosReconstruction() {
@@ -128,6 +112,12 @@ RosReconstruction::~RosReconstruction() {
   }
 
   VLOG(2) << "[Hydra Reconstruction] pointcloud queue: " << pointcloud_queue_.size();
+}
+
+std::string RosReconstruction::printInfo() const {
+  std::stringstream ss;
+  ss << config::toString(config_);
+  return ss.str();
 }
 
 bool RosReconstruction::checkPointcloudTimestamp(const ros::Time& curr_time) {
@@ -282,28 +272,6 @@ void RosReconstruction::pointcloudSpin() {
     }  // end pose graph critical section
 
     queue_->push(input);
-  }
-}
-
-void RosReconstruction::visualize(const ReconstructionOutput& output) {
-  if (config_.publish_mesh && output.mesh) {
-    hydra_msgs::ActiveMesh::ConstPtr msg(new hydra_msgs::ActiveMesh());
-    auto mesh = const_cast<hydra_msgs::ActiveMesh&>(*msg);
-    mesh_pub_.publish(msg);
-  }
-
-  if (visualizer_) {
-    visualizer_->visualize(gvd_integrator_->getGraph(),
-                           gvd_integrator_->getGvdGraph(),
-                           *gvd_,
-                           *tsdf_,
-                           output.timestamp_ns,
-                           mesh_->getVoxbloxMesh().get());
-    if (config_.gvd.graph_extractor.use_compression_extractor) {
-      visualizer_->visualizeExtractor(output.timestamp_ns,
-                                      dynamic_cast<CompressionGraphExtractor&>(
-                                          gvd_integrator_->getGraphExtractor()));
-    }
   }
 }
 

@@ -34,21 +34,36 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/pipeline/ros_frontend.h"
 
-#include "hydra_ros/config/ros_utilities.h"
+#include <config_utilities/config.h>
+#include <config_utilities/printing.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
 
 namespace hydra {
 
 using message_filters::Subscriber;
 
-RosFrontend::RosFrontend(const ros::NodeHandle& nh,
+void declare_config(RosFrontendConfig& conf) {
+  using namespace config;
+  name("RosFrontendConfig");
+  base<FrontendConfig>(conf);
+  field(conf.frontend_ns, "frontend_namespace");
+  field(conf.enable_active_mesh_pub, "enable_active_mesh_pub");
+  field(conf.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
+  field(conf.world_frame, "world_frame");
+  field(conf.sensor_frame, "sensor_frame");
+  field(conf.use_latest_tf, "use_latest_tf");
+  field(conf.use_posegraph_pos, "use_posegraph_pos");
+}
+
+RosFrontend::RosFrontend(const RosFrontendConfig& config,
                          const RobotPrefixConfig& prefix,
                          const SharedDsgInfo::Ptr& dsg,
                          const SharedModuleState::Ptr& state,
                          const LogSetup::Ptr& log_setup)
-    : FrontendModule(prefix, load_config<FrontendConfig>(nh), dsg, state, log_setup),
-      nh_(nh) {
-  ros_config_ = load_config<ROSFrontendConfig>(nh);
-
+    : FrontendModule(config, prefix, dsg, state, log_setup),
+      config_(config),
+      nh_(config.frontend_ns) {
   pose_graph_sub_ = nh_.subscribe(
       "pose_graph_incremental", 100, &RosFrontend::poseGraphCallback, this);
 
@@ -59,14 +74,14 @@ RosFrontend::RosFrontend(const ros::NodeHandle& nh,
 
   tf_listener_.reset(new tf2_ros::TransformListener(buffer_));
 
-  if (ros_config_.enable_active_mesh_pub) {
+  if (config_.enable_active_mesh_pub) {
     active_vertices_pub_ = nh_.advertise<MeshVertexCloud>("active_vertices", 1, true);
     segmenter_->addVisualizationCallback(
         [this](const auto& cloud, const auto& indices, const auto& labels) {
           this->publishActiveVertices(cloud, indices, labels);
         });
   }
-  if (ros_config_.enable_segmented_mesh_pub) {
+  if (config_.enable_segmented_mesh_pub) {
     segmented_vertices_pub_.reset(new ObjectCloudPub("object_vertices", nh_));
     segmenter_->addVisualizationCallback(
         [this](const auto& cloud, const auto& indices, const auto& labels) {
@@ -77,6 +92,12 @@ RosFrontend::RosFrontend(const ros::NodeHandle& nh,
 
 RosFrontend::~RosFrontend() { segmented_vertices_pub_.reset(); }
 
+std::string RosFrontend::printInfo() const {
+  std::stringstream ss;
+  ss << config::toString(config_);
+  return ss.str();
+}
+
 void RosFrontend::inputCallback(const ActiveLayer::ConstPtr& places,
                                 const ActiveMesh::ConstPtr& mesh) {
   VLOG(5) << "Received input @ " << places->header.stamp.toNSec() << " [ns]";
@@ -84,7 +105,7 @@ void RosFrontend::inputCallback(const ActiveLayer::ConstPtr& places,
 
   ReconstructionOutput::Ptr input(new ReconstructionOutput());
 
-  if (ros_config_.use_posegraph_pos && !pose_graph_queue_.empty()) {
+  if (config_.use_posegraph_pos && !pose_graph_queue_.empty()) {
     const auto latest_position = getLatestPosition();
     if (!latest_position) {
       ROS_ERROR_STREAM("Could not extract position from empty pose graph!");
@@ -93,7 +114,7 @@ void RosFrontend::inputCallback(const ActiveLayer::ConstPtr& places,
 
     input->current_position = *latest_position;
   } else {
-    if (ros_config_.use_posegraph_pos) {
+    if (config_.use_posegraph_pos) {
       ROS_WARN_STREAM("Falling back to using tf for latest pos");
     }
 
@@ -166,9 +187,9 @@ std::optional<Eigen::Vector3d> RosFrontend::getLatestPositionTf(
   geometry_msgs::TransformStamped transform;
   try {
     transform =
-        buffer_.lookupTransform(ros_config_.world_frame,
-                                ros_config_.sensor_frame,
-                                ros_config_.use_latest_tf ? ros::Time(0) : time_to_use);
+        buffer_.lookupTransform(config_.world_frame,
+                                config_.sensor_frame,
+                                config_.use_latest_tf ? ros::Time(0) : time_to_use);
   } catch (const tf2::TransformException& ex) {
     ROS_WARN_STREAM(ex.what());
     return std::nullopt;

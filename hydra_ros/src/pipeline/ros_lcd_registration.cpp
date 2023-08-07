@@ -42,11 +42,9 @@
 
 #include <iomanip>
 
-namespace hydra {
+namespace hydra::lcd {
 
 using hydra::timing::ScopedTimer;
-using lcd::DsgRegistrationInput;
-using lcd::DsgRegistrationSolution;
 
 inline size_t getRobotIdFromNode(const DynamicSceneGraph& graph, NodeId node_id) {
   const auto& attrs =
@@ -70,9 +68,9 @@ std::string getPoseRepr(const Eigen::Quaterniond& q, const Eigen::Vector3d& v) {
   return ss.str();
 }
 
-DsgRegistrationSolution DsgAgentSolver::solve(const DynamicSceneGraph& dsg,
-                                              const DsgRegistrationInput& match,
-                                              NodeId) const {
+RegistrationSolution DsgAgentSolver::solve(const DynamicSceneGraph& dsg,
+                                           const DsgRegistrationInput& match,
+                                           NodeId) const {
   if (match.query_nodes.empty() || match.match_nodes.empty()) {
     return {};
   }
@@ -124,11 +122,7 @@ DsgRegistrationSolution DsgAgentSolver::solve(const DynamicSceneGraph& dsg,
   const Eigen::IOFormat format(3, Eigen::DontAlignCols, ", ", ", ", "", "", "[", "]");
   VLOG(3) << "Visual registration succeded: "
           << getPoseRepr(match_q_query, match_t_query);
-  return {true,
-          query_id,
-          match_id,
-          gtsam::Pose3(gtsam::Rot3(match_q_query), match_t_query),
-          -1};
+  return {true, query_id, match_id, match_t_query, match_q_query, -1};
 }
 
-}  // namespace hydra
+}  // namespace hydra::lcd

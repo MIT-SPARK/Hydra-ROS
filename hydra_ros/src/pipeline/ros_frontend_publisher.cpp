@@ -32,42 +32,41 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <config_utilities/parsing/ros.h>
-#include <glog/logging.h>
-#include <hydra/utils/log_utilities.h>
+#include "hydra_ros/pipeline/ros_frontend_publisher.h"
 
-#include "hydra_ros/pipeline/ros_reconstruction.h"
-#include "hydra_ros/utils/node_utilities.h"
+namespace hydra {
 
-int main(int argc, char* argv[]) {
-  ros::init(argc, argv, "hydra_topology_node");
+using kimera_pgmo::KimeraPgmoMeshDelta;
+using pose_graph_tools::PoseGraph;
 
-  FLAGS_minloglevel = 3;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
+    : nh_(node_handle, "frontend") {
+  dsg_sender_.reset(new DsgSender(nh_, "frontend", false));
+  mesh_graph_pub_ = nh_.advertise<PoseGraph>("mesh_graph_incremental", 100, true);
+  mesh_update_pub_ = nh_.advertise<KimeraPgmoMeshDelta>("full_mesh_update", 100, true);
+}
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
+void RosFrontendPublisher::start() {}
 
-  ros::NodeHandle nh("~");
+void RosFrontendPublisher::stop() {}
 
-  const auto log_config = config::fromRos<hydra::LogConfig>(nh);
-  auto logs = std::make_shared<hydra::LogSetup>(log_config);
+// TODO(nathan) think about saving timing information?
+void RosFrontendPublisher::save(const LogSetup&) {}
 
-  hydra::configureTimers(nh, logs);
-  const hydra::RobotPrefixConfig prefix(nh.param<int>("robot_id", 0));
-
-  auto reconstruction_config = config::fromRos<hydra::RosReconstructionConfig>(nh);
-  if (!hydra::loadReconstructionExtrinsics(reconstruction_config)) {
-    LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
+void RosFrontendPublisher::publish(const DynamicSceneGraph& graph,
+                                   const BackendInput& backend_input,
+                                   uint64_t timestamp_ns) {
+  if (backend_input.deformation_graph) {
+    mesh_graph_pub_.publish(*backend_input.deformation_graph);
   }
 
-  hydra::RosReconstruction module(reconstruction_config, nh, prefix);
-  module.start();
+  if (backend_input.mesh_update) {
+    mesh_update_pub_.publish(backend_input.mesh_update->toRosMsg(timestamp_ns));
+  }
 
-  ros::spin();
-
-  module.stop();
-  module.save(*logs);
-  return 0;
+  ros::Time stamp;
+  stamp.fromNSec(timestamp_ns);
+  dsg_sender_->sendGraph(graph, stamp);
 }
+
+}  // namespace hydra

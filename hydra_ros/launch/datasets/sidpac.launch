@@ -17,8 +17,6 @@
     <arg name="label_topic" default="/semantic/image_raw"/>
     <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
-    <arg name="reconstruction_config_path" default="$(find hydra)/config/sidpac/reconstruction_config.yaml"/>
-
     <include file="$(find hydra_ros)/launch/utils/data_sources/sidpac_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">

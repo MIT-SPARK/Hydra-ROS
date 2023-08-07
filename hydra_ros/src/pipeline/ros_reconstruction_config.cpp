@@ -34,16 +34,45 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/pipeline/ros_reconstruction_config.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/types/enum.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <hydra/reconstruction/reconstruction_module.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_ros/transform_listener.h>
 
-#include "hydra_ros/config/ros_utilities.h"
-
 namespace hydra {
 
-DECLARE_STRUCT_NAME(RosReconstructionConfig);
+void declare_config(RosReconstructionConfig& conf) {
+  using namespace config;
+  name("RosReconstructionConfig");
+  base<ReconstructionConfig>(conf);
+  enum_field(conf.extrinsics_mode,
+             "extrinsics_mode",
+             {{ExtrinsicsLookupMode::USE_KIMERA, "USE_KIMERA"},
+              {ExtrinsicsLookupMode::USE_TF, "USE_TF"},
+              {ExtrinsicsLookupMode::USE_LOADED_PARAMS, "USE_LOADED_PARAMS"}});
+
+  switch (conf.extrinsics_mode) {
+    case ExtrinsicsLookupMode::USE_KIMERA:
+      field(conf.kimera_extrinsics_file, "kimera_extrinsics_file");
+      break;
+    case ExtrinsicsLookupMode::USE_TF:
+      field(conf.sensor_frame, "sensor_frame");
+      break;
+    case ExtrinsicsLookupMode::USE_LOADED_PARAMS:
+    default:
+      break;
+  }
+
+  field(conf.use_image_receiver, "use_image_receiver");
+  field(conf.publish_pointcloud, "publish_pointcloud");
+  field(conf.enable_output_queue, "enable_reconstruction_output_queue");
+  field(conf.pointcloud_separation_s, "pointcloud_separation_s");
+  field(conf.tf_wait_duration_s, "tf_wait_duration_s");
+  field(conf.tf_buffer_size_s, "tf_buffer_size_s");
+  field(conf.image_queue_size, "image_queue_size");
+}
 
 // this is technically not threadsafe w.r.t. to spinning in another thread.
 // but this gets called in the constructor, so should be fine for now
@@ -56,7 +85,7 @@ bool lookupExtrinsicsFromTf(RosReconstructionConfig& config) {
   bool have_transform = false;
   std::string err_str;
   LOG(INFO) << "Looking up extrinsics via TF: " << config.robot_frame << " -> "
-                                                   << config.sensor_frame;
+            << config.sensor_frame;
   while (ros::ok()) {
     if (buffer.canTransform(config.robot_frame,
                             config.sensor_frame,

@@ -26,10 +26,10 @@
 
     <include file="$(find hydra_ros)/launch/utils/includes/$(arg tf_name)_static_tfs.xml"/>
 
-    <include file="$(find hydra_ros)/launch/utils/hydra.launch" pass_all_args="true">
+    <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
+        <arg name="override_default_lcd" default="true"/>
         <arg name="config_dir" default="$(find hydra)/config/default_robot"/>
-        <arg name="reconstruction_config" default="$(find hydra)/config/default_topology_config.yaml"/>
         <arg name="extrinsics_mode" value="USE_LOADED_PARAMS"/>
         <arg name="extrinsics" default="$(find hydra)/config/robots/$(arg tf_name).yaml"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>

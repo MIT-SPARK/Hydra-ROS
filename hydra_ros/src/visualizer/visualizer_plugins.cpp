@@ -122,7 +122,7 @@ MarkerArray makeLeafEdges(const PMGraphPluginConfig& config,
   fillPoseWithIdentity(edges);
   fillPoseWithIdentity(vertices);
 
-  std::vector<gtsam::Point3> vertex_positions =
+  const auto vertex_positions =
       dgraph.getInitialPositionsVertices(vertex_prefix);
 
   std::set<size_t> seen;
@@ -142,7 +142,7 @@ MarkerArray makeLeafEdges(const PMGraphPluginConfig& config,
         continue;
       }
 
-      const gtsam::Point3& pos = vertex_positions.at(vertex);
+      const auto& pos = vertex_positions.at(vertex);
       geometry_msgs::Point end;
       end.x = pos.x();
       end.y = pos.y();

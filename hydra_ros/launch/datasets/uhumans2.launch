@@ -30,8 +30,6 @@
     <arg name="label_topic" default="/tesse/seg_cam/rgb/image_raw" if="$(arg use_gt_semantics)"/>
     <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
-    <arg name="reconstruction_config_path" default="$(find hydra)/config/uhumans2/reconstruction_config.yaml"/>
-
     <include file="$(find hydra_ros)/launch/utils/data_sources/uhumans2_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
@@ -40,6 +38,7 @@
         <arg name="dsg_output_prefix" default="uhumans2"/>
         <arg name="extrinsics" default="$(find hydra)/config/extrinsics/uhumans2.yaml"/>
         <arg name="rviz_file" default="uhumans2.rviz"/>
+        <arg name="override_default_lcd" default="true"/>
         <arg name="use_oriented_bounding_boxes" default="false"/>
     </include>
 </launch>

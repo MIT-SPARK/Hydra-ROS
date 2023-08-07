@@ -34,21 +34,24 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <dynamic_reconfigure/server.h>
-#include <hydra/config/config.h>
-#include <hydra/places/compression_graph_extractor.h>
-#include <hydra/reconstruction/configs.h>
+#include <hydra/common/module.h>
+#include <hydra/places/gvd_voxel.h>
 #include <hydra_ros/GvdVisualizerConfig.h>
+#include <voxblox/core/layer.h>
 
-#include "hydra_ros/visualizer/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/visualizer_types.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
+namespace places {
+class GraphExtractorInterface;
+class GvdGraph;
+}  // namespace places
+
+class MarkerGroupPub;
 
 using hydra_ros::GvdVisualizerConfig;
-using RqtMutexPtr = std::unique_ptr<boost::recursive_mutex>;
 
-struct TopologyVisualizerConfig {
+struct ReconstructionVisualizerConfig {
   std::string world_frame = "world";
   std::string topology_marker_ns = "topology_graph";
   bool show_block_outlines = false;
@@ -61,35 +64,26 @@ struct TopologyVisualizerConfig {
   LayerConfig graph_layer;
 };
 
-template <typename Visitor>
-void visit_config(const Visitor& v, TopologyVisualizerConfig& config) {
-  v.visit("world_frame", config.world_frame);
-  v.visit("topology_marker_ns", config.topology_marker_ns);
-  v.visit("show_block_outlines", config.show_block_outlines);
-  v.visit("use_gvd_block_outlines", config.use_gvd_block_outlines);
-  v.visit("outline_scale", config.outline_scale);
-}
-
-class TopologyServerVisualizer {
+class ReconstructionVisualizer : public Module {
  public:
-  explicit TopologyServerVisualizer(const std::string& ns);
+  explicit ReconstructionVisualizer(const std::string& ns);
 
-  virtual ~TopologyServerVisualizer() = default;
+  virtual ~ReconstructionVisualizer();
 
-  void visualize(const SceneGraphLayer& graph,
-                 const places::GvdGraph& gvd_graph,
+  void start() override;
+
+  void stop() override;
+
+  void save(const LogSetup&) override;
+
+  void visualize(uint64_t timestamp_ns,
                  const voxblox::Layer<places::GvdVoxel>& gvd,
-                 const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
-                 uint64_t timestamp_ns,
-                 const voxblox::MeshLayer* mesh = nullptr);
+                 const places::GraphExtractorInterface* extractor = nullptr);
 
-  void visualizeError(const voxblox::Layer<places::GvdVoxel>& lhs,
+  void visualizeError(uint64_t timestamp_ns,
+                      const voxblox::Layer<places::GvdVoxel>& lhs,
                       const voxblox::Layer<places::GvdVoxel>& rhs,
-                      double threshold,
-                      uint64_t timestamp_ns);
-
-  void visualizeExtractor(uint64_t timestamp_ns,
-                          const places::CompressionGraphExtractor& extractor);
+                      double threshold);
 
  private:
   void visualizeGraph(const std_msgs::Header& header, const SceneGraphLayer& graph);
@@ -101,9 +95,7 @@ class TopologyServerVisualizer {
                          const places::GvdGraph& gvd_graph) const;
 
   void visualizeBlocks(const std_msgs::Header& header,
-                       const voxblox::Layer<places::GvdVoxel>& gvd,
-                       const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
-                       const voxblox::MeshLayer* mesh) const;
+                       const voxblox::Layer<places::GvdVoxel>& gvd) const;
 
   void publishGraphLabels(const std_msgs::Header& header, const SceneGraphLayer& graph);
 
@@ -130,7 +122,7 @@ class TopologyServerVisualizer {
   ros::NodeHandle nh_;
   std::unique_ptr<MarkerGroupPub> pubs_;
 
-  TopologyVisualizerConfig config_;
+  ReconstructionVisualizerConfig config_;
   std::set<int> previous_labels_;
   size_t previous_spheres_;
 
@@ -143,5 +135,3 @@ class TopologyServerVisualizer {
 };
 
 }  // namespace hydra
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, TopologyVisualizerConfig)

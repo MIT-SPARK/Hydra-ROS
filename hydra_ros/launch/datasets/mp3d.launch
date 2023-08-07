@@ -12,8 +12,6 @@
     <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"/>
     <arg name="pointcloud_topic" default="/habitat/agent_0/pointcloud"/>
 
-    <arg name="reconstruction_config_path" default="$(find hydra)/config/habitat/reconstruction_config.yaml"/>
-
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/habitat"/>

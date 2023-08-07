@@ -32,43 +32,35 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/config/ros_parser.h"
+#pragma once
+#include <hydra/common/module.h>
+#include <hydra/common/shared_module_state.h>
+#include <ros/ros.h>
 
-#include <iostream>
+#include "hydra_ros/utils/dsg_streaming_interface.h"
 
-namespace config_parser {
+namespace hydra {
 
-RosParserImpl::RosParserImpl(const ros::NodeHandle& nh, const std::string& name)
-    : nh_(nh), name_(name) {}
+class RosFrontendPublisher : public Module {
+ public:
+  RosFrontendPublisher(const ros::NodeHandle& nh);
 
-RosParserImpl::RosParserImpl(const ros::NodeHandle& nh) : RosParserImpl(nh, "") {}
+  void start() override;
 
-RosParserImpl::RosParserImpl() : RosParserImpl(ros::NodeHandle(), "") {}
+  void stop() override;
 
-RosParserImpl RosParserImpl::child(const std::string& new_name) const {
-  // push name onto nodehandle namespace if name isn't empty
-  ros::NodeHandle new_nh = (name_ == "") ? nh_ : ros::NodeHandle(nh_, name_);
-  return RosParserImpl(new_nh, new_name);
-}
+  void save(const LogSetup& logs) override;
 
-std::vector<std::string> RosParserImpl::children() const {
-  const std::string resolved_name = nh_.resolveName(name_);
-  if (resolved_name == "") {
-    return {};
-  }
+  void publish(const DynamicSceneGraph& graph,
+               const BackendInput& backend_input,
+               uint64_t timestamp_ns);
 
-  XmlRpc::XmlRpcValue value;
-  nh_.getParam(name_, value);
-  if (value.getType() != XmlRpc::XmlRpcValue::Type::TypeStruct) {
-    return {};
-  }
+ protected:
+  ros::NodeHandle nh_;
 
-  std::vector<std::string> children;
-  for (const auto& nv_pair : value) {
-    children.push_back(nv_pair.first);
-  }
+  std::unique_ptr<DsgSender> dsg_sender_;
+  ros::Publisher mesh_graph_pub_;
+  ros::Publisher mesh_update_pub_;
+};
 
-  return children;
-}
-
-}  // namespace config_parser
+}  // namespace hydra

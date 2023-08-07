@@ -34,209 +34,173 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/pipeline/hydra_ros_pipeline.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/validation.h>
+#include <config_utilities/printing.h>
 #include <hydra/common/hydra_config.h>
+#include <hydra/loop_closure/loop_closure_module.h>
 
-#include "hydra_ros/config/ros_utilities.h"
+#include <memory>
+
+#include "hydra_ros/pipeline/ros_backend.h"
+#include "hydra_ros/pipeline/ros_backend_publisher.h"
+#include "hydra_ros/pipeline/ros_frontend.h"
+#include "hydra_ros/pipeline/ros_frontend_publisher.h"
 #include "hydra_ros/pipeline/ros_lcd_registration.h"
+#include "hydra_ros/pipeline/ros_reconstruction.h"
+#include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
 namespace hydra {
 
-template <typename Visitor>
-void visit_config(const Visitor& v, HydraRosConfig& config) {
-  v.visit("enable_lcd", config.enable_lcd);
-  v.visit("use_ros_backend", config.use_ros_backend);
-  v.visit("do_reconstruction", config.do_reconstruction);
-  v.visit("enable_frontend_output", config.enable_frontend_output);
-  v.visit("frontend_mesh_separation_s", config.frontend_mesh_separation_s);
+void declare_config(HydraRosConfig& conf) {
+  using namespace config;
+  name("HydraRosConfig");
+  field(conf.enable_lcd, "enable_lcd");
+  field(conf.use_ros_backend, "use_ros_backend");
+  field(conf.do_reconstruction, "do_reconstruction");
+  field(conf.enable_frontend_output, "enable_frontend_output");
+  field(conf.visualize_reconstruction, "visualize_reconstruction");
+  field(conf.reconstruction_visualizer_namespace,
+        "reconstruction_visualizer_namespace");
 }
 
-DECLARE_STRUCT_NAME(HydraRosConfig);
-DECLARE_STRUCT_NAME(FrontendConfig);
-DECLARE_STRUCT_NAME(BackendConfig);
-DECLARE_STRUCT_NAME(LoopClosureConfig);
-DECLARE_STRUCT_NAME(kimera_pgmo::KimeraPgmoConfig);
-
-}  // namespace hydra
-
-DECLARE_CONFIG_OSTREAM_OPERATOR(hydra, HydraRosConfig)
-
-namespace hydra {
-
-HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& node_handle,
+HydraRosPipeline::HydraRosPipeline(const HydraRosConfig& config,
+                                   const ros::NodeHandle& node_handle,
                                    int robot_id,
                                    const LogSetup::Ptr& log_setup)
-    : nh(node_handle), prefix(robot_id), log_setup(log_setup) {
-  config = load_config<hydra::HydraRosConfig>(nh);
-
-  const auto label_space = load_config<hydra::LabelSpaceConfig>(nh);
+    : HydraPipeline(robot_id, log_setup), config_(config), nh_(node_handle) {
+  const auto label_space =
+      config::checkValid(config::fromRos<hydra::LabelSpaceConfig>(nh_));
+  VLOG(1) << "Loaded label space:" << std::endl << config::toString(label_space);
   HydraConfig::instance().setLabelSpaceConfig(label_space);
 
-  // TODO(nathan) parse and use at some point
-  const LayerId mesh_layer_id = 1;
-  const std::map<LayerId, char> layer_id_map{{DsgLayers::OBJECTS, 'o'},
-                                             {DsgLayers::PLACES, 'p'},
-                                             {DsgLayers::ROOMS, 'r'},
-                                             {DsgLayers::BUILDINGS, 'b'}};
+  initFrontend();
 
-  frontend_dsg.reset(new SharedDsgInfo(layer_id_map, mesh_layer_id));
-  backend_dsg.reset(new SharedDsgInfo(layer_id_map, mesh_layer_id));
-  shared_state.reset(new SharedModuleState());
-
-  if (config.do_reconstruction) {
-    const auto frontend_config = load_config<FrontendConfig>(nh);
-    frontend = std::make_shared<FrontendModule>(
-        prefix, frontend_config, frontend_dsg, shared_state, log_setup);
-
-    auto reconstruction_config = load_config<RosReconstructionConfig>(nh);
-    if (!loadReconstructionExtrinsics(reconstruction_config)) {
-      LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
-    }
-
-    reconstruction = std::make_shared<RosReconstruction>(
-        nh, prefix, reconstruction_config, frontend->getQueue());
-  } else {
-    frontend = std::make_shared<RosFrontend>(
-        nh, prefix, frontend_dsg, shared_state, log_setup);
+  if (config_.do_reconstruction) {
+    initReconstruction();
   }
 
-  if (config.enable_frontend_output) {
-    ros::NodeHandle frontend_nh(nh, "frontend");
-    dsg_sender.reset(new DsgSender(
-        frontend_nh, "frontend", false, config.frontend_mesh_separation_s));
-    mesh_graph_pub =
-        nh.advertise<pose_graph_tools::PoseGraph>("mesh_graph_incremental", 100, true);
-    mesh_update_pub =
-        nh.advertise<kimera_pgmo::KimeraPgmoMeshDelta>("full_mesh_update", 100, true);
-    frontend->addOutputCallback(std::bind(&HydraRosPipeline::sendFrontendOutput,
-                                          this,
-                                          std::placeholders::_1,
-                                          std::placeholders::_2,
-                                          std::placeholders::_3));
+  initBackend();
+
+  if (config_.enable_lcd) {
+    initLCD();
+  }
+}
+
+HydraRosPipeline::~HydraRosPipeline() {}
+
+void HydraRosPipeline::initFrontend() {
+  // explict type for shared_ptr
+  FrontendModule::Ptr frontend =
+      config::createFromROS<FrontendModule>(ros::NodeHandle(nh_, "frontend"),
+                                            prefix_,
+                                            frontend_dsg_,
+                                            shared_state_,
+                                            log_setup_);
+  modules_["frontend"] = frontend;
+
+  if (!config_.enable_frontend_output) {
+    return;
   }
 
-  const auto backend_config = load_config<BackendConfig>(nh);
-  if (config.use_ros_backend) {
-    backend = std::make_shared<RosBackend>(
-        nh, prefix, frontend_dsg, backend_dsg, shared_state, log_setup);
-  } else {
-    const auto pgmo_config = load_config<kimera_pgmo::KimeraPgmoConfig>(nh, "pgmo");
-    backend = std::make_shared<BackendModule>(prefix,
-                                              backend_config,
-                                              pgmo_config,
-                                              frontend_dsg,
-                                              backend_dsg,
-                                              shared_state,
-                                              log_setup);
+  if (!frontend) {
+    LOG(FATAL) << "Frontend module required!";
+    return;
   }
 
-  backend_visualizer =
-      std::make_shared<RosBackendVisualizer>(nh, backend_config, prefix);
-  backend->addOutputCallback(std::bind(&RosBackendVisualizer::publishOutputs,
-                                       backend_visualizer.get(),
+  auto frontend_publisher = std::make_shared<RosFrontendPublisher>(nh_);
+  modules_["frontend_publisher"] = frontend_publisher;
+  frontend->addOutputCallback(std::bind(&RosFrontendPublisher::publish,
+                                        frontend_publisher.get(),
+                                        std::placeholders::_1,
+                                        std::placeholders::_2,
+                                        std::placeholders::_3));
+}
+
+void HydraRosPipeline::initBackend() {
+  // explict type for shared_ptr
+  BackendModule::Ptr backend =
+      config::createFromROS<BackendModule>(ros::NodeHandle(nh_, "backend"),
+                                           prefix_,
+                                           frontend_dsg_,
+                                           backend_dsg_,
+                                           shared_state_,
+                                           log_setup_);
+
+  modules_["backend"] = backend;
+  if (!modules_.at("backend")) {
+    LOG(FATAL) << "Failed to construct backend!";
+  }
+
+  auto backend_publisher =
+      std::make_shared<RosBackendPublisher>(nh_, backend->config(), prefix_);
+  modules_["backend_publisher"] = backend_publisher;
+  backend->addOutputCallback(std::bind(&RosBackendPublisher::publish,
+                                       backend_publisher.get(),
                                        std::placeholders::_1,
                                        std::placeholders::_2,
                                        std::placeholders::_3));
+}
 
-  if (config.enable_lcd) {
-    auto lcd_config = load_config<LoopClosureConfig>(nh, "");
-    lcd_config.detector.num_semantic_classes = HydraConfig::instance().getTotalLabels();
-    VLOG(1) << "Number of classes for LCD: "
-            << lcd_config.detector.num_semantic_classes;
+void HydraRosPipeline::initReconstruction() {
+  auto conf = config::checkValid(config::fromRos<RosReconstructionConfig>(nh_));
+  if (!loadReconstructionExtrinsics(conf)) {
+    LOG(ERROR) << "Could not load extrinsics! Falling back to parsed extrinsics";
+  }
 
-    shared_state->lcd_queue.reset(new InputQueue<LcdInput::Ptr>());
-    lcd.reset(new LoopClosureModule(prefix, lcd_config, frontend_dsg, shared_state));
-
-    bow_sub = nh.subscribe("bow_vectors", 100, &HydraRosPipeline::bowCallback, this);
-    if (lcd_config.detector.enable_agent_registration) {
-      lcd->getDetector().setRegistrationSolver(0, std::make_unique<DsgAgentSolver>());
+  InputQueue<ReconstructionOutput::Ptr>::Ptr frontend_queue;
+  if (modules_.count("frontend")) {
+    auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
+    if (frontend) {
+      frontend_queue = frontend->getQueue();
+    } else {
+      LOG(ERROR) << "Invalid frontend module: disabling reconstruction output queue";
     }
+  }
+
+  const auto reconstruction =
+      std::make_shared<RosReconstruction>(conf, nh_, prefix_, frontend_queue);
+  modules_["reconstruction"] = reconstruction;
+
+  if (config_.visualize_reconstruction) {
+    const auto viz = std::make_shared<ReconstructionVisualizer>(
+        config_.reconstruction_visualizer_namespace);
+    reconstruction->addOutputCallback(
+        [&viz](const ReconstructionOutput& output,
+               const voxblox::Layer<places::GvdVoxel>& gvd,
+               const places::GraphExtractorInterface* extractor) {
+          viz->visualize(output.timestamp_ns, gvd, extractor);
+        });
+    modules_["reconstruction_visualizer"] = viz;
+  }
+
+  // TODO(nathan) publish reconstruction output
+}
+
+void HydraRosPipeline::initLCD() {
+  auto lcd_config = config::fromRos<LoopClosureConfig>(nh_);
+  lcd_config.detector.num_semantic_classes = HydraConfig::instance().getTotalLabels();
+  VLOG(1) << "Number of classes for LCD: " << lcd_config.detector.num_semantic_classes;
+  config::checkValid(lcd_config);
+
+  shared_state_->lcd_queue.reset(new InputQueue<LcdInput::Ptr>());
+  auto lcd = std::make_shared<LoopClosureModule>(
+      prefix_, lcd_config, frontend_dsg_, shared_state_);
+  modules_["lcd"] = lcd;
+
+  bow_sub_ = nh_.subscribe("bow_vectors", 100, &HydraRosPipeline::bowCallback, this);
+  if (lcd_config.detector.enable_agent_registration) {
+    lcd->getDetector().setRegistrationSolver(0,
+                                             std::make_unique<lcd::DsgAgentSolver>());
   }
 }
 
 void HydraRosPipeline::bowCallback(const pose_graph_tools::BowQueries::ConstPtr& msg) {
   for (const auto& query : msg->queries) {
-    shared_state->visual_lcd_queue.push(
+    shared_state_->visual_lcd_queue.push(
         pose_graph_tools::BowQuery::ConstPtr(new pose_graph_tools::BowQuery(query)));
   }
-}
-
-void HydraRosPipeline::start() {
-  if (reconstruction) {
-    reconstruction->start();
-  }
-
-  if (frontend) {
-    frontend->start();
-  }
-
-  if (backend) {
-    backend->start();
-  }
-
-  if (lcd) {
-    lcd->start();
-  }
-}
-
-void HydraRosPipeline::stop() {
-  if (reconstruction) {
-    reconstruction->stop();
-  }
-
-  if (frontend) {
-    frontend->stop();
-  }
-
-  if (lcd) {
-    lcd->stop();
-  }
-
-  if (backend) {
-    backend->stop();
-  }
-}
-
-void HydraRosPipeline::save(const LogSetup& logs) {
-  if (!logs.valid()) {
-    return;
-  }
-
-  if (reconstruction) {
-    reconstruction->save(logs);
-  }
-
-  if (frontend) {
-    frontend->save(logs);
-  }
-
-  if (backend) {
-    backend->save(logs);
-  }
-
-  if (lcd) {
-    lcd->save(logs);
-  }
-}
-
-void HydraRosPipeline::sendFrontendOutput(const DynamicSceneGraph& graph,
-                                          const BackendInput& backend_input,
-                                          uint64_t timestamp_ns) {
-  if (backend_input.deformation_graph) {
-    mesh_graph_pub.publish(*backend_input.deformation_graph);
-  }
-
-  if (backend_input.mesh_update) {
-    mesh_update_pub.publish(backend_input.mesh_update->toRosMsg(timestamp_ns));
-  }
-
-  sendFrontendGraph(graph, timestamp_ns);
-}
-
-void HydraRosPipeline::sendFrontendGraph(const DynamicSceneGraph& graph,
-                                         uint64_t timestamp_ns) {
-  ros::Time stamp;
-  stamp.fromNSec(timestamp_ns);
-  dsg_sender->sendGraph(graph, stamp);
 }
 
 }  // namespace hydra

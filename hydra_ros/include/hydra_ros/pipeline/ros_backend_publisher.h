@@ -32,66 +32,57 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <hydra/backend/backend_module.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
+#include <hydra/backend/backend_config.h>
+#include <hydra/common/module.h>
+#include <hydra/common/robot_prefix_config.h>
+
+#include "hydra_ros/utils/dsg_streaming_interface.h"
+
+namespace spark_dsg {
+class ZmqSender;
+}  // namespace spark_dsg
 
 namespace hydra {
 
-class RosBackend : public BackendModule {
+class RosBackendPublisher : public Module {
  public:
-  using Policy =
-      message_filters::sync_policies::ApproximateTime<kimera_pgmo::KimeraPgmoMesh,
-                                                      pose_graph_tools::PoseGraph>;
-  using Sync = message_filters::Synchronizer<Policy>;
-  using PoseGraphSub = message_filters::Subscriber<pose_graph_tools::PoseGraph>;
-  using MeshSub = message_filters::Subscriber<kimera_pgmo::KimeraPgmoMesh>;
+  RosBackendPublisher(const ros::NodeHandle& nh,
+                      const BackendConfig& config,
+                      const RobotPrefixConfig& prefix);
 
-  RosBackend(const BackendConfig& config,
-             const RobotPrefixConfig& prefix,
-             const SharedDsgInfo::Ptr& dsg,
-             const SharedDsgInfo::Ptr& backend_dsg,
-             const SharedModuleState::Ptr& state,
-             const LogSetup::Ptr& log_setup);
+  virtual ~RosBackendPublisher();
 
-  ~RosBackend();
+  void start() override{};
 
-  std::string printInfo() const override;
+  void stop() override{};
 
-  void inputCallback(const kimera_pgmo::KimeraPgmoMesh::ConstPtr& mesh,
-                     const pose_graph_tools::PoseGraph::ConstPtr& deformation_graph);
+  void save(const LogSetup&) override{};
 
-  void poseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+  void publish(const DynamicSceneGraph& graph,
+               const kimera_pgmo::DeformationGraph& dgraph,
+               size_t timestamp_ns);
 
  protected:
-  void publishOutputs(const pcl::PolygonMesh& mesh, size_t timestamp_ns) const;
+  virtual void publishPoseGraph(const DynamicSceneGraph& graph,
+                                const kimera_pgmo::DeformationGraph& dgraph) const;
 
-  void publishDeformationGraphViz() const;
-
-  void publishPoseGraphViz() const;
-
-  void publishUpdatedMesh(const pcl::PolygonMesh& mesh, size_t timestamp_ns) const;
+  virtual void publishDeformationGraphViz(const kimera_pgmo::DeformationGraph& dgraph,
+                                          size_t timestamp_ns) const;
 
  protected:
   ros::NodeHandle nh_;
-  std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graph_queue_;
-  kimera_pgmo::KimeraPgmoMesh::ConstPtr latest_mesh_msg_;
+  BackendConfig config_;
+  RobotPrefixConfig prefix_;
 
-  ros::Subscriber pose_graph_sub_;
-  std::unique_ptr<PoseGraphSub> deformation_graph_sub_;
-  std::unique_ptr<MeshSub> mesh_sub_;
-  std::unique_ptr<Sync> sync_;
+  ros::Publisher mesh_mesh_edges_pub_;
+  ros::Publisher pose_mesh_edges_pub_;
+  ros::Publisher pose_graph_pub_;
 
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<BackendModule,
-                                     RosBackend,
-                                     BackendConfig,
-                                     RobotPrefixConfig,
-                                     SharedDsgInfo::Ptr,
-                                     SharedDsgInfo::Ptr,
-                                     SharedModuleState::Ptr,
-                                     LogSetup::Ptr>("RosBackend");
+  // Hack for temporary removal of label flickering
+  size_t last_zmq_pub_time_;
+
+  std::unique_ptr<spark_dsg::ZmqSender> zmq_sender_;
+  std::unique_ptr<DsgSender> dsg_sender_;
 };
 
 }  // namespace hydra

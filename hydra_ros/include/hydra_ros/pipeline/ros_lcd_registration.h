@@ -35,16 +35,16 @@
 #pragma once
 #include <hydra/loop_closure/registration.h>
 
-namespace hydra {
+namespace hydra::lcd {
 
-struct DsgAgentSolver : lcd::DsgRegistrationSolver {
+struct DsgAgentSolver : DsgRegistrationSolver {
   DsgAgentSolver() = default;
 
   virtual ~DsgAgentSolver() = default;
 
-  lcd::DsgRegistrationSolution solve(const DynamicSceneGraph& dsg,
-                                     const lcd::DsgRegistrationInput& match,
-                                     NodeId query_agent_id) const override;
+  RegistrationSolution solve(const DynamicSceneGraph& dsg,
+                             const DsgRegistrationInput& match,
+                             NodeId query_agent_id) const override;
 };
 
-}  // namespace hydra
+}  // namespace hydra::lcd

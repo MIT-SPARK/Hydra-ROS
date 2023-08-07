@@ -32,9 +32,9 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <config_utilities/parsing/ros.h>
 #include <kimera_pgmo/DeformationGraph.h>
 
-#include "hydra_ros/config/ros_utilities.h"
 #include "hydra_ros/pipeline/ros_backend.h"
 #include "hydra_ros/pipeline/ros_frontend.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
@@ -76,11 +76,9 @@ struct DsgOptimizer {
   void do_optimize() {
     // TODO(nathan) maybe pull robot id from somewhere
     RobotPrefixConfig prefix(0);
-    auto config = load_config<BackendConfig>(nh);
-    auto pgmo_config = load_config<kimera_pgmo::KimeraPgmoConfig>(nh, "pgmo");
     SharedModuleState::Ptr state(new SharedModuleState());
-    backend.reset(new BackendModule(
-        prefix, config, pgmo_config, frontend_dsg, backend_dsg, state));
+    backend = config::createFromROS<BackendModule>(
+        nh, prefix, frontend_dsg, backend_dsg, state);
     LOG(ERROR) << "Loading backend state!";
     backend->loadState(frontend_filepath, dgrf_filepath);
     LOG(ERROR) << "Loaded backend state!";

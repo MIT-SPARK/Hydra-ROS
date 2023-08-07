@@ -33,14 +33,9 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/shared_module_state.h>
-#include <hydra/utils/log_utilities.h>
-#include <hydra/loop_closure/loop_closure_module.h>
+#include <hydra/common/hydra_pipeline.h>
 #include <pose_graph_tools/BowQueries.h>
-
-#include "hydra_ros/pipeline/ros_backend.h"
-#include "hydra_ros/pipeline/ros_frontend.h"
-#include "hydra_ros/pipeline/ros_reconstruction.h"
+#include <ros/ros.h>
 
 namespace hydra {
 
@@ -49,46 +44,34 @@ struct HydraRosConfig {
   bool use_ros_backend = false;
   bool do_reconstruction = true;
   bool enable_frontend_output = true;
-  double frontend_mesh_separation_s = 0.0;
+  bool visualize_reconstruction = false;
+  std::string reconstruction_visualizer_namespace = "~";
 };
 
-struct HydraRosPipeline {
-  explicit HydraRosPipeline(const ros::NodeHandle& nh, int robot_id = 0, const LogSetup::Ptr& log_setup = nullptr);
+void declare_config(HydraRosConfig& conf);
 
-  void start();
+class HydraRosPipeline : public HydraPipeline {
+ public:
+  HydraRosPipeline(const HydraRosConfig& config,
+                   const ros::NodeHandle& nh,
+                   int robot_id = 0,
+                   const LogSetup::Ptr& log_setup = nullptr);
 
-  void stop();
-
-  void save(const LogSetup& logs);
+  virtual ~HydraRosPipeline();
 
   void bowCallback(const pose_graph_tools::BowQueries::ConstPtr& msg);
 
-  void sendFrontendOutput(const DynamicSceneGraph& graph,
-                          const BackendInput& backend_input,
-                          uint64_t timestamp_ns);
+ protected:
+  const HydraRosConfig config_;
+  ros::NodeHandle nh_;
 
-  void sendFrontendGraph(const DynamicSceneGraph& graph, uint64_t timestamp_ns);
+  ros::Subscriber bow_sub_;
 
-  ros::NodeHandle nh;
-
-  HydraRosConfig config;
-  RobotPrefixConfig prefix;
-  SharedDsgInfo::Ptr frontend_dsg;
-  SharedDsgInfo::Ptr backend_dsg;
-  SharedModuleState::Ptr shared_state;
-
-  std::shared_ptr<ReconstructionModule> reconstruction;
-  std::shared_ptr<FrontendModule> frontend;
-  std::shared_ptr<BackendModule> backend;
-  std::shared_ptr<RosBackendVisualizer> backend_visualizer;
-  std::shared_ptr<LoopClosureModule> lcd;
-
-  LogSetup::Ptr log_setup;
-
-  std::unique_ptr<DsgSender> dsg_sender;
-  ros::Publisher mesh_graph_pub;
-  ros::Publisher mesh_update_pub;
-  ros::Subscriber bow_sub;
+ private:
+  void initFrontend();
+  void initBackend();
+  void initReconstruction();
+  void initLCD();
 };
 
 }  // namespace hydra

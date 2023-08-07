@@ -42,7 +42,6 @@
 #include <tf2_ros/transform_listener.h>
 
 #include "hydra_ros/pipeline/ros_reconstruction_config.h"
-#include "hydra_ros/visualizer/topology_server_visualizer.h"
 
 namespace hydra {
 
@@ -52,12 +51,14 @@ class RosReconstruction : public ReconstructionModule {
  public:
   using PointcloudQueue = InputQueue<sensor_msgs::PointCloud2::ConstPtr>;
 
-  RosReconstruction(const ros::NodeHandle& nh,
+  RosReconstruction(const RosReconstructionConfig& config,
+                    const ros::NodeHandle& nh,
                     const RobotPrefixConfig& prefix,
-                    const RosReconstructionConfig& config,
                     const OutputQueue::Ptr& output_queue = nullptr);
 
   virtual ~RosReconstruction();
+
+  std::string printInfo() const override;
 
   void handlePointcloud(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
@@ -71,10 +72,9 @@ class RosReconstruction : public ReconstructionModule {
 
   void pointcloudSpin();
 
-  void visualize(const ReconstructionOutput& output);
-
-  ros::NodeHandle nh_;
+ protected:
   const RosReconstructionConfig config_;
+  ros::NodeHandle nh_;
 
   ros::Subscriber pcl_sub_;
   std::unique_ptr<ImageReceiver> image_receiver_;
@@ -89,8 +89,6 @@ class RosReconstruction : public ReconstructionModule {
   std::mutex pose_graph_mutex_;
   std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
 
-  // visualizer
-  std::unique_ptr<TopologyServerVisualizer> visualizer_;
   ros::Publisher mesh_pub_;
   ros::Publisher pcl_pub_;
 

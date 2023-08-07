@@ -32,15 +32,20 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/topology_server_visualizer.h"
+#include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/ros.h>
+#include <hydra/places/compression_graph_extractor.h>
 #include <hydra/utils/timing_utilities.h>
 
-#include "hydra_ros/config/ros_utilities.h"
+#include "hydra_ros/visualizer/gvd_visualization_utilities.h"
+#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
 
 using places::CompressionGraphExtractor;
+using places::GraphExtractorInterface;
 using places::GvdGraph;
 using places::GvdVoxel;
 using timing::ScopedTimer;
@@ -50,56 +55,73 @@ using voxblox::Layer;
 using voxblox::MeshLayer;
 using voxblox::TsdfVoxel;
 
-TopologyServerVisualizer::TopologyServerVisualizer(const std::string& ns)
+void declare_config(ReconstructionVisualizerConfig& conf) {
+  using namespace config;
+  name("ReconstructionVisualizerConfig");
+  field(conf.world_frame, "world_frame");
+  field(conf.topology_marker_ns, "topology_marker_ns");
+  field(conf.show_block_outlines, "show_block_outlines");
+  field(conf.use_gvd_block_outlines, "use_gvd_block_outlines");
+  field(conf.outline_scale, "outline_scale");
+}
+
+ReconstructionVisualizer::ReconstructionVisualizer(const std::string& ns)
     : nh_(ns), previous_spheres_(0), published_gvd_graph_(false) {
   pubs_.reset(new MarkerGroupPub(nh_));
 
-  config_ = config_parser::load_from_ros_nh<TopologyVisualizerConfig>(nh_);
+  config_ = config::fromRos<ReconstructionVisualizerConfig>(nh_);
   config_.graph.layer_z_step = 0;
   config_.graph.color_places_by_distance = true;
 
   setupConfigServers();
 }
 
-void TopologyServerVisualizer::visualize(const SceneGraphLayer& graph,
-                                         const GvdGraph& gvd_graph,
+ReconstructionVisualizer::~ReconstructionVisualizer() {}
+
+void ReconstructionVisualizer::start() {}
+
+void ReconstructionVisualizer::stop() {}
+
+void ReconstructionVisualizer::save(const LogSetup&) {}
+
+void ReconstructionVisualizer::visualize(uint64_t timestamp_ns,
                                          const Layer<GvdVoxel>& gvd,
-                                         const Layer<TsdfVoxel>& tsdf,
-                                         uint64_t timestamp_ns,
-                                         const MeshLayer* mesh) {
+                                         const GraphExtractorInterface* extractor) {
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
   std_msgs::Header header;
   header.frame_id = config_.world_frame;
   header.stamp.fromNSec(timestamp_ns);
 
-  visualizeGraph(header, graph);
-  visualizeGvdGraph(header, gvd_graph);
   visualizeGvd(header, gvd);
-  if (config_.show_block_outlines) {
-    visualizeBlocks(header, gvd, tsdf, mesh);
-  }
-}
 
-void TopologyServerVisualizer::visualizeExtractor(
-    uint64_t timestamp_ns, const CompressionGraphExtractor& extractor) {
-  std_msgs::Header header;
-  header.frame_id = config_.world_frame;
-  header.stamp.fromNSec(timestamp_ns);
+  if (extractor) {
+    visualizeGraph(header, extractor->getGraph());
+    visualizeGvdGraph(header, extractor->getGvdGraph());
+  }
+
+  if (config_.show_block_outlines) {
+    visualizeBlocks(header, gvd);
+  }
+
+  const auto compression = dynamic_cast<const CompressionGraphExtractor*>(extractor);
+  if (!compression) {
+    return;
+  }
 
   MarkerArray markers;
   pubs_->publish("gvd_cluster_viz", [&](MarkerArray& markers) {
     const std::string ns = "gvd_cluster_graph";
-    if (extractor.getGvdGraph().empty() && published_gvd_clusters_) {
+    if (compression->getGvdGraph().empty() && published_gvd_clusters_) {
       published_gvd_graph_ = false;
       markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_nodes"));
       markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_edges"));
       return true;
     }
 
-    markers = showGvdClusters(extractor.getGvdGraph(),
-                              extractor.getCompressedNodeInfo(),
-                              extractor.getCompressedRemapping(),
+    markers = showGvdClusters(compression->getGvdGraph(),
+                              compression->getCompressedNodeInfo(),
+                              compression->getCompressedRemapping(),
                               config_.gvd,
                               config_.colormap,
                               ns);
@@ -115,10 +137,10 @@ void TopologyServerVisualizer::visualizeExtractor(
   });
 }
 
-void TopologyServerVisualizer::visualizeError(const Layer<GvdVoxel>& lhs,
+void ReconstructionVisualizer::visualizeError(uint64_t timestamp_ns,
+                                              const Layer<GvdVoxel>& lhs,
                                               const Layer<GvdVoxel>& rhs,
-                                              double threshold,
-                                              uint64_t timestamp_ns) {
+                                              double threshold) {
   pubs_->publish("error_viz", [&](Marker& msg) {
     msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
     msg.header.frame_id = config_.world_frame;
@@ -133,7 +155,7 @@ void TopologyServerVisualizer::visualizeError(const Layer<GvdVoxel>& lhs,
   });
 }
 
-void TopologyServerVisualizer::visualizeGraph(const std_msgs::Header& header,
+void ReconstructionVisualizer::visualizeGraph(const std_msgs::Header& header,
                                               const SceneGraphLayer& graph) {
   if (graph.nodes().empty()) {
     LOG(INFO) << "visualizing empty graph!";
@@ -163,7 +185,7 @@ void TopologyServerVisualizer::visualizeGraph(const std_msgs::Header& header,
   publishGraphLabels(header, graph);
 }
 
-void TopologyServerVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
+void ReconstructionVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
                                                  const GvdGraph& graph) const {
   pubs_->publish("gvd_graph_viz", [&](MarkerArray& markers) {
     const std::string ns = config_.topology_marker_ns + "_gvd_graph";
@@ -186,7 +208,7 @@ void TopologyServerVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
   });
 }
 
-void TopologyServerVisualizer::visualizeGvd(const std_msgs::Header& header,
+void ReconstructionVisualizer::visualizeGvd(const std_msgs::Header& header,
                                             const Layer<GvdVoxel>& gvd) const {
   pubs_->publish("esdf_viz", [&](Marker& msg) {
     msg = makeEsdfMarker(config_.gvd, config_.colormap, gvd);
@@ -228,33 +250,17 @@ void TopologyServerVisualizer::visualizeGvd(const std_msgs::Header& header,
   });
 }
 
-void TopologyServerVisualizer::visualizeBlocks(const std_msgs::Header& header,
-                                               const Layer<GvdVoxel>& gvd,
-                                               const Layer<TsdfVoxel>& tsdf,
-                                               const MeshLayer* mesh) const {
+void ReconstructionVisualizer::visualizeBlocks(const std_msgs::Header& header,
+                                               const Layer<GvdVoxel>& gvd) const {
   pubs_->publish("voxel_block_viz", [&](Marker& msg) {
-    if (config_.use_gvd_block_outlines) {
-      msg = makeBlocksMarker(gvd, config_.outline_scale);
-    } else {
-      msg = makeBlocksMarker(tsdf, config_.outline_scale);
-    }
-
+    msg = makeBlocksMarker(gvd, config_.outline_scale);
     msg.header = header;
     msg.ns = "topology_server_blocks";
     return true;
   });
-
-  if (mesh) {
-    pubs_->publish("mesh_block_viz", [&](Marker& msg) {
-      msg = makeMeshBlocksMarker(*mesh, config_.outline_scale);
-      msg.header = header;
-      msg.ns = "topology_server_mesh_blocks";
-      return true;
-    });
-  }
 }
 
-void TopologyServerVisualizer::publishFreespace(const std_msgs::Header& header,
+void ReconstructionVisualizer::publishFreespace(const std_msgs::Header& header,
                                                 const SceneGraphLayer& graph) {
   const std::string label_ns = config_.topology_marker_ns + "_freespace";
 
@@ -308,7 +314,7 @@ void TopologyServerVisualizer::publishFreespace(const std_msgs::Header& header,
   });
 }
 
-void TopologyServerVisualizer::publishGraphLabels(const std_msgs::Header& header,
+void ReconstructionVisualizer::publishGraphLabels(const std_msgs::Header& header,
                                                   const SceneGraphLayer& graph) {
   if (!config_.graph_layer.use_label) {
     return;
@@ -358,30 +364,30 @@ void TopologyServerVisualizer::publishGraphLabels(const std_msgs::Header& header
   });
 }
 
-void TopologyServerVisualizer::graphConfigCb(LayerConfig& config, uint32_t) {
+void ReconstructionVisualizer::graphConfigCb(LayerConfig& config, uint32_t) {
   config_.graph_layer = config;
 }
 
-void TopologyServerVisualizer::colormapCb(ColormapConfig& config, uint32_t) {
+void ReconstructionVisualizer::colormapCb(ColormapConfig& config, uint32_t) {
   config_.colormap = config;
 }
 
-void TopologyServerVisualizer::gvdConfigCb(GvdVisualizerConfig& config, uint32_t) {
+void ReconstructionVisualizer::gvdConfigCb(GvdVisualizerConfig& config, uint32_t) {
   config_.gvd = config;
   config_.graph.places_colormap_min_distance = config.gvd_min_distance;
   config_.graph.places_colormap_max_distance = config.gvd_max_distance;
 }
 
-void TopologyServerVisualizer::setupConfigServers() {
+void ReconstructionVisualizer::setupConfigServers() {
   startRqtServer(
-      "gvd_visualizer", gvd_config_server_, &TopologyServerVisualizer::gvdConfigCb);
+      "gvd_visualizer", gvd_config_server_, &ReconstructionVisualizer::gvdConfigCb);
 
   startRqtServer("graph_visualizer",
                  graph_config_server_,
-                 &TopologyServerVisualizer::graphConfigCb);
+                 &ReconstructionVisualizer::graphConfigCb);
 
   startRqtServer(
-      "visualizer_colormap", colormap_server_, &TopologyServerVisualizer::colormapCb);
+      "visualizer_colormap", colormap_server_, &ReconstructionVisualizer::colormapCb);
 }
 
 }  // namespace hydra
