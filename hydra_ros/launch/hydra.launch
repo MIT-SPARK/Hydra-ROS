@@ -56,9 +56,10 @@
     <arg name="lcd_config_path" default="$(arg lcd_config_dir)/gnn_lcd_config.yaml" if="$(arg use_gnn_descriptors)"/>
     <arg name="lcd_config_path" default="$(arg lcd_config_dir)/lcd_config.yaml" unless="$(arg use_gnn_descriptors)"/>
     <!-- zmq interface -->
-    <arg name="use_zmq_interface" default="false"/>
-    <arg name="zmq_send_url" default="tcp://127.0.0.1:8001"/>
-    <arg name="zmq_recv_url" default="tcp://127.0.0.1:8002"/>
+    <arg name="use_zmq_interface" default="true"/>
+    <arg name="zmq_ip" default="127.0.0.1"/>
+    <arg name="zmq_send_url" default="tcp://$(arg zmq_ip):8001"/>
+    <arg name="zmq_recv_url" default="tcp://$(arg zmq_ip):8002"/>
     <!-- misc visualization -->
     <arg name="start_visualizer" default="true"/>
     <arg name="visualize_reconstruction" default="false"/>
@@ -146,9 +147,9 @@
         <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>
         <param name="show_stats" value="$(arg show_topology_stats)"/>
         <!-- zmq interface -->
-        <param name="dsg/use_zmq_interface" value="$(arg use_zmq_interface)"/>
-        <param name="dsg/zmq_send_url" value="$(arg zmq_send_url)"/>
-        <param name="dsg/zmq_recv_url" value="$(arg zmq_recv_url)"/>
+        <param name="backend/dsg/use_zmq_interface" value="$(arg use_zmq_interface)"/>
+        <param name="backend/dsg/zmq_send_url" value="$(arg zmq_send_url)"/>
+        <param name="backend/dsg/zmq_recv_url" value="$(arg zmq_recv_url)"/>
         <!-- LCD params -->
         <param name="enable_lcd" value="$(arg enable_dsg_lcd)"/>
         <param name="lcd_use_bow_vectors" value="$(arg lcd_use_bow_vectors)"/>
