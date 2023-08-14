@@ -163,6 +163,7 @@
         <!-- visualization -->
         <param name="visualize_reconstruction" value="$(arg visualize_reconstruction)"/>
         <param name="publish_reconstruction_mesh" value="$(arg visualize_reconstruction)"/>
+        <param name="reconstruction_visualizer_namespace" value="topology_visualizer"/>
         <rosparam file="$(arg graph_viz_config_path)" ns="topology_visualizer"/>
 
         <!-- goes last to make sure params actually override -->

@@ -76,6 +76,8 @@ class ReconstructionVisualizer : public Module {
 
   void save(const LogSetup&) override;
 
+  std::string printInfo() const override;
+
   void visualize(uint64_t timestamp_ns,
                  const voxblox::Layer<places::GvdVoxel>& gvd,
                  const places::GraphExtractorInterface* extractor = nullptr);

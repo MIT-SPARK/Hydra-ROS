@@ -36,8 +36,8 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
-#include <config_utilities/validation.h>
 #include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 #include <hydra/common/hydra_config.h>
 #include <hydra/loop_closure/loop_closure_module.h>
 
@@ -166,12 +166,12 @@ void HydraRosPipeline::initReconstruction() {
   if (config_.visualize_reconstruction) {
     const auto viz = std::make_shared<ReconstructionVisualizer>(
         config_.reconstruction_visualizer_namespace);
-    reconstruction->addOutputCallback(
-        [&viz](const ReconstructionOutput& output,
-               const voxblox::Layer<places::GvdVoxel>& gvd,
-               const places::GraphExtractorInterface* extractor) {
-          viz->visualize(output.timestamp_ns, gvd, extractor);
-        });
+    reconstruction->addVisualizationCallback(
+        std::bind(&ReconstructionVisualizer::visualize,
+                  viz.get(),
+                  std::placeholders::_1,
+                  std::placeholders::_2,
+                  std::placeholders::_3));
     modules_["reconstruction_visualizer"] = viz;
   }
 

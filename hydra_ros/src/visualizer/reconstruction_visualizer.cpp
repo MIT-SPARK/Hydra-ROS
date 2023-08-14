@@ -35,6 +35,7 @@
 #include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/printing.h>
 #include <config_utilities/parsing/ros.h>
 #include <hydra/places/compression_graph_extractor.h>
 #include <hydra/utils/timing_utilities.h>
@@ -83,6 +84,12 @@ void ReconstructionVisualizer::start() {}
 void ReconstructionVisualizer::stop() {}
 
 void ReconstructionVisualizer::save(const LogSetup&) {}
+
+std::string ReconstructionVisualizer::printInfo() const {
+  std::stringstream ss;
+  ss << config::toString(config_);
+  return ss.str();
+}
 
 void ReconstructionVisualizer::visualize(uint64_t timestamp_ns,
                                          const Layer<GvdVoxel>& gvd,
