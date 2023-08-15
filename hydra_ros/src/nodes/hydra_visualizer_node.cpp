@@ -33,11 +33,13 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/config.h>
+#include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <glog/logging.h>
 #include <hydra/utils/timing_utilities.h>
 #include <ros/ros.h>
+#include <spark_dsg/zmq_interface.h>
 #include <std_srvs/Empty.h>
 
 #include <fstream>
@@ -53,20 +55,27 @@ namespace hydra {
 
 struct NodeConfig {
   bool load_graph = false;
+  bool use_zmq = false;
   std::string scene_graph_filepath = "";
   std::string visualizer_ns = "/hydra_dsg_visualizer";
   std::string mesh_plugin_ns = "dsg_mesh";
   std::string output_path = "";
+  std::string zmq_url = "tcp://127.0.0.1:8001";
+  size_t zmq_num_threads = 2;
+  size_t zmq_poll_time_ms = 10;
 };
 
 void declare_config(NodeConfig& config) {
   using namespace config;
   name("VisualizerNodeConfig");
   field(config.load_graph, "load_graph");
+  field(config.use_zmq, "use_zmq");
   field(config.scene_graph_filepath, "scene_graph_filepath");
   field(config.visualizer_ns, "visualizer_ns");
   field(config.mesh_plugin_ns, "mesh_plugin_ns");
   field(config.output_path, "output_path");
+  field(config.zmq_url, "zmq_url");
+  field(config.zmq_num_threads, "zmq_num_threads");
 }
 
 struct VisualizerNode {
@@ -83,16 +92,6 @@ struct VisualizerNode {
       size_log_file_.reset(
           new std::ofstream(config_.output_path + "/dsg_message_sizes.csv"));
       *size_log_file_ << "time_ns,bytes" << std::endl;
-    }
-
-    if (!config_.load_graph || config_.scene_graph_filepath.empty()) {
-      receiver_.reset(new DsgReceiver(nh_, [&](const ros::Time& stamp, size_t bytes) {
-        if (size_log_file_) {
-          *size_log_file_ << stamp.toNSec() << "," << bytes << std::endl;
-        }
-      }));
-    } else {
-      loadGraph();
     }
   }
 
@@ -114,53 +113,119 @@ struct VisualizerNode {
     visualizer_->setGraph(dsg);
   }
 
-  bool handleService(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+  bool handleReload(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
     loadGraph();
     return true;
   }
 
-  void spin() {
-    ROS_DEBUG("Visualizer running");
+  bool handleRedraw(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+    // TODO(nathan) this is technically safe, but not super ideal
+    visualizer_->setGraphUpdated();
+    visualizer_->redraw();
+    return true;
+  }
 
-    if (!config_.load_graph) {
-      bool graph_set = false;
+  void spinRos() {
+    receiver_.reset(new DsgReceiver(nh_, [&](const ros::Time& stamp, size_t bytes) {
+      if (size_log_file_) {
+        *size_log_file_ << stamp.toNSec() << "," << bytes << std::endl;
+      }
+    }));
 
-      ros::Rate r(10);
-      while (ros::ok()) {
-        ros::spinOnce();
+    bool graph_set = false;
 
-        if (receiver_ && receiver_->updated()) {
-          if (!receiver_->graph()) {
-            r.sleep();
-            continue;
-          }
-          if (!graph_set) {
-            visualizer_->setGraph(receiver_->graph());
-            graph_set = true;
-          } else {
-            visualizer_->setGraphUpdated();
-          }
+    ros::WallRate r(10);
+    while (ros::ok()) {
+      ros::spinOnce();
 
-          visualizer_->redraw();
-          receiver_->clearUpdated();
+      if (receiver_ && receiver_->updated()) {
+        if (!receiver_->graph()) {
+          r.sleep();
+          continue;
+        }
+        if (!graph_set) {
+          visualizer_->setGraph(receiver_->graph());
+          graph_set = true;
+        } else {
+          visualizer_->setGraphUpdated();
         }
 
-        r.sleep();
+        visualizer_->redraw();
+        receiver_->clearUpdated();
       }
+
+      r.sleep();
+    }
+  }
+
+  void spinFile() {
+    if (config_.scene_graph_filepath.empty()) {
+      LOG(ERROR) << "Scene graph filepath invalid!";
+      return;
+    }
+
+    loadGraph();
+
+    reload_service_ =
+        nh_.advertiseService("reload", &VisualizerNode::handleReload, this);
+    visualizer_->start();
+    ros::spin();
+  }
+
+  void spinZmq() {
+    zmq_receiver_.reset(
+        new spark_dsg::ZmqReceiver(config_.zmq_url, config_.zmq_num_threads));
+
+    bool graph_set = false;
+    while (ros::ok()) {
+      ros::spinOnce();
+
+      // we always receive all messages
+      if (!zmq_receiver_->recv(config_.zmq_poll_time_ms, true)) {
+        continue;
+      }
+
+      auto graph = zmq_receiver_->graph();
+      if (!graph) {
+        continue;
+      }
+
+      if (!graph_set) {
+        visualizer_->setGraph(graph);
+        graph_set = true;
+      } else {
+        visualizer_->setGraphUpdated();
+      }
+
+      visualizer_->redraw();
+    }
+  }
+
+  void spin() {
+    ROS_DEBUG("Visualizer running");
+    redraw_service_ =
+        nh_.advertiseService("redraw", &VisualizerNode::handleRedraw, this);
+
+    if (config_.load_graph) {
+      spinFile();
+      return;
+    }
+
+    if (config_.use_zmq) {
+      spinZmq();
     } else {
-      reload_service_ =
-          nh_.advertiseService("reload", &VisualizerNode::handleService, this);
-      visualizer_->start();
-      ros::spin();
+      spinRos();
     }
   }
 
   ros::NodeHandle nh_;
   std::unique_ptr<DsgVisualizer> visualizer_;
   std::unique_ptr<DsgReceiver> receiver_;
+  std::unique_ptr<spark_dsg::ZmqReceiver> zmq_receiver_;
   NodeConfig config_;
   std::unique_ptr<std::ofstream> size_log_file_;
   ros::ServiceServer reload_service_;
+  ros::ServiceServer redraw_service_;
 };
 
 }  // namespace hydra

@@ -78,6 +78,8 @@ class RosBackendPublisher : public Module {
   ros::Publisher pose_mesh_edges_pub_;
   ros::Publisher pose_graph_pub_;
 
+  bool zmq_publish_mesh_;
+
   // Hack for temporary removal of label flickering
   size_t last_zmq_pub_time_;
 

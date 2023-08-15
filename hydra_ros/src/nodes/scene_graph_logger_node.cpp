@@ -53,7 +53,7 @@ struct SceneGraphLoggerNode {
   }
 
   void spin() {
-    ros::Rate r(10);
+    ros::WallRate r(10);
     while (ros::ok()) {
       ros::spinOnce();
 

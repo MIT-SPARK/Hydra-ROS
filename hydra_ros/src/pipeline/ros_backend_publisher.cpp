@@ -48,7 +48,11 @@ using visualization_msgs::Marker;
 RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh,
                                          const BackendConfig& config,
                                          const RobotPrefixConfig& prefix)
-    : nh_(nh), config_(config), prefix_(prefix), last_zmq_pub_time_(0) {
+    : nh_(nh),
+      config_(config),
+      prefix_(prefix),
+      zmq_publish_mesh_(true),
+      last_zmq_pub_time_(0) {
   mesh_mesh_edges_pub_ =
       nh_.advertise<Marker>("pgmo/deformation_graph_mesh_mesh", 10, false);
   pose_mesh_edges_pub_ =
@@ -57,6 +61,7 @@ RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh,
 
   double min_mesh_separation_s = 0.0;
   nh_.getParam("min_mesh_separation_s", min_mesh_separation_s);
+  nh_.getParam("zmq_publish_mesh", zmq_publish_mesh_);
 
   dsg_sender_.reset(new hydra::DsgSender(nh_, "backend", false, min_mesh_separation_s));
   if (config_.use_zmq_interface) {
@@ -79,7 +84,7 @@ void RosBackendPublisher::publish(const DynamicSceneGraph& graph,
   if (config_.use_zmq_interface) {
     // TODO(nathan) handle this better
     //&& timestamp_ns - last_zmq_pub_time_ > 9000000000
-    zmq_sender_->send(graph);
+    zmq_sender_->send(graph, zmq_publish_mesh_);
     last_zmq_pub_time_ = timestamp_ns;
   }
 

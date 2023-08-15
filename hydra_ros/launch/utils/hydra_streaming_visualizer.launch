@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
+  <arg name="viz_use_zmq" default="false"/>
+  <arg name="viz_zmq_ip" default="127.0.0.1"/>
+  <arg name="viz_zmq_port" default="8001"/>
+  <arg name="viz_zmq_url" default="tcp://$(arg viz_zmq_ip):$(arg viz_zmq_port)"/>
+
   <arg name="show_frontend" default="false"/>
   <arg name="dsg_topic" default="hydra_ros_node/dsg" unless="$(arg show_frontend)"/>
   <arg name="dsg_mesh_topic" default="hydra_ros_node/dsg_mesh" unless="$(arg show_frontend)"/>
@@ -47,6 +52,9 @@
     <param name="visualizer_ns" value="$(arg visualizer_ns)"/>
     <param name="mesh_plugin_ns" value="dsg_mesh"/>
     <param name="output_path" value=""/>
+
+    <param name="use_zmq" value="$(arg viz_use_zmq)"/>
+    <param name="zmq_url" value="$(arg viz_zmq_url)"/>
 
     <remap from="~dsg" to="$(arg dsg_topic)"/>
     <remap from="~dsg_mesh_updates" to="$(arg dsg_mesh_topic)"/>
