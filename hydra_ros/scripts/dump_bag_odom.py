@@ -37,45 +37,36 @@
 import rosbag
 import argparse
 
-NODE_PREFIX = '    <node pkg="tf2_ros" type="static_transform_publisher"'
-TF_STR = ' args="{x} {y} {z} {qx} {qy} {qz} {qw} {parent} {child}"/>\n\n'
+LINE_STR = "{ts},{x},{y},{z},{qw},{qx},{qy},{qz}\n"
 
 
 def main():
     """Run some stuff."""
     parser = argparse.ArgumentParser(
-        description="utiltiy to read a static tf from a bag."
+        description="utiltiy to read a odom information from a bag."
     )
     parser.add_argument("bag_file", type=str, help="bag file to use")
+    parser.add_argument("topic", type=str, help="bag file to use")
     parser.add_argument("output", type=str, help="file to output to")
     args = parser.parse_args()
 
-    tf_idx = 0
     with open(args.output, "w") as fout:
-        fout.write("<launch>\n\n")
+        fout.write("#timestamp_kf,x,y,z,qw,qx,qy,qz\n")
 
         with rosbag.Bag(args.bag_file, "r") as bag:
-            for topic, tf_msg, t in bag.read_messages(topics=["/tf_static"]):
-                for msg in tf_msg.transforms:
-                    fout.write(NODE_PREFIX)
-                    name = "bag_static_tf_{}".format(tf_idx)
-                    tf_idx += 1
-                    fout.write(' name="{}"'.format(name))
-                    fout.write(
-                        TF_STR.format(
-                            x=msg.transform.translation.x,
-                            y=msg.transform.translation.y,
-                            z=msg.transform.translation.z,
-                            qx=msg.transform.rotation.x,
-                            qy=msg.transform.rotation.y,
-                            qz=msg.transform.rotation.z,
-                            qw=msg.transform.rotation.w,
-                            parent=msg.header.frame_id,
-                            child=msg.child_frame_id,
-                        )
+            for topic, msg, t in bag.read_messages(topics=[args.topic]):
+                fout.write(
+                    LINE_STR.format(
+                        ts=msg.header.stamp.to_nsec(),
+                        x=msg.pose.pose.position.x,
+                        y=msg.pose.pose.position.y,
+                        z=msg.pose.pose.position.z,
+                        qx=msg.pose.pose.orientation.x,
+                        qy=msg.pose.pose.orientation.y,
+                        qz=msg.pose.pose.orientation.z,
+                        qw=msg.pose.pose.orientation.w,
                     )
-
-        fout.write("</launch>\n")
+                )
 
 
 if __name__ == "__main__":

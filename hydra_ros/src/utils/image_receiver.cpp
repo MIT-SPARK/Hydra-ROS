@@ -6,16 +6,18 @@
 
 namespace hydra {
 
+image_transport::TransportHints getHintsWithNamespace(const ros::NodeHandle& nh,
+                                                      const std::string& ns) {
+  return image_transport::TransportHints(
+      "raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
+}
+
 ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
                                  const std::string& camera_name,
                                  const std::string& image_name,
                                  uint32_t queue_size)
     : transport(ros::NodeHandle(nh, camera_name)),
-      sub(transport,
-          image_name,
-          queue_size,
-          image_transport::TransportHints(
-              "raw", ros::TransportHints(), ros::NodeHandle(nh, camera_name))) {}
+      sub(transport, image_name, queue_size, getHintsWithNamespace(nh, camera_name)) {}
 
 ImageReceiver::ImageReceiver(const ros::NodeHandle& nh,
                              const OutputCallback& callback,

@@ -1,0 +1,47 @@
+<launch>
+    <arg name="sim_time_required" default="true"/>
+    <param name="use_sim_time" value="$(arg sim_time_required)"/>
+
+    <arg name="robot_name" default="sparkal1"/>
+
+    <arg name="semantic_map_name" default="ade20k_full"/>
+    <arg name="semantic_map_dir" default="$(find semantic_recolor)/config/colors"/>
+    <arg name="semantic_map_file" default="$(arg semantic_map_name)_config.csv"/>
+    <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"/>
+
+    <arg name="typology_dir" default="$(find hydra)/config/"/>
+    <arg name="typology_file" default="$(arg semantic_map_name)_typology.yaml"/>
+    <arg name="typology_path" default="$(arg typology_dir)/$(arg typology_file)"/>
+
+    <arg name="reconstruction_config_path" default="$(find hydra)/config/default_reconstruction_config.yaml"/>
+
+    <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
+    <arg name="rviz_file" default="$(arg robot_name).rviz"/>
+
+    <arg name="use_image_interface" default="true"/>
+    <arg name="publish_pointcloud" default="true"/>
+    <arg name="color_compressed" default="true"/>
+    <arg name="rgb_topic" default="/$(arg robot_name)/forward/color/image_raw"/>
+    <arg name="rgb_info_topic" default="/$(arg robot_name)/forward/color/camera_info"/>
+    <arg name="depth_topic" default="/$(arg robot_name)/forward/depth_registered/image_rect"/>
+    <arg name="label_topic" default="/oneformer/labels/image_raw"/>
+    <arg name="pointcloud_topic" default="$(arg robot_name)/semantic_pointcloud"/>
+
+    <arg name="use_gt_frame" default="true"/>
+    <arg name="robot_frame" default="$(arg robot_name)/lamp" if="$(arg use_gt_frame)"/>
+    <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
+    <arg name="world_frame" default="$(arg robot_name)/map"/>
+    <arg name="sensor_frame" default="$(arg robot_name)/forward_color_optical_frame"/>
+
+    <arg name="run_name"/>
+    <arg name="dataset_path"/>
+    <arg name="dataset_info_file" value="$(arg dataset_path)/$(arg robot_name)/launch/$(arg run_name)_info.launch"/>
+    <include file="$(arg dataset_info_file)" pass_all_args="true"/>
+
+    <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+        <arg name="robot_id" default="0"/>
+        <arg name="extrinsics_mode" value="USE_TF"/>
+        <arg name="use_oriented_bounding_boxes" default="true"/>
+        <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
+    </include>
+</launch>

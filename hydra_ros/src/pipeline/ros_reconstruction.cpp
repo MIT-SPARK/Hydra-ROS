@@ -88,8 +88,12 @@ RosReconstruction::RosReconstruction(const RosReconstructionConfig& config,
     pcl_sub_ =
         nh_.subscribe("pointcloud", 10, &RosReconstruction::handlePointcloud, this);
   }
-  pose_graph_sub_ =
-      nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
+
+  if (!config_.make_pose_graph) {
+    pose_graph_sub_ =
+        nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
+  }
+
   pointcloud_thread_.reset(new std::thread(&RosReconstruction::pointcloudSpin, this));
 
   if (!config_.enable_output_queue && !output_queue) {
@@ -123,6 +127,7 @@ std::string RosReconstruction::printInfo() const {
 bool RosReconstruction::checkPointcloudTimestamp(const ros::Time& curr_time) {
   VLOG(1) << "[Hydra Reconstruction] Got raw pointcloud input @ " << curr_time.toNSec()
           << " [ns]";
+
   if (last_time_received_) {
     const auto separation_s = (curr_time - *last_time_received_).toSec();
     if (separation_s < config_.pointcloud_separation_s) {
