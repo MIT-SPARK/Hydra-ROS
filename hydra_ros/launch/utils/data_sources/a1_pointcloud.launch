@@ -9,6 +9,7 @@
     <arg name="robot_frame" default="base_link"/>
     <arg name="parent_frame" default="world"/>
     <arg name="use_image_interface" default="false"/>
+    <arg name="load_static_tfs" default="true"/>
 
     <arg name="rgb_info_topic" default="/cam_d455/color/camera_info"/>
     <arg name="rgb_topic" default="/cam_d455/color/image_raw"/>
@@ -18,11 +19,15 @@
 
     <arg name="enable_rectification" default="true"/>
 
+    <include file="$(find hydra_ros)/launch/utils/includes/$(arg robot_name)_static_tfs.xml" if="$(arg load_static_tfs)"/>
+
     <arg name="need_compressed"
          value="$(eval arg('use_compressed_transport') and not arg('use_prerecorded_semantics'))"/>
 
     <include file="$(find hydra_ros)/launch/utils/gt_pose/robot_gt_pose.launch" pass_all_args="true"
-             if="$(arg use_gt_frame)"/>
+             if="$(arg use_gt_frame)">
+        <arg name="load_static_tfs" value="false"/>
+    </include>
 
     <include file="$(find hydra_ros)/launch/utils/includes/rgbd_to_pointcloud.xml" pass_all_args="true"
         unless="$(arg use_semantics)"/>
