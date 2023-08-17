@@ -20,7 +20,7 @@ INFO_LAUNCH_TEMPLATE = """<launch>
   <arg name="raw_depth_info_topic" default="{robot_name}/forward/depth/camera_info"/>
   <arg name="raw_depth_topic" default="{robot_name}/forward/depth/image_rect_raw"/>
 
-  <arg name="color_map_name" default="ade20k_full_config"/>
+  <arg name="color_map_name" default="ade20k_full"/>
   <arg name="color_map_file"
        default="$(find semantic_recolor)/config/colors/$(arg color_map_name).yaml"/>
 
