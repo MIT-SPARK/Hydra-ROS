@@ -72,7 +72,6 @@ ReconstructionVisualizer::ReconstructionVisualizer(const std::string& ns)
 
   config_ = config::fromRos<ReconstructionVisualizerConfig>(nh_);
   config_.graph.layer_z_step = 0;
-  config_.graph.color_places_by_distance = true;
 
   setupConfigServers();
 }

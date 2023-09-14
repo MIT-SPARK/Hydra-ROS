@@ -4,6 +4,7 @@ z_offset_scale: 3.0
 visualize: true
 # nodes
 marker_scale: 0.2
+marker_color_mode: 2  # parent
 marker_alpha: 0.9
 use_sphere_marker: true
 use_label: false

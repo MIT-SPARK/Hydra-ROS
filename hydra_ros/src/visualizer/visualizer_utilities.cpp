@@ -359,11 +359,21 @@ Marker makeCentroidMarkers(const std_msgs::Header& header,
                            const VisualizerConfig& visualizer_config,
                            const std::string& ns,
                            const ColormapConfig& colors) {
-  return makeCentroidMarkers(
-      header, config, layer, visualizer_config, ns, [&](const SceneGraphNode& node) {
-        return getDistanceColor(
-            visualizer_config, colors, node.attributes<PlaceNodeAttributes>().distance);
-      });
+  return makeCentroidMarkers(header,
+                             config,
+                             layer,
+                             visualizer_config,
+                             ns,
+                             [&](const SceneGraphNode& node) -> NodeColor {
+                               try {
+                                 return getDistanceColor(
+                                     visualizer_config,
+                                     colors,
+                                     node.attributes<PlaceNodeAttributes>().distance);
+                               } catch (const std::bad_cast&) {
+                                 return NodeColor::Zero();
+                               }
+                             });
 }
 
 Marker makeCentroidMarkers(const std_msgs::Header& header,

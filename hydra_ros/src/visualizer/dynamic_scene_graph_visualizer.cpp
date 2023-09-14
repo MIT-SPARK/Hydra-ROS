@@ -45,6 +45,13 @@ using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 using Node = SceneGraphNode;
 
+enum class NodeColorMode : int {
+  DEFAULT = hydra_ros::LayerVisualizer_DEFAULT,
+  DISTANCE = hydra_ros::LayerVisualizer_DISTANCE,
+  PARENT = hydra_ros::LayerVisualizer_PARENT,
+  ACTIVE = hydra_ros::LayerVisualizer_ACTIVE,
+};
+
 void clearPrevMarkers(const std_msgs::Header& header,
                       const std::set<NodeId>& curr_nodes,
                       const std::string& ns,
@@ -507,6 +514,24 @@ void DynamicSceneGraphVisualizer::deleteLayer(const std_msgs::Header& header,
   prev_labels_.at(layer.id).clear();
 }
 
+NodeColor getActiveColor(const SceneGraphNode& node) {
+  return node.attributes().is_active ? NodeColor(0, 255, 0) : NodeColor::Zero();
+}
+
+NodeColor DynamicSceneGraphVisualizer::getParentColor(
+    const SceneGraphNode& node) const {
+  auto parent = node.getParent();
+  if (!parent) {
+    return NodeColor::Zero();
+  }
+
+  return scene_graph_->getNode(*parent)
+      .value()
+      .get()
+      .attributes<SemanticNodeAttributes>()
+      .color;
+}
+
 void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
                                             const SceneGraphLayer& layer,
                                             const LayerConfig& config,
@@ -514,43 +539,32 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
   const auto& viz_config = visualizer_config_->get();
   const std::string node_ns = getLayerNodeNamespace(layer.id);
 
-  const bool color_by_distance =
-      layer.id == DsgLayers::PLACES && viz_config.color_places_by_distance;
-
   Marker nodes;
-  if (viz_config.color_nodes_by_active_flag) {
-    nodes = makeCentroidMarkers(
-        header,
-        config,
-        layer,
-        viz_config,
-        node_ns,
-        [&](const SceneGraphNode& node) -> NodeColor {
-          return node.attributes().is_active ? NodeColor(0, 255, 0) : NodeColor::Zero();
-        });
-  } else if (color_by_distance) {
-    nodes = makeCentroidMarkers(
-        header, config, layer, viz_config, node_ns, places_colormap_->get());
-  } else if (layer.id == DsgLayers::PLACES) {
-    nodes = makeCentroidMarkers(header,
-                                config,
-                                layer,
-                                viz_config,
-                                node_ns,
-                                [&](const SceneGraphNode& node) -> NodeColor {
-                                  auto parent = node.getParent();
-                                  if (!parent) {
-                                    return NodeColor::Zero();
-                                  }
-
-                                  return scene_graph_->getNode(*parent)
-                                      .value()
-                                      .get()
-                                      .attributes<SemanticNodeAttributes>()
-                                      .color;
-                                });
-  } else {
-    nodes = makeCentroidMarkers(header, config, layer, viz_config, node_ns);
+  const auto curr_mode = static_cast<NodeColorMode>(config.marker_color_mode);
+  switch (curr_mode) {
+    case NodeColorMode::ACTIVE:
+      nodes = makeCentroidMarkers(
+          header, config, layer, viz_config, node_ns, getActiveColor);
+      break;
+    case NodeColorMode::DISTANCE:
+      nodes = makeCentroidMarkers(
+          header, config, layer, viz_config, node_ns, places_colormap_->get());
+      break;
+    case NodeColorMode::PARENT:
+      nodes =
+          makeCentroidMarkers(header,
+                              config,
+                              layer,
+                              viz_config,
+                              node_ns,
+                              std::bind(&DynamicSceneGraphVisualizer::getParentColor,
+                                        this,
+                                        std::placeholders::_1));
+      break;
+    case NodeColorMode::DEFAULT:
+    default:
+      nodes = makeCentroidMarkers(header, config, layer, viz_config, node_ns);
+      break;
   }
   addMultiMarkerIfValid(nodes, msg);
 
