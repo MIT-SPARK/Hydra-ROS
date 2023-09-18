@@ -113,11 +113,11 @@
 
         <!-- parameter files -->
         <rosparam file="$(arg pipeline_path)"/>
+        <rosparam file="$(arg labelspace_path)"/>
         <rosparam file="$(arg reconstruction_config_path)" if="$(arg do_reconstruction)"/>
         <rosparam file="$(arg frontend_config_path)" ns="frontend"/>
         <rosparam file="$(arg backend_config_path)" ns="backend"/>
         <rosparam file="$(arg lcd_config_path)"/>
-        <rosparam file="$(arg labelspace_path)"/>
         <rosparam file="$(arg ros_params_file)"/>
 
         <!-- robot configuration -->
@@ -130,7 +130,7 @@
         <param name="kimera_extrinsics_file" value="$(arg kimera_extrinsics_file)" if="$(eval arg('extrinsics_mode') == 'USE_KIMERA')"/>
         <param name="sensor_frame" value="$(arg sensor_frame)" if="$(eval arg('extrinsics_mode') == 'USE_TF')"/>
         <!-- pipeline configuration -->
-        <param name="exit_mode" value="$(arg exit_mode)"/>
+        <param name="exit_after_clock" value="$(eval arg('exit_mode') == 'CLOCK')"/>
         <param name="do_reconstruction" value="$(arg do_reconstruction)"/>
         <param name="enable_frontend_output" value="$(arg enable_frontend_output)"/>
         <param name="semantic_colormap_file" value="$(arg semantic_map_path)"/>

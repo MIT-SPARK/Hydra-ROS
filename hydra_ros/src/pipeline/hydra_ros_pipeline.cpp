@@ -116,6 +116,46 @@ void HydraRosPipeline::initFrontend() {
                                         std::placeholders::_1,
                                         std::placeholders::_2,
                                         std::placeholders::_3));
+
+  if (config_.visualize_reconstruction) {
+    const auto viz = std::make_shared<ReconstructionVisualizer>(
+        config_.reconstruction_visualizer_namespace);
+    frontend->addPlaceVisualizationCallback(
+        std::bind(&ReconstructionVisualizer::visualize,
+                  viz.get(),
+                  std::placeholders::_1,
+                  std::placeholders::_2,
+                  std::placeholders::_3));
+    modules_["reconstruction_visualizer"] = viz;
+  }
+
+  freespace_server_ = nh_.advertiseService(
+      "query_freespace", &HydraRosPipeline::handleFreespaceSrv, this);
+}
+
+bool HydraRosPipeline::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
+                                          hydra_msgs::QueryFreespace::Response& res) {
+  if (req.x.size() != req.y.size() || req.x.size() != req.z.size()) {
+    return false;
+  }
+
+  if (req.x.empty()) {
+    return true;
+  }
+
+  FrontendModule::PositionMatrix points(3, req.x.size());
+  for (size_t i = 0; i < req.x.size(); ++i) {
+    points(0, i) = req.x[i];
+    points(1, i) = req.y[i];
+    points(2, i) = req.z[i];
+  }
+
+  auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
+  const auto result = frontend->inFreespace(points, req.freespace_distance_m);
+  for (const auto flag : result) {
+    res.in_freespace.push_back(flag ? 1 : 0);
+  }
+  return true;
 }
 
 void HydraRosPipeline::initBackend() {
@@ -162,18 +202,6 @@ void HydraRosPipeline::initReconstruction() {
   const auto reconstruction =
       std::make_shared<RosReconstruction>(conf, nh_, prefix_, frontend_queue);
   modules_["reconstruction"] = reconstruction;
-
-  if (config_.visualize_reconstruction) {
-    const auto viz = std::make_shared<ReconstructionVisualizer>(
-        config_.reconstruction_visualizer_namespace);
-    reconstruction->addVisualizationCallback(
-        std::bind(&ReconstructionVisualizer::visualize,
-                  viz.get(),
-                  std::placeholders::_1,
-                  std::placeholders::_2,
-                  std::placeholders::_3));
-    modules_["reconstruction_visualizer"] = viz;
-  }
 
   // TODO(nathan) publish reconstruction output
 }

@@ -15,7 +15,7 @@
     <arg name="rgb_topic" default="/$(arg robot_name)/forward/color/image_raw"/>
     <arg name="rgb_info_topic" default="/$(arg robot_name)/forward/color/camera_info"/>
     <arg name="depth_topic" default="/$(arg robot_name)/forward/depth_registered/image_rect"/>
-    <arg name="label_topic" default="/oneformer/labels/image_raw"/>
+    <arg name="label_topic" default="/semantic/image_raw"/>
     <arg name="pointcloud_topic" default="$(arg robot_name)/semantic_pointcloud"/>
 
     <arg name="use_gt_frame" default="true"/>
@@ -27,13 +27,15 @@
     <arg name="run_name"/>
     <arg name="dataset_path"/>
     <arg name="dataset_info_file" value="$(arg dataset_path)/$(arg robot_name)/launch/$(arg run_name)_info.launch"/>
-    <include file="$(arg dataset_info_file)" pass_all_args="true"/>
+    <include file="$(arg dataset_info_file)" pass_all_args="true">
+        <arg name="label_topic" value="/oneformer/labels/image_raw"/>
+    </include>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
         <arg name="extrinsics_mode" value="USE_TF"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
-        <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
+        <arg name="config_dir" default="$(find hydra)/config/d455_outdoor"/>
         <arg name="rviz_file" default="$(arg robot_name).rviz"/>
         <arg name="rgb_image_transport" value="compressed" if="$(arg use_compressed_transport)"/>
         <arg name="rgb_image_transport" value="raw" unless="$(arg use_compressed_transport)"/>

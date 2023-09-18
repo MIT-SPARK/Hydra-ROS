@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/frontend_module.h>
+#include <hydra/frontend/mesh_segmenter.h>
 #include <hydra_msgs/ActiveLayer.h>
 #include <hydra_msgs/ActiveMesh.h>
 #include <kimera_pgmo/MeshFrontend.h>

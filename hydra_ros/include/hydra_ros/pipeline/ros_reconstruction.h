@@ -35,7 +35,6 @@
 #pragma once
 #include <geometry_msgs/Pose.h>
 #include <hydra/reconstruction/reconstruction_module.h>
-#include <hydra_msgs/QueryFreespace.h>
 #include <pose_graph_tools/PoseGraph.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
@@ -64,9 +63,6 @@ class RosReconstruction : public ReconstructionModule {
 
   void handlePoseGraph(const pose_graph_tools::PoseGraph::ConstPtr& pose_graph);
 
-  bool handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
-                          hydra_msgs::QueryFreespace::Response& res);
-
  protected:
   bool checkPointcloudTimestamp(const ros::Time& curr_time);
 
@@ -91,9 +87,6 @@ class RosReconstruction : public ReconstructionModule {
 
   ros::Publisher mesh_pub_;
   ros::Publisher pcl_pub_;
-
-  // freespace query
-  ros::ServiceServer freespace_server_;
 };
 
 }  // namespace hydra

@@ -49,23 +49,6 @@ bool haveClock() {
   return num_pubs > 0;
 }
 
-ExitMode getExitMode(const ros::NodeHandle& nh) {
-  std::string exit_mode_str = "NORMAL";
-  nh.getParam("exit_mode", exit_mode_str);
-
-  if (exit_mode_str == "CLOCK") {
-    return ExitMode::CLOCK;
-  } else if (exit_mode_str == "SERVICE") {
-    return ExitMode::SERVICE;
-  } else if (exit_mode_str == "NORMAL") {
-    return ExitMode::NORMAL;
-  } else {
-    ROS_WARN_STREAM("Unrecognized option: " << exit_mode_str
-                                            << ". Defaulting to NORMAL");
-    return ExitMode::NORMAL;
-  }
-}
-
 void clockCallback(const rosgraph_msgs::Clock&) {}
 
 void spinWhileClockPresent() {
@@ -115,18 +98,12 @@ void spinUntilExitRequested() {
 }
 
 void spinAndWait(const ros::NodeHandle& nh) {
-  const auto exit_mode = getExitMode(nh);
-  switch (exit_mode) {
-    case ExitMode::CLOCK:
-      spinWhileClockPresent();
-      break;
-    case ExitMode::SERVICE:
-      spinUntilExitRequested();
-      break;
-    case ExitMode::NORMAL:
-    default:
-      ros::spin();
-      break;
+  bool exit_after_clock = false;
+  nh.getParam("exit_after_clock", exit_after_clock);
+  if (exit_after_clock) {
+    spinWhileClockPresent();
+  } else {
+    spinUntilExitRequested();
   }
 }
 

@@ -40,8 +40,6 @@
 
 namespace hydra {
 
-enum class ExitMode { CLOCK, SERVICE, NORMAL };
-
 struct ServiceFunctor {
   ServiceFunctor() : should_exit(false) {}
 
@@ -54,8 +52,6 @@ struct ServiceFunctor {
 };
 
 bool haveClock();
-
-ExitMode getExitMode(const ros::NodeHandle& nh);
 
 void spinWhileClockPresent();
 

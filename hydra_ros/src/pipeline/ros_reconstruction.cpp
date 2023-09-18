@@ -100,9 +100,6 @@ RosReconstruction::RosReconstruction(const RosReconstructionConfig& config,
     // reset output queue so we don't waste memory with queued packets
     output_queue_.reset();
   }
-
-  freespace_server_ = nh_.advertiseService(
-      "query_freespace", &RosReconstruction::handleFreespaceSrv, this);
 }
 
 RosReconstruction::~RosReconstruction() {
@@ -156,30 +153,6 @@ void RosReconstruction::handlePoseGraph(const PoseGraph::ConstPtr& pose_graph) {
 
   std::unique_lock<std::mutex> lock(pose_graph_mutex_);
   pose_graphs_.push_back(pose_graph);
-}
-
-bool RosReconstruction::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
-                                           hydra_msgs::QueryFreespace::Response& res) {
-  if (req.x.size() != req.y.size() || req.x.size() != req.z.size()) {
-    return false;
-  }
-
-  if (req.x.empty()) {
-    return true;
-  }
-
-  ReconstructionModule::PositionMatrix points(3, req.x.size());
-  for (size_t i = 0; i < req.x.size(); ++i) {
-    points(0, i) = req.x[i];
-    points(1, i) = req.y[i];
-    points(2, i) = req.z[i];
-  }
-
-  const auto result = inFreespace(points, req.freespace_distance_m);
-  for (const auto flag : result) {
-    res.in_freespace.push_back(flag ? 1 : 0);
-  }
-  return true;
 }
 
 void RosReconstruction::pointcloudSpin() {
