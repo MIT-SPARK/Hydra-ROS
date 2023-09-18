@@ -3,9 +3,11 @@
     <param name="use_sim_time" value="$(arg sim_time_required)"/>
 
     <arg name="robot_name" default="sparkal1"/>
+    <arg name="robot_id" default="0"/>
     <arg name="use_gt_frame" default="false"/>
     <arg name="robot_frame" default="$(arg robot_name)/base" if="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
+    <arg name="odom_frame" default="$(arg robot_name)/odom"/>
     <arg name="world_frame" default="$(arg robot_name)/map"/>
     <arg name="use_compressed_transport" default="true"/>
 
@@ -24,7 +26,6 @@
              pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" ns="$(arg robot_name)" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
         <arg name="extrinsics_mode" value="USE_KIMERA"/>
         <arg name="kimera_extrinsics_file" default="$(find hydra_vio_configs)/config/robots/$(arg robot_name)/LeftCameraParams.yaml"/>

@@ -50,7 +50,7 @@ void declare_config(RosFrontendConfig& conf) {
   field(conf.frontend_ns, "frontend_namespace");
   field(conf.enable_active_mesh_pub, "enable_active_mesh_pub");
   field(conf.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
-  field(conf.world_frame, "world_frame");
+  field(conf.odom_frame, "odom");
   field(conf.sensor_frame, "sensor_frame");
   field(conf.use_latest_tf, "use_latest_tf");
   field(conf.use_posegraph_pos, "use_posegraph_pos");
@@ -187,7 +187,7 @@ std::optional<Eigen::Vector3d> RosFrontend::getLatestPositionTf(
   geometry_msgs::TransformStamped transform;
   try {
     transform =
-        buffer_.lookupTransform(config_.world_frame,
+        buffer_.lookupTransform(config_.odom_frame,
                                 config_.sensor_frame,
                                 config_.use_latest_tf ? ros::Time(0) : time_to_use);
   } catch (const tf2::TransformException& ex) {

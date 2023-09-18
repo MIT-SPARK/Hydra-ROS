@@ -63,6 +63,8 @@ class RosReconstruction : public ReconstructionModule {
 
   void handlePoseGraph(const pose_graph_tools::PoseGraph::ConstPtr& pose_graph);
 
+  void handleAgentNodeMeasurements(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+
  protected:
   bool checkPointcloudTimestamp(const ros::Time& curr_time);
 
@@ -75,6 +77,7 @@ class RosReconstruction : public ReconstructionModule {
   ros::Subscriber pcl_sub_;
   std::unique_ptr<ImageReceiver> image_receiver_;
   ros::Subscriber pose_graph_sub_;
+  ros::Subscriber agent_node_meas_sub_;
   std::unique_ptr<tf2_ros::Buffer> buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 
@@ -84,6 +87,9 @@ class RosReconstruction : public ReconstructionModule {
 
   std::mutex pose_graph_mutex_;
   std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
+
+  std::mutex agent_measurement_mutex_;
+  pose_graph_tools::PoseGraph::ConstPtr agent_node_measurements_;
 
   ros::Publisher mesh_pub_;
   ros::Publisher pcl_pub_;

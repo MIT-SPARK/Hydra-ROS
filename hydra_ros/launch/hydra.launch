@@ -2,6 +2,7 @@
     <!-- data arguments -->
     <arg name="robot_id"/>
     <arg name="robot_frame"/>
+    <arg name="odom_frame" default="odom"/>
     <arg name="world_frame" default="world"/>
     <arg name="do_reconstruction" default="true"/>
     <arg name="use_image_interface" default="false"/>
@@ -32,6 +33,7 @@
 
     <!-- pipeline configuration -->
     <arg name="use_gt_frame" default="true"/>
+    <arg name="external_optimizer" default="false"/>
     <arg name="use_oriented_bounding_boxes" default="false"/>
     <arg name="exit_mode" default="NORMAL"/>
     <arg name="optimize_on_lc" default="true"/>
@@ -99,6 +101,7 @@
         <!-- topic remappings -->
         <remap from="~pose_graph" to="kimera_vio_ros/pose_graph_incremental"
                unless="$(arg use_gt_frame)"/>
+        <remap from="~agent_node_measurements" to="kimera_distributed/optimized_nodes" if="$(arg external_optimizer)" />
         <remap from="~/bow_vectors" to="kimera_vio_ros/bow_query"/>
         <remap from="frame_registration" to="kimera_vio_ros/kimera_vio_ros_node/register_lcd_frames"/>
         <remap from="~pointcloud" to="$(arg pointcloud_topic)" if="$(arg do_reconstruction)"/>
@@ -123,6 +126,7 @@
         <!-- robot configuration -->
         <param name="robot_id" value="$(arg robot_id)"/>
         <param name="world_frame" value="$(arg world_frame)"/>
+        <param name="odom_frame" value="$(arg odom_frame)"/>
         <param name="robot_frame" value="$(arg robot_frame)"/>
         <!-- sensor extrinsics -->
         <param name="extrinsics_mode" value="$(arg extrinsics_mode)"/>
@@ -142,6 +146,8 @@
         <param name="frontend/objects/bounding_box_type" value="RAABB" if="$(arg use_oriented_bounding_boxes)"/>
         <param name="frontend/objects/bounding_box_type" value="AABB" unless="$(arg use_oriented_bounding_boxes)"/>
         <param name="frontend/validate_vertices" value="$(arg validate_vertices)"/>
+        <!-- distributed -->
+        <param name="pgmo/add_initial_prior" value="false" if="$(arg external_optimizer)"/>
         <!-- logging -->
         <param name="log_path" value="$(arg dsg_path)"/>
         <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>

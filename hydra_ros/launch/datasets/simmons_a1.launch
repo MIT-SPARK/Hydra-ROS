@@ -6,6 +6,7 @@
     <arg name="use_gt_frame" default="false"/>
     <arg name="robot_frame" default="base" if="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
+    <arg name="odom_frame" default="odom"/>
     <arg name="world_frame" default="world"/>
     <arg name="pointcloud_topic" value="/semantic_pointcloud"/>
 

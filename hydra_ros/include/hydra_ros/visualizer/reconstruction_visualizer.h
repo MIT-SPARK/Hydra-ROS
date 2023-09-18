@@ -52,7 +52,7 @@ class MarkerGroupPub;
 using hydra_ros::GvdVisualizerConfig;
 
 struct ReconstructionVisualizerConfig {
-  std::string world_frame = "world";
+  std::string odom_frame = "odom";
   std::string topology_marker_ns = "topology_graph";
   bool show_block_outlines = false;
   bool use_gvd_block_outlines = false;

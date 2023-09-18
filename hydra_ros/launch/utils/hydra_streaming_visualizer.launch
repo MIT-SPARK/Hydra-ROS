@@ -17,7 +17,7 @@
   <arg name="color_mesh_by_label" default="false"/>
 
   <arg name="viz_config_dir" default="$(find hydra_ros)/config/hydra_visualizer"/>
-  <arg name="visualizer_ns" default="/hydra_dsg_visualizer"/>
+  <arg name="visualizer_ns" default="hydra_dsg_visualizer"/>
 
   <arg name="start_rviz" default="true"/>
   <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>

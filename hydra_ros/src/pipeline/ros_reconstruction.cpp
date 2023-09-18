@@ -92,6 +92,12 @@ RosReconstruction::RosReconstruction(const RosReconstructionConfig& config,
   if (!config_.make_pose_graph) {
     pose_graph_sub_ =
         nh_.subscribe("pose_graph", 1000, &RosReconstruction::handlePoseGraph, this);
+
+    agent_node_meas_sub_ =
+        nh_.subscribe("agent_node_measurements",
+                      1,
+                      &RosReconstruction::handleAgentNodeMeasurements,
+                      this);
   }
 
   pointcloud_thread_.reset(new std::thread(&RosReconstruction::pointcloudSpin, this));
@@ -155,6 +161,11 @@ void RosReconstruction::handlePoseGraph(const PoseGraph::ConstPtr& pose_graph) {
   pose_graphs_.push_back(pose_graph);
 }
 
+void RosReconstruction::handleAgentNodeMeasurements(const PoseGraph::ConstPtr& msg) {
+  std::unique_lock<std::mutex> lock(agent_measurement_mutex_);
+  agent_node_measurements_ = msg;
+}
+
 void RosReconstruction::pointcloudSpin() {
   while (!should_shutdown_) {
     bool has_data = pointcloud_queue_.poll();
@@ -178,7 +189,7 @@ void RosReconstruction::pointcloudSpin() {
     bool have_transform = false;
     std::string err_str;
     for (size_t i = 0; i < 5; ++i) {
-      if (buffer_->canTransform(config_.world_frame,
+      if (buffer_->canTransform(config_.odom_frame,
                                 config_.robot_frame,
                                 curr_time,
                                 ros::Duration(0),
@@ -196,7 +207,7 @@ void RosReconstruction::pointcloudSpin() {
 
     if (!have_transform) {
       LOG(WARNING) << "Failed to get tf from " << config_.robot_frame << " to "
-                   << config_.world_frame << " @ " << curr_time.toNSec()
+                   << config_.odom_frame << " @ " << curr_time.toNSec()
                    << " [ns]. Reason: " << err_str;
       continue;
     }
@@ -204,9 +215,9 @@ void RosReconstruction::pointcloudSpin() {
     geometry_msgs::TransformStamped transform;
     try {
       transform =
-          buffer_->lookupTransform(config_.world_frame, config_.robot_frame, curr_time);
+          buffer_->lookupTransform(config_.odom_frame, config_.robot_frame, curr_time);
     } catch (const tf2::TransformException& ex) {
-      LOG(ERROR) << "Failed to look up: " << config_.world_frame << " to "
+      LOG(ERROR) << "Failed to look up: " << config_.odom_frame << " to "
                  << config_.robot_frame;
       continue;
     }
@@ -248,6 +259,11 @@ void RosReconstruction::pointcloudSpin() {
       input->pose_graphs = pose_graphs_;
       pose_graphs_.clear();
     }  // end pose graph critical section
+
+    {  // start agent node measurements critical section
+      std::unique_lock<std::mutex> lock(agent_measurement_mutex_);
+      input->agent_node_measurements = agent_node_measurements_;
+    }
 
     queue_->push(input);
   }

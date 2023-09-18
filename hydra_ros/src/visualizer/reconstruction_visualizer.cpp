@@ -59,7 +59,7 @@ using voxblox::TsdfVoxel;
 void declare_config(ReconstructionVisualizerConfig& conf) {
   using namespace config;
   name("ReconstructionVisualizerConfig");
-  field(conf.world_frame, "world_frame");
+  field(conf.odom_frame, "odom_frame");
   field(conf.topology_marker_ns, "topology_marker_ns");
   field(conf.show_block_outlines, "show_block_outlines");
   field(conf.use_gvd_block_outlines, "use_gvd_block_outlines");
@@ -96,7 +96,7 @@ void ReconstructionVisualizer::visualize(uint64_t timestamp_ns,
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
   std_msgs::Header header;
-  header.frame_id = config_.world_frame;
+  header.frame_id = config_.odom_frame;
   header.stamp.fromNSec(timestamp_ns);
 
   visualizeGvd(header, gvd);
@@ -149,7 +149,7 @@ void ReconstructionVisualizer::visualizeError(uint64_t timestamp_ns,
                                               double threshold) {
   pubs_->publish("error_viz", [&](Marker& msg) {
     msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
-    msg.header.frame_id = config_.world_frame;
+    msg.header.frame_id = config_.odom_frame;
     msg.header.stamp.fromNSec(timestamp_ns);
 
     if (msg.points.size()) {

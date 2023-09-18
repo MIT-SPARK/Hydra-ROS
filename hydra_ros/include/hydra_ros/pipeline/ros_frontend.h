@@ -61,7 +61,7 @@ struct RosFrontendConfig : public FrontendConfig {
   std::string frontend_ns = "~";
   bool enable_active_mesh_pub = false;
   bool enable_segmented_mesh_pub = false;
-  std::string world_frame = "world";
+  std::string odom_frame = "odom";
   std::string sensor_frame = "left_cam";
   bool use_latest_tf = true;
   bool use_posegraph_pos = true;
