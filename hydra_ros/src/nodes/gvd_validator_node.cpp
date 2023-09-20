@@ -32,14 +32,17 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <config_utilities/config.h>
+#include <config_utilities/config_utilities.h>
 #include <config_utilities/parsing/yaml.h>
-#include <config_utilities/printing.h>
 #include <cv_bridge/cv_bridge.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <hydra/reconstruction/camera.h>
 #include <hydra/reconstruction/combo_integrator.h>
+#include <hydra/reconstruction/projective_integrator.h>
 #include <hydra/reconstruction/reconstruction_config.h>
+#include <hydra/reconstruction/sensor.h>
+#include <hydra/reconstruction/volumetric_map.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -48,13 +51,12 @@
 #include <tf2_eigen/tf2_eigen.h>
 #include <tf2_msgs/TFMessage.h>
 #include <voxblox/core/common.h>
-#include <voxblox/integrator/tsdf_integrator.h>
 #include <voxblox_msgs/Mesh.h>
 #include <voxblox_ros/mesh_vis.h>
 
 #include <Eigen/Dense>
 
-#include "hydra_ros/visualizer/reconstruction_visualizer.h"
+#include "hydra_ros/visualizer/places_visualizer.h"
 
 DEFINE_string(config, "", "gvd integrator yaml config");
 DEFINE_string(output_path, "", "output directory");
@@ -62,25 +64,20 @@ DEFINE_int32(max_updates, 0, "maximum number of updates per bag");
 DEFINE_int32(voxels_per_side, 16, "voxel block size");
 DEFINE_double(voxel_size, 0.1, "voxel size");
 
-using hydra::ComboIntegrator;
-using hydra::ReconstructionVisualizer;
-using hydra::SemanticMeshLayer;
-using hydra::places::GvdVoxel;
+namespace hydra {
+
+using places::GvdVoxel;
 using sensor_msgs::Image;
 using voxblox::BlockIndexList;
 using voxblox::Layer;
 using voxblox::MeshLayer;
-using voxblox::TsdfIntegratorBase;
-using voxblox::TsdfIntegratorFactory;
 using voxblox::TsdfVoxel;
 
 using Policy = message_filters::sync_policies::ApproximateTime<Image, Image>;
 using TimeSync = message_filters::Synchronizer<Policy>;
-using TsdfConfig = voxblox::TsdfIntegratorBase::Config;
+using TsdfConfig = ProjectiveIntegratorConfig;
 using MeshConfig = hydra::MeshIntegratorConfig;
 using GvdConfig = hydra::places::GvdIntegratorConfig;
-
-namespace hydra {
 
 struct BagConfig {
   std::string color_topic;
@@ -88,6 +85,8 @@ struct BagConfig {
   double start = -1.0;
   double duration = -1.0;
   std::vector<float> intrinsics;
+  int image_width = 640;
+  int image_height = 480;
 };
 
 void declare_config(BagConfig& conf) {
@@ -98,11 +97,9 @@ void declare_config(BagConfig& conf) {
   field(conf.start, "start");
   field(conf.duration, "duration");
   field(conf.intrinsics, "intrinsics");
+  field(conf.image_width, "image_width");
+  field(conf.image_height, "image_height");
 }
-
-}  // namespace hydra
-
-using hydra::BagConfig;
 
 struct ComparisonResult {
   size_t num_missing_lhs = 0;
@@ -216,32 +213,29 @@ struct GvdValidator {
     float cy;
   } intrinsics;
 
-  GvdValidator(const TsdfConfig& tsdf_config,
+  GvdValidator(const config::VirtualConfig<Sensor>& sensor_config,
+               const VolumetricMap::Config& map_config,
+               const TsdfConfig& tsdf_config,
                const MeshConfig& mesh_config,
                const GvdConfig& gvd_config,
-               const ComboIntegrator::GraphExtractorConfig& graph_config,
-               double voxel_size,
-               int voxels_per_side)
-      : gvd_config(gvd_config),
-        mesh_config(mesh_config),
-        graph_config(graph_config),
-        voxel_size(voxel_size),
-        voxels_per_side(voxels_per_side) {
+               const ComboIntegrator::GraphExtractorConfig& graph_config)
+      : gvd_config(gvd_config), mesh_config(mesh_config), graph_config(graph_config) {
     // roughly 3000 hours: should be enough to store all the tfs
     ros::Duration max_duration;
     max_duration.fromSec(1.0e7);
     buffer.reset(new tf2::BufferCore(max_duration));
 
-    visualizer.reset(new ReconstructionVisualizer("~"));
-    full_visualizer.reset(new ReconstructionVisualizer("~full"));
+    visualizer.reset(new PlacesVisualizer("~"));
+    full_visualizer.reset(new PlacesVisualizer("~full"));
 
-    tsdf.reset(new Layer<TsdfVoxel>(voxel_size, voxels_per_side));
-    tsdf_integrator = TsdfIntegratorFactory::create("fast", tsdf_config, tsdf.get());
+    map.reset(new VolumetricMap(map_config));
+    tsdf_integrator.reset(new ProjectiveIntegrator(tsdf_config));
 
-    gvd.reset(new Layer<GvdVoxel>(voxel_size, voxels_per_side));
-    mesh.reset(new SemanticMeshLayer(tsdf->block_size()));
+    gvd.reset(new Layer<GvdVoxel>(map->voxel_size(), map->voxels_per_side()));
     gvd_integrator.reset(
-        new ComboIntegrator(gvd_config, tsdf, gvd, mesh, &mesh_config, graph_config));
+        new ComboIntegrator(gvd_config, gvd, &mesh_config, graph_config));
+
+    sensor = sensor_config.create();
   }
 
   void addTfsFromBag(const rosbag::Bag& bag) {
@@ -326,35 +320,33 @@ struct GvdValidator {
     voxblox::Colors colors(total);
     fillPointCloud(rgb->image, depth, xyz, colors);
 
-    const auto pose = buffer->lookupTransform("world", "left_cam", rgb->header.stamp);
+    const auto pose =
+        buffer->lookupTransform(odom_frame, sensor_frame, rgb->header.stamp);
 
-    Eigen::Quaterniond world_q_color;
-    tf2::convert(pose.transform.rotation, world_q_color);
-
-    Eigen::Vector3d world_t_color;
-    world_t_color << pose.transform.translation.x, pose.transform.translation.y,
+    ReconstructionInput input;
+    tf2::convert(pose.transform.rotation, input.world_R_body);
+    input.world_t_body << pose.transform.translation.x, pose.transform.translation.y,
         pose.transform.translation.z;
 
-    voxblox::Transformation voxblox_transform(world_q_color.cast<float>(),
-                                              world_t_color.cast<float>());
-    tsdf_integrator->integratePointCloud(voxblox_transform, xyz, colors, false);
+    FrameData data;
+    CHECK(input.fillFrameData(data));
+    tsdf_integrator->updateMap(*sensor, data, *map);
 
     VLOG(2) << "";
     VLOG(2) << "====================================================================";
     VLOG(2) << "Starting Incremental Update";
     VLOG(2) << "====================================================================";
-    gvd_integrator->update(rgb_msg->header.stamp.toNSec(), true, true);
+    gvd_integrator->update(rgb_msg->header.stamp.toNSec(), *map, true, true);
 
-    full_gvd.reset(new Layer<GvdVoxel>(voxel_size, voxels_per_side));
-    full_mesh.reset(new SemanticMeshLayer(tsdf->block_size()));
-    full_gvd_integrator.reset(new ComboIntegrator(
-        gvd_config, tsdf, full_gvd, full_mesh, &mesh_config, graph_config));
+    full_gvd.reset(new Layer<GvdVoxel>(map->voxel_size(), map->voxels_per_side()));
+    full_gvd_integrator.reset(
+        new ComboIntegrator(gvd_config, full_gvd, &mesh_config, graph_config));
 
     VLOG(2) << "";
     VLOG(2) << "====================================================================";
     VLOG(2) << "Running Full Update" << std::endl;
     VLOG(2) << "====================================================================";
-    full_gvd_integrator->update(rgb_msg->header.stamp.toNSec(), false, true);
+    full_gvd_integrator->update(rgb_msg->header.stamp.toNSec(), *map, false, true);
 
     auto result = compareLayers(*gvd, *full_gvd);
 
@@ -370,9 +362,10 @@ struct GvdValidator {
       visualizer->visualizeError(timestamp_ns, *gvd, *full_gvd, 0.0);
 
       voxblox_msgs::Mesh mesh_msg;
-      generateVoxbloxMeshMsg(
-          mesh->getVoxbloxMesh(), voxblox::ColorMode::kLambertColor, &mesh_msg);
-      mesh_msg.header.frame_id = "world";
+      generateVoxbloxMeshMsg(map->getMeshLayer().getVoxbloxMesh(),
+                             voxblox::ColorMode::kLambertColor,
+                             &mesh_msg);
+      mesh_msg.header.frame_id = odom_frame;
       mesh_msg.header.stamp = rgb_msg->header.stamp;
       mesh_pub.publish(mesh_msg);
 
@@ -455,25 +448,28 @@ struct GvdValidator {
   ComboIntegrator::GraphExtractorConfig graph_config;
   double voxel_size;
   int voxels_per_side;
+  std::string odom_frame = "odom";
+  std::string sensor_frame = "left_cam";
 
   int64_t num_updates = 0;
   std::unique_ptr<tf2::BufferCore> buffer;
 
-  Layer<TsdfVoxel>::Ptr tsdf;
-  TsdfIntegratorBase::Ptr tsdf_integrator;
+  std::unique_ptr<Sensor> sensor;
+  std::unique_ptr<VolumetricMap> map;
+  std::unique_ptr<ProjectiveIntegrator> tsdf_integrator;
 
   Layer<GvdVoxel>::Ptr gvd;
-  SemanticMeshLayer::Ptr mesh;
   std::unique_ptr<ComboIntegrator> gvd_integrator;
-  std::unique_ptr<ReconstructionVisualizer> visualizer;
+  std::unique_ptr<PlacesVisualizer> visualizer;
 
   Layer<GvdVoxel>::Ptr full_gvd;
-  SemanticMeshLayer::Ptr full_mesh;
   std::unique_ptr<ComboIntegrator> full_gvd_integrator;
-  std::unique_ptr<ReconstructionVisualizer> full_visualizer;
+  std::unique_ptr<PlacesVisualizer> full_visualizer;
 
   ros::Publisher mesh_pub;
 };
+
+}  // namespace hydra
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "gvd_validator");
@@ -493,29 +489,37 @@ int main(int argc, char** argv) {
   }
 
   const std::string bag_path(argv[1]);
-  auto bag_config = config::fromYamlFile<BagConfig>(FLAGS_config);
-  auto tsdf_config = config::fromYamlFile<TsdfConfig>(FLAGS_config);
-  auto mesh_config = config::fromYamlFile<MeshConfig>(FLAGS_config);
-  auto gvd_config = config::fromYamlFile<GvdConfig>(FLAGS_config);
+  hydra::VolumetricMap::Config map_config;
+  map_config.voxel_size = FLAGS_voxel_size;
+  map_config.voxels_per_side = FLAGS_voxels_per_side;
+  auto bag_config = config::fromYamlFile<hydra::BagConfig>(FLAGS_config);
+  auto tsdf_config = config::fromYamlFile<hydra::TsdfConfig>(FLAGS_config);
+  auto mesh_config = config::fromYamlFile<hydra::MeshConfig>(FLAGS_config);
+  auto gvd_config = config::fromYamlFile<hydra::GvdConfig>(FLAGS_config);
   auto graph_config =
-      config::fromYamlFile<ComboIntegrator::GraphExtractorConfig>(FLAGS_config);
+      config::fromYamlFile<hydra::ComboIntegrator::GraphExtractorConfig>(FLAGS_config);
 
   VLOG(1) << "BagConfig:" << std::endl << bag_config;
   VLOG(1) << "TsdfConfig:" << std::endl << tsdf_config;
   VLOG(1) << "MeshConfig:" << std::endl << mesh_config;
   VLOG(1) << "GvdConfig:" << std::endl << gvd_config;
 
-  GvdValidator validator(tsdf_config,
-                         mesh_config,
-                         gvd_config,
-                         graph_config,
-                         FLAGS_voxel_size,
-                         FLAGS_voxels_per_side);
+  hydra::Camera::Config cam_config;
+  cam_config.width = bag_config.image_width;
+  cam_config.height = bag_config.image_height;
+  cam_config.fx = bag_config.intrinsics.at(0);
+  cam_config.fy = bag_config.intrinsics.at(1);
+  cam_config.cx = bag_config.intrinsics.at(2);
+  cam_config.cx = bag_config.intrinsics.at(3);
+  // identity transform
+  hydra::ParamSensorExtrinsics::Config extrinsics;
+  cam_config.extrinsics =
+      config::VirtualConfig<hydra::SensorExtrinsics>(extrinsics, "param");
+
+  config::VirtualConfig<hydra::Sensor> sensor_config(cam_config, "camera");
+  hydra::GvdValidator validator(
+      sensor_config, map_config, tsdf_config, mesh_config, gvd_config, graph_config);
   validator.mesh_pub = nh.advertise<voxblox_msgs::Mesh>("mesh_viz", 1, true);
-  validator.intrinsics.fx = bag_config.intrinsics.at(0);
-  validator.intrinsics.fy = bag_config.intrinsics.at(1);
-  validator.intrinsics.cx = bag_config.intrinsics.at(2);
-  validator.intrinsics.cy = bag_config.intrinsics.at(3);
   validator.readBag(bag_path, bag_config);
   return 0;
 }

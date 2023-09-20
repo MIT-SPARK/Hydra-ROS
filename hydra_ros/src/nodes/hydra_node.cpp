@@ -37,10 +37,11 @@
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/settings.h>
 #include <config_utilities/validation.h>
+#include <hydra/common/hydra_config.h>
 #include <hydra/utils/log_utilities.h>
 #include <hydra/utils/timing_utilities.h>
 
-#include "hydra_ros/pipeline/hydra_ros_pipeline.h"
+#include "hydra_ros/common/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
 
 using hydra::timing::ElapsedTimeRecorder;
@@ -67,6 +68,12 @@ int main(int argc, char* argv[]) {
 
   int robot_id = 0;
   nh.getParam("robot_id", robot_id);
+  const auto frames = config::fromRos<hydra::FrameConfig>(nh);
+  hydra::HydraConfig::instance().setFrames(frames);
+
+  const auto map =
+      config::fromRos<hydra::VolumetricMap::Config>(nh, "reconstruction/map");
+  hydra::HydraConfig::instance().setMapConfig(map);
 
   const auto config = config::checkValid(config::fromRos<hydra::HydraRosConfig>(nh));
   hydra::HydraRosPipeline hydra(config, nh, robot_id, logs);

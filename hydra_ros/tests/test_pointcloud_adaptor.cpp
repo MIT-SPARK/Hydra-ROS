@@ -34,84 +34,102 @@
  * -------------------------------------------------------------------------- */
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <hydra_ros/utils/pointcloud_adaptor.h>
+#include <hydra_ros/reconstruction/pointcloud_adaptor.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 
-namespace voxblox {
-
-bool operator==(const Color& lhs, const Color& rhs) {
-  return lhs.r == rhs.r && lhs.g == rhs.g && lhs.b == rhs.b && lhs.a == rhs.a;
-}
-
-std::ostream& operator<<(std::ostream& out, const Color& c) {
-  return out << "[" << static_cast<int>(c.r) << ", " << static_cast<int>(c.g) << ", "
-             << static_cast<int>(c.b) << ", " << static_cast<int>(c.a) << "]";
-}
-
-}  // namespace voxblox
-
 namespace hydra {
 
-struct VoxbloxCloud {
-  voxblox::Pointcloud points;
-  voxblox::Colors colors;
-  std::vector<uint32_t> labels;
-};
-
-bool operator==(const VoxbloxCloud& lhs, const VoxbloxCloud& rhs) {
-  if (lhs.labels != rhs.labels) {
-    LOG(ERROR) << "labels inequal!";
+bool comparePoints(const CloudInputPacket& lhs, const CloudInputPacket& rhs) {
+  if (lhs.points.size() != rhs.points.size() ||
+      lhs.points.type() != rhs.points.type()) {
+    LOG(ERROR) << "points incompatible!";
     return false;
   }
 
-  if (lhs.colors != rhs.colors) {
-    LOG(ERROR) << "colors inequal!";
+  if (lhs.colors.size() != rhs.colors.size() ||
+      lhs.colors.type() != rhs.colors.type()) {
+    LOG(ERROR) << "colors incompatible!";
     return false;
   }
 
-  if (lhs.points.size() != rhs.points.size()) {
-    LOG(ERROR) << "points not same size!";
+  if (lhs.labels.size() != rhs.labels.size() ||
+      lhs.labels.type() != rhs.labels.type()) {
+    LOG(ERROR) << "points incompatible";
     return false;
   }
 
-  for (size_t i = 0; i < lhs.points.size(); ++i) {
-    if ((lhs.points.at(i) - rhs.points.at(i)).norm() > 1.0e-9) {
-      LOG(ERROR) << "points not equal";
-      return false;
+  if (lhs.labels.type() != CV_32SC1 || lhs.points.type() != CV_32FC3 ||
+      lhs.colors.type() != CV_8UC3) {
+    LOG(ERROR) << "invalid types";
+    return false;
+  }
+
+  for (int r = 0; r < lhs.points.rows; ++r) {
+    for (int c = 0; c < lhs.points.cols; ++c) {
+      const auto& p_lhs = lhs.points.at<cv::Vec3f>(r, c);
+      const auto& p_rhs = rhs.points.at<cv::Vec3f>(r, c);
+      const auto& vec_lhs = Eigen::Vector3f(p_lhs[0], p_lhs[1], p_lhs[2]);
+      const auto& vec_rhs = Eigen::Vector3f(p_rhs[0], p_rhs[1], p_rhs[2]);
+      if (!vec_lhs.isApprox(vec_rhs)) {
+        LOG(ERROR) << "points not equal";
+        return false;
+      }
+
+      if (lhs.labels.at<int32_t>(r, c) != rhs.labels.at<int32_t>(r, c)) {
+        LOG(ERROR) << "labels not equal";
+        return false;
+      }
+
+      if (lhs.colors.at<cv::Vec3b>(r, c) != rhs.colors.at<cv::Vec3b>(r, c)) {
+        LOG(ERROR) << "labels not equal";
+        return false;
+      }
     }
   }
 
   return true;
 }
 
-std::ostream& operator<<(std::ostream& out, const VoxbloxCloud& cloud) {
+std::string showCloud(const CloudInputPacket& cloud) {
+  std::stringstream out;
   out << "pointcloud: {" << std::endl;
-  for (size_t i = 0; i < cloud.points.size(); ++i) {
-    const auto& point = cloud.points.at(i);
-    out << " - " << i << ": pos: [" << std::setprecision(4) << point.x() << ", "
-        << point.y() << ", " << point.z() << "]";
+  for (int r = 0; r < cloud.points.rows; ++r) {
+    for (int c = 0; c < cloud.points.cols; ++c) {
+      const auto& point = cloud.points.at<cv::Vec3f>(r, c);
+      out << " - (" << r << ", " << c << "): pos: [" << std::setprecision(4) << point[0]
+          << ", " << point[1] << ", " << point[2] << "]";
 
-    if (i < cloud.colors.size()) {
-      out << ", color: " << cloud.colors.at(i);
-    } else {
-      out << ", color: n/a";
+      if (r < cloud.colors.rows && c < cloud.colors.cols) {
+        const auto& color = cloud.colors.at<cv::Vec3b>(r, c);
+        out << ", color: [" << static_cast<int>(color[0]) << ", "
+            << static_cast<int>(color[1]) << ", " << static_cast<int>(color[2]) << "]";
+      } else {
+        out << ", color: n/a";
+      }
+
+      if (r < cloud.labels.rows && c < cloud.labels.cols) {
+        out << ", label: " << cloud.labels.at<int32_t>(r, c);
+      } else {
+        out << ", label: n/a";
+      }
+
+      out << std::endl;
     }
-
-    if (i < cloud.labels.size()) {
-      out << ", label: " << cloud.labels.at(i);
-    } else {
-      out << ", label: n/a";
-    }
-
-    out << std::endl;
   }
   out << "}";
-  return out;
+  return out.str();
 }
 
-pcl::PointXYZRGBL makeTestPointXYZRGBL(size_t i, VoxbloxCloud& expected) {
+void resizePacket(CloudInputPacket& packet, int rows, int cols) {
+  packet.points = cv::Mat(rows, cols, CV_32FC3);
+  packet.colors = cv::Mat(rows, cols, CV_8UC3);
+  packet.labels = cv::Mat(rows, cols, CV_32SC1);
+}
+
+pcl::PointXYZRGBL makeTestPointXYZRGBL(int r, int c, CloudInputPacket& expected) {
+  size_t i = r * expected.points.cols + c;
   pcl::PointXYZRGBL point;
   point.x = static_cast<float>(i);
   point.y = static_cast<float>(i + 1);
@@ -122,31 +140,35 @@ pcl::PointXYZRGBL makeTestPointXYZRGBL(size_t i, VoxbloxCloud& expected) {
   point.a = static_cast<uint8_t>(i + 6);
   point.label = static_cast<uint32_t>(i + 7);
 
-  expected.points.push_back(voxblox::Point(point.x, point.y, point.z));
-  expected.colors.push_back(voxblox::Color(point.r, point.g, point.b, point.a));
-  expected.labels.push_back(point.label);
+  expected.points.at<cv::Vec3f>(r, c) = {point.x, point.y, point.z};
+  expected.colors.at<cv::Vec3b>(r, c) = {point.r, point.g, point.b};
+  expected.labels.at<int32_t>(r, c) = point.label;
   return point;
 }
 
-pcl::PointXYZL makeTestPointXYZL(size_t i, VoxbloxCloud& expected) {
+pcl::PointXYZL makeTestPointXYZL(int r, int c, CloudInputPacket& expected) {
+  size_t i = r * expected.points.cols + c;
   pcl::PointXYZL point;
   point.x = static_cast<float>(i);
   point.y = static_cast<float>(i + 1);
   point.z = static_cast<float>(i + 2);
   point.label = static_cast<uint32_t>(i + 3);
 
-  expected.points.push_back(voxblox::Point(point.x, point.y, point.z));
-  expected.colors.push_back(voxblox::Color());
-  expected.labels.push_back(point.label);
+  expected.points.at<cv::Vec3f>(r, c) = {point.x, point.y, point.z};
+  expected.colors.at<cv::Vec3b>(r, c) = {0, 0, 0};
+  expected.labels.at<int32_t>(r, c) = point.label;
   return point;
 }
 
 TEST(PointcloudAdaptor, ConvertPointXYZRGBL) {
-  VoxbloxCloud expected;
+  CloudInputPacket expected(0);
+  resizePacket(expected, 5, 2);
 
-  pcl::PointCloud<pcl::PointXYZRGBL> cloud;
-  for (size_t i = 0; i < 10; ++i) {
-    cloud.push_back(makeTestPointXYZRGBL(i, expected));
+  pcl::PointCloud<pcl::PointXYZRGBL> cloud(2, 5);
+  for (int r = 0; r < expected.points.rows; ++r) {
+    for (int c = 0; c < expected.points.cols; ++c) {
+      cloud.at(c, r) = makeTestPointXYZRGBL(r, c, expected);
+    }
   }
 
   pcl::PCLPointCloud2 serialized_cloud;
@@ -154,18 +176,21 @@ TEST(PointcloudAdaptor, ConvertPointXYZRGBL) {
   sensor_msgs::PointCloud2 msg;
   pcl_conversions::fromPCL(serialized_cloud, msg);
 
-  VoxbloxCloud result;
-  fillVoxbloxPointcloud(msg, result.points, result.colors, result.labels, true);
-
-  EXPECT_EQ(expected, result);
+  CloudInputPacket result(0);
+  fillPointcloudPacket(msg, result, true);
+  EXPECT_TRUE(comparePoints(expected, result))
+      << "expected: " << showCloud(expected) << ", result: " << showCloud(result);
 }
 
 TEST(PointcloudAdaptor, ConvertPointXYZL) {
-  VoxbloxCloud expected;
+  CloudInputPacket expected(0);
+  resizePacket(expected, 5, 2);
 
-  pcl::PointCloud<pcl::PointXYZL> cloud;
-  for (size_t i = 0; i < 10; ++i) {
-    cloud.push_back(makeTestPointXYZL(i, expected));
+  pcl::PointCloud<pcl::PointXYZL> cloud(2, 5);
+  for (int r = 0; r < expected.points.rows; ++r) {
+    for (int c = 0; c < expected.points.cols; ++c) {
+      cloud.at(c, r) = makeTestPointXYZL(r, c, expected);
+    }
   }
 
   pcl::PCLPointCloud2 serialized_cloud;
@@ -173,10 +198,10 @@ TEST(PointcloudAdaptor, ConvertPointXYZL) {
   sensor_msgs::PointCloud2 msg;
   pcl_conversions::fromPCL(serialized_cloud, msg);
 
-  VoxbloxCloud result;
-  fillVoxbloxPointcloud(msg, result.points, result.colors, result.labels, true);
-
-  EXPECT_EQ(expected, result);
+  CloudInputPacket result(0);
+  fillPointcloudPacket(msg, result, true);
+  EXPECT_TRUE(comparePoints(expected, result))
+      << "expected: " << showCloud(expected) << ", result: " << showCloud(result);
 }
 
 }  // namespace hydra

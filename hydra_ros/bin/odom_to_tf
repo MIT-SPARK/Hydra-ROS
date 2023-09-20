@@ -28,8 +28,8 @@ def main():
     """Do stuff."""
     rospy.init_node("odom_to_tf")
 
-    parent_frame = rospy.get_param("~parent_frame", "world")
-    child_frame = rospy.get_param("~child_frame", "t265_odom")
+    parent_frame = rospy.get_param("~parent_frame", "odom")
+    child_frame = rospy.get_param("~child_frame", "base_link")
     broadcaster = tf2_ros.TransformBroadcaster()
 
     rospy.Subscriber(

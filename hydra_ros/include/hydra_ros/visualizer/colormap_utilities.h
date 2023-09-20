@@ -40,6 +40,12 @@
 namespace hydra {
 namespace dsg_utils {
 
+inline double computeRatio(double min, double max, double value) {
+  double ratio = (value - min) / (max - min);
+  ratio = !std::isfinite(ratio) ? 0.0 : ratio;
+  return ratio;
+}
+
 std_msgs::ColorRGBA makeColorMsg(const NodeColor& color, double alpha = 1.0);
 
 NodeColor getRgbFromHls(double hue, double luminance, double saturation);

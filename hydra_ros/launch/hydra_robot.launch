@@ -14,23 +14,22 @@
     <arg name="use_gt_frame" default="false"/>
     <arg name="load_static_tfs" default="false"/>
     <arg name="robot_frame" default="base_link"/>
-    <arg name="world_frame" default="world"/>
 
     <arg name="record_bag" default="false"/>
     <arg name="extra_bag_topics" default=""/>
 
-    <include file="$(find hydra_ros)/launch/utils/data_sources/$(arg robot_name)_pointcloud.launch"
+    <include file="$(find hydra_ros)/launch/sources/$(arg robot_name)_pointcloud.launch"
              pass_all_args="true">
         <arg name="use_compressed_transport" default="false"/>
     </include>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
+        <arg name="use_oriented_bounding_boxes" default="true"/>
         <arg name="override_default_lcd" default="true"/>
         <arg name="config_dir" default="$(find hydra)/config/default_robot"/>
-        <arg name="extrinsics_mode" value="USE_KIMERA"/>
-        <arg name="kimera_extrinsics_file" default="$(find hydra_vio_configs)/config/robots/$(arg kimera_name)/LeftCameraParams.yaml"/>
-        <arg name="use_oriented_bounding_boxes" default="true"/>
+        <arg name="extrinsics_type" value="kimera"/>
+        <arg name="kimera_sensor_filepath" default="$(find hydra_vio_configs)/config/robots/$(arg kimera_name)/LeftCameraParams.yaml"/>
     </include>
 
     <node name="scene_graph_recorder" type="record" pkg="rosbag"

@@ -1,0 +1,23 @@
+<launch>
+
+  <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
+  <arg name="rviz_file" default="hydra_visualizer.rviz"/>
+  <arg name="rviz_path" default="$(arg rviz_dir)/$(arg rviz_file)"/>
+
+  <arg name="run_topdown_rviz" default="false"/>
+  <arg name="rviz_topdown_dir" default="$(find hydra_ros)/rviz"/>
+  <arg name="rviz_topdown_file" default="hydra_streaming_visualizer_topdown.rviz"/>
+  <arg name="rviz_topdown_path" default="$(arg rviz_topdown_dir)/$(arg rviz_topdown_file)"/>
+
+  <arg name="verbose" default="false"/>
+  <arg name="log_output" value="screen" if="$(arg verbose)"/>
+  <arg name="log_output" value="log" unless="$(arg verbose)"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" output="$(arg log_output)"
+        args="-d $(arg rviz_path)"/>
+
+  <node name="topdown_rviz" pkg="rviz" type="rviz" output="$(arg log_output)"
+        if="$(arg run_topdown_rviz)"
+        args="-d $(arg rviz_topdown_path)"/>
+
+</launch>

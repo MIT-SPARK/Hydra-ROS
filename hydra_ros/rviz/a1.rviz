@@ -4,6 +4,7 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
+        - /Global Options1
         - /Scene Graph1
         - /Input1
       Splitter Ratio: 0.5
@@ -25,7 +26,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Color
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -58,20 +59,7 @@ Visualization Manager:
           Marker Topic: /hydra_dsg_visualizer/dsg_markers
           Name: Scene Graph (Static)
           Namespaces:
-            interlayer_edges_3_2: true
-            interlayer_edges_4_3: true
-            interlayer_edges_5_4: true
-            layer_bounding_boxes_2: true
-            layer_bounding_boxes_edges_2: true
-            layer_edges_3: true
-            layer_edges_4: true
-            layer_labels_2: true
-            layer_labels_4: true
-            layer_labels_5: true
-            layer_nodes_2: true
-            layer_nodes_3: true
-            layer_nodes_4: true
-            layer_nodes_5: true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -79,9 +67,7 @@ Visualization Manager:
           Marker Topic: /hydra_dsg_visualizer/dynamic_layers_viz
           Name: Scene Graph (Dynamic)
           Namespaces:
-            "dynamic_edges_\x00": true
-            "dynamic_label_\x00": true
-            "dynamic_nodes_\x00": true
+            {}
           Queue Size: 100
           Value: true
         - Class: rviz_mesh_plugin/TriangleMesh
@@ -190,8 +176,6 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: false
-        base:
-          Value: true
         base_link:
           Value: true
         cam_d455_accel_frame:
@@ -211,8 +195,6 @@ Visualization Manager:
         cam_d455_gyro_optical_frame:
           Value: true
         cam_d455_link:
-          Value: true
-        world:
           Value: true
       Marker Alpha: 1
       Marker Scale: 1
@@ -235,16 +217,13 @@ Visualization Manager:
             cam_d455_gyro_frame:
               cam_d455_gyro_optical_frame:
                 {}
-        world:
-          base:
-            {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:

@@ -15,8 +15,8 @@ def main():
         rospy.logfatal("file required!")
         sys.exit(1)
 
-    parent_frame = rospy.get_param("~parent_frame", "world")
-    child_frame = rospy.get_param("~child_frame", "left_cam_pgo")
+    parent_frame = rospy.get_param("~parent_frame", "odom")
+    child_frame = rospy.get_param("~child_frame", "base_link")
 
     delta_t = rospy.Duration(-0.05)
     have_first_line = False

@@ -3,10 +3,9 @@ Panels:
     Help Height: 0
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Input1
+      Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 264
+    Tree Height: 864
   - Class: rviz/Selection
     Name: Selection
   - Class: rviz/Tool Properties
@@ -24,7 +23,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Semantics
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -32,24 +31,47 @@ Toolbars:
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.5
-      Cell Size: 0.5
-      Class: rviz/Grid
-      Color: 160; 160; 164
-      Enabled: false
-      Line Style:
-        Line Width: 0.029999999329447746
-        Value: Lines
-      Name: Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 1000
-      Reference Frame: <Fixed Frame>
-      Value: false
+    - Class: rviz/TF
+      Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        base_link_gt:
+          Value: true
+        front_lidar:
+          Value: true
+        left_cam:
+          Value: true
+        map:
+          Value: true
+        rear_lidar:
+          Value: true
+        right_cam:
+          Value: true
+        world:
+          Value: true
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        map:
+          world:
+            base_link_gt:
+              front_lidar:
+                {}
+              left_cam:
+                {}
+              rear_lidar:
+                {}
+              right_cam:
+                {}
+      Update Interval: 0
+      Value: true
     - Class: rviz/Group
       Displays:
         - Class: rviz/MarkerArray
@@ -57,10 +79,20 @@ Visualization Manager:
           Marker Topic: /hydra_dsg_visualizer/dsg_markers
           Name: Scene Graph (Static)
           Namespaces:
+            interlayer_edges_3_2: true
+            interlayer_edges_4_3: true
+            interlayer_edges_5_4: true
             layer_bounding_boxes_2: true
             layer_bounding_boxes_edges_2: true
+            layer_edges_3: true
+            layer_edges_4: true
             layer_labels_2: true
+            layer_labels_4: true
+            layer_labels_5: true
             layer_nodes_2: true
+            layer_nodes_3: true
+            layer_nodes_4: true
+            layer_nodes_5: true
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -126,7 +158,7 @@ Visualization Manager:
           Use rainbow: true
           Value: false
         - Class: rviz/Image
-          Enabled: true
+          Enabled: false
           Image Topic: /tesse/depth_cam/mono/image_raw
           Max Value: 1
           Median window: 300
@@ -136,9 +168,9 @@ Visualization Manager:
           Queue Size: 2
           Transport Hint: raw
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Image
-          Enabled: true
+          Enabled: false
           Image Topic: /tesse/seg_cam/rgb/image_raw
           Max Value: 1
           Median window: 5
@@ -148,9 +180,9 @@ Visualization Manager:
           Queue Size: 2
           Transport Hint: raw
           Unreliable: false
-          Value: true
+          Value: false
         - Class: rviz/Image
-          Enabled: true
+          Enabled: false
           Image Topic: /tesse/left_cam/rgb/image_raw
           Max Value: 1
           Median window: 5
@@ -160,7 +192,7 @@ Visualization Manager:
           Queue Size: 2
           Transport Hint: raw
           Unreliable: false
-          Value: true
+          Value: false
       Enabled: true
       Name: Input
     - Class: rviz/Group
@@ -187,89 +219,63 @@ Visualization Manager:
       Displays:
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /incremental_dsg_builder_node/topology_visualizer/mesh_block_viz
-          Name: Mesh Allocated Blocks
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: false
-        - Class: rviz/MarkerArray
-          Enabled: false
-          Marker Topic: /incremental_dsg_builder_node/topology_visualizer/voxel_block_viz
-          Name: GVD Allocated Blocks
-          Namespaces:
-            {}
-          Queue Size: 100
-          Value: false
-        - Class: rviz/MarkerArray
-          Enabled: false
-          Marker Topic: /incremental_dsg_builder_node/topology_visualizer/gvd_graph_viz
+          Marker Topic: /places_visualizer/gvd_graph_viz
           Name: GVD Graph
           Namespaces:
             {}
           Queue Size: 100
           Value: false
         - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /incremental_dsg_builder_node/topology_visualizer/graph_viz
+          Enabled: false
+          Marker Topic: /places_visualizer/graph_viz
           Name: Sparse GVD Graph
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /incremental_dsg_builder_node/topology_visualizer/gvd_cluster_viz
+          Marker Topic: /places_visualizer/gvd_cluster_viz
           Name: GVD Clusters
           Namespaces:
             {}
           Queue Size: 100
           Value: false
+        - Class: rviz/MarkerArray
+          Enabled: true
+          Marker Topic: /places_visualizer/esdf_viz
+          Name: EsdfSlice
+          Namespaces:
+            gvd_visualizer: true
+          Queue Size: 100
+          Value: true
       Enabled: true
       Name: Topology
-    - Class: rviz/TF
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /reconstruction_visualizer/tsdf_viz
+          Name: TSDF Distances
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /reconstruction_visualizer/tsdf_weight_viz
+          Name: TSDF Weights
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
       Enabled: true
-      Filter (blacklist): ""
-      Filter (whitelist): ""
-      Frame Timeout: 15
-      Frames:
-        All Enabled: true
-        base_link_gt:
-          Value: true
-        front_lidar:
-          Value: true
-        left_cam:
-          Value: true
-        rear_lidar:
-          Value: true
-        right_cam:
-          Value: true
-        world:
-          Value: true
-      Marker Alpha: 1
-      Marker Scale: 1
-      Name: TF
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-      Tree:
-        world:
-          base_link_gt:
-            front_lidar:
-              {}
-            left_cam:
-              {}
-            rear_lidar:
-              {}
-            right_cam:
-              {}
-      Update Interval: 0
-      Value: true
+      Name: Reconstruction
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
     Default Light: true
-    Fixed Frame: world
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -293,7 +299,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 26.10266876220703
+      Distance: 29.65623664855957
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -301,17 +307,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -6.01790189743042
-        Y: 31.393951416015625
-        Z: 1.0132226943969727
+        X: 0.2775549292564392
+        Y: 26.251100540161133
+        Z: 8.997931480407715
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6303983330726624
+      Pitch: 0.8397970199584961
       Target Frame: <Fixed Frame>
-      Yaw: 2.6703996658325195
+      Yaw: 1.7467107772827148
     Saved: ~
 Window Geometry:
   Depth:
@@ -321,7 +327,7 @@ Window Geometry:
   Height: 1016
   Hide Left Dock: false
   Hide Right Dock: true
-  QMainWindow State: 000000ff00000000fd00000004000000000000015600000359fc020000000bfb0000001200530065006c0065006300740069006f006e000000003b0000018f0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003e00000145000000cb00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a004400650070007400680100000189000000520000001600fffffffb0000001200530065006d0061006e007400690063007301000001e1000001480000001600fffffffb00000006005200470042010000032f000000680000001600ffffff000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b00000351000000a500fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000033700fffffffb0000000800540069006d00650100000000000004500000000000000000000006240000035900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001560000039dfc020000000bfb0000001200530065006c0065006300740069006f006e000000003b0000018f0000005d00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003e0000039d000000cb00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a00440065007000740068000000036d0000006e0000001600fffffffb0000001200530065006d0061006e00740069006300730000000382000000590000001600fffffffb00000006005200470042000000020a000001d10000001600ffffff000000010000010f00000351fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003b00000351000000a500fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650200000000000003b300000395000001e0fb0000000800540069006d00650100000000000004500000000000000000000006240000039d00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   RGB:
     collapsed: false
   Selection:

@@ -74,10 +74,10 @@ DynamicSceneGraphVisualizer::DynamicSceneGraphVisualizer(
     : nh_(nh),
       need_redraw_(false),
       periodic_redraw_(false),
-      world_frame_("world"),
+      visualizer_frame_("map"),
       visualizer_ns_(nh.resolveName("config")),
       visualizer_layer_ns_(nh.resolveName("config/layer")) {
-  nh_.param("world_frame", world_frame_, world_frame_);
+  nh_.param("visualizer_frame", visualizer_frame_, visualizer_frame_);
   nh_.param("visualizer_ns", visualizer_ns_, visualizer_ns_);
   nh_.param("visualizer_layer_ns", visualizer_layer_ns_, visualizer_layer_ns_);
 
@@ -107,7 +107,7 @@ void DynamicSceneGraphVisualizer::reset() {
   if (scene_graph_) {
     std_msgs::Header header;
     header.stamp = ros::Time::now();
-    header.frame_id = world_frame_;
+    header.frame_id = visualizer_frame_;
 
     MarkerArray msg;
     resetImpl(header, msg);
@@ -134,7 +134,7 @@ bool DynamicSceneGraphVisualizer::redraw() {
 
   std_msgs::Header header;
   header.stamp = ros::Time::now();
-  header.frame_id = world_frame_;
+  header.frame_id = visualizer_frame_;
 
   MarkerArray msg;
   redrawImpl(header, msg);

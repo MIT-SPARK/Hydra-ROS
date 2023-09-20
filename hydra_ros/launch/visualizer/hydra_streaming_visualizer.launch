@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+  <arg name="visualizer_ns" default="hydra_dsg_visualizer" doc="visualizer namespace to use"/>
+  <arg name="start_rviz" default="true" doc="automatically start rviz"/>
+  <arg name="viz_use_zmq" default="false" doc="use zmq to receive scene graphs"/>
+  <arg name="viz_zmq_ip" default="127.0.0.1" doc="zmq IP to listen on"/>
+  <arg name="viz_zmq_port" default="8001" doc="zmq port to listen on"/>
+  <arg name="viz_zmq_url" default="tcp://$(arg viz_zmq_ip):$(arg viz_zmq_port)"
+       doc="full zmq url to listen on, including protocol"/>
+
+  <arg name="show_frontend" default="false" doc="show frontend scene graph"/>
+  <arg name="dsg_topic" default="hydra_ros_node/dsg" unless="$(arg show_frontend)"/>
+  <arg name="dsg_mesh_topic" default="hydra_ros_node/dsg_mesh" unless="$(arg show_frontend)"/>
+  <arg name="dsg_topic" default="hydra_ros_node/frontend/dsg" if="$(arg show_frontend)"/>
+  <arg name="dsg_mesh_topic" default="hydra_ros_node/frontend/dsg_mesh" if="$(arg show_frontend)"/>
+  <arg name="rviz_file" default="hydra_streaming_visualizer.rviz"/>
+  <arg name="color_mesh_by_label" default="true"/>
+
+  <arg name="verbosity" default="0"/>
+
+  <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_params.xml"
+           pass_all_args="true"/>
+
+  <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_rviz.xml"
+           pass_all_args="true"
+           if="$(arg start_rviz)"/>
+
+  <node pkg="hydra_ros" type="hydra_visualizer_node" name="hydra_visualizer_node"
+        output="log"
+        required="true"
+        args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
+    <param name="visualizer_ns" value="$(arg visualizer_ns)"/>
+    <param name="scene_graph_filepath" value=""/>
+    <param name="output_path" value=""/>
+    <param name="load_graph" value="false"/>
+    <param name="use_zmq" value="$(arg viz_use_zmq)"/>
+    <param name="zmq_url" value="$(arg viz_zmq_url)"/>
+
+    <remap from="~dsg" to="$(arg dsg_topic)"/>
+    <remap from="~dsg_mesh_updates" to="$(arg dsg_mesh_topic)"/>
+  </node>
+
+</launch>

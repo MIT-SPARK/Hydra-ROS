@@ -45,6 +45,7 @@ namespace hydra {
 class DsgSender {
  public:
   explicit DsgSender(const ros::NodeHandle& nh,
+                     const std::string& frame_id,
                      const std::string& timer_name = "publish_dsg",
                      bool publish_mesh = false,
                      double min_mesh_separation_s = 0.0,
@@ -54,6 +55,8 @@ class DsgSender {
 
  private:
   ros::NodeHandle nh_;
+  std::string frame_id_;
+
   ros::Publisher pub_;
   ros::Publisher mesh_pub_;
   mutable std::optional<uint64_t> last_mesh_time_ns_;

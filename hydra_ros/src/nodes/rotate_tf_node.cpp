@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
   ros::init(argc, argv, "rotate_tf_node");
   ros::NodeHandle nh;
 
-  std::string parent_frame = "world";
+  std::string parent_frame = "map";
   ros::param::get("~parent_frame", parent_frame);
 
   std::string child_frame = "rotated_view";

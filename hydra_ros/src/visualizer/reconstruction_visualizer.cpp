@@ -35,45 +35,127 @@
 #include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/printing.h>
 #include <config_utilities/parsing/ros.h>
-#include <hydra/places/compression_graph_extractor.h>
-#include <hydra/utils/timing_utilities.h>
+#include <config_utilities/printing.h>
+#include <hydra/common/hydra_config.h>
+#include <tf2_eigen/tf2_eigen.h>
 
+#include "hydra_ros/visualizer/colormap_utilities.h"
 #include "hydra_ros/visualizer/gvd_visualization_utilities.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
 
-using places::CompressionGraphExtractor;
-using places::GraphExtractorInterface;
-using places::GvdGraph;
-using places::GvdVoxel;
-using timing::ScopedTimer;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
+using voxblox::BlockIndexList;
 using voxblox::Layer;
-using voxblox::MeshLayer;
 using voxblox::TsdfVoxel;
+using voxblox::VoxelIndex;
+using VizConfig = ReconstructionVisualizerConfig;
+
+using ColorFunction =
+    std::function<std_msgs::ColorRGBA(const VizConfig&, const TsdfVoxel&)>;
+
+std_msgs::ColorRGBA colorVoxelByDist(const VizConfig& config, const TsdfVoxel& voxel) {
+  double ratio =
+      dsg_utils::computeRatio(config.min_distance, config.max_distance, voxel.distance);
+  auto color = dsg_utils::interpolateColorMap(config.colors, ratio);
+  return dsg_utils::makeColorMsg(color, config.marker_alpha);
+}
+
+std_msgs::ColorRGBA colorVoxelByWeight(const VizConfig& config,
+                                       const TsdfVoxel& voxel) {
+  // TODO(nathan) consider exponential
+  double ratio =
+      dsg_utils::computeRatio(config.min_weight, config.max_weight, voxel.weight);
+  auto color = dsg_utils::interpolateColorMap(config.colors, ratio);
+  return dsg_utils::makeColorMsg(color, config.marker_alpha);
+}
+
+// adapted from khronos
+Marker makeTsdfMarker(const VizConfig& config,
+                      const std_msgs::Header& header,
+                      const Layer<TsdfVoxel>& layer,
+                      const Eigen::Isometry3d& world_T_sensor,
+                      const ColorFunction& color_func,
+                      const std::string& ns) {
+  Marker msg;
+  msg.header = header;
+  msg.action = visualization_msgs::Marker::ADD;
+  msg.id = 0;
+  msg.ns = ns;
+  msg.type = visualization_msgs::Marker::CUBE_LIST;
+  msg.scale.x = layer.voxel_size();
+  msg.scale.y = layer.voxel_size();
+  msg.scale.z = layer.voxel_size();
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, msg.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), msg.pose.orientation);
+
+  auto height = config.slice_height;
+  if (config.use_relative_height) {
+    height += world_T_sensor.translation().z();
+  }
+
+  const voxblox::Point slice_pos(0, 0, height);
+  const auto slice_index = layer.computeBlockIndexFromCoordinates(slice_pos);
+  const auto origin =
+      voxblox::getOriginPointFromGridIndex(slice_index, layer.block_size());
+  const auto grid_index = voxblox::getGridIndexFromPoint<VoxelIndex>(
+      slice_pos - origin, layer.voxel_size_inv());
+
+  BlockIndexList blocks;
+  layer.getAllAllocatedBlocks(&blocks);
+  for (const auto& idx : blocks) {
+    if (idx.z() != slice_index.z()) {
+      continue;
+    }
+
+    const auto& block = layer.getBlockByIndex(idx);
+    for (size_t x = 0; x < block.voxels_per_side(); ++x) {
+      for (size_t y = 0; y < block.voxels_per_side(); ++y) {
+        const VoxelIndex voxel_index(x, y, grid_index.z());
+        const auto& voxel = block.getVoxelByVoxelIndex(voxel_index);
+        if (voxel.weight < config.min_observation_weight) {
+          continue;
+        }
+
+        const Eigen::Vector3d pos =
+            block.computeCoordinatesFromVoxelIndex(voxel_index).cast<double>();
+        geometry_msgs::Point marker_pos;
+        tf2::convert(pos, marker_pos);
+        msg.points.push_back(marker_pos);
+        msg.colors.push_back(color_func(config, voxel));
+      }
+    }
+  }
+
+  return msg;
+}
 
 void declare_config(ReconstructionVisualizerConfig& conf) {
   using namespace config;
   name("ReconstructionVisualizerConfig");
-  field(conf.odom_frame, "odom_frame");
-  field(conf.topology_marker_ns, "topology_marker_ns");
-  field(conf.show_block_outlines, "show_block_outlines");
-  field(conf.use_gvd_block_outlines, "use_gvd_block_outlines");
-  field(conf.outline_scale, "outline_scale");
+  field(conf.min_weight, "min_weight");
+  field(conf.max_weight, "max_weight");
+  field(conf.min_distance, "min_distance", "m");
+  field(conf.max_distance, "max_distance", "m");
+  field(conf.marker_alpha, "marker_alpha");
+  field(conf.use_relative_height, "use_relative_height");
+  field(conf.slice_height, "slice_height", "m");
+  field(conf.min_observation_weight, "min_observation_weight");
+  field(conf.colors.min_hue, "min_hue");
+  field(conf.colors.max_hue, "max_hue");
+  field(conf.colors.min_luminance, "min_luminance");
+  field(conf.colors.max_luminance, "max_luminance");
+  field(conf.colors.min_saturation, "min_saturation");
+  field(conf.colors.max_saturation, "max_saturation");
 }
 
-ReconstructionVisualizer::ReconstructionVisualizer(const std::string& ns)
-    : nh_(ns), previous_spheres_(0), published_gvd_graph_(false) {
+ReconstructionVisualizer::ReconstructionVisualizer(const std::string& ns) : nh_(ns) {
   pubs_.reset(new MarkerGroupPub(nh_));
-
   config_ = config::fromRos<ReconstructionVisualizerConfig>(nh_);
-  config_.graph.layer_z_step = 0;
-
-  setupConfigServers();
 }
 
 ReconstructionVisualizer::~ReconstructionVisualizer() {}
@@ -91,309 +173,34 @@ std::string ReconstructionVisualizer::printInfo() const {
 }
 
 void ReconstructionVisualizer::visualize(uint64_t timestamp_ns,
-                                         const Layer<GvdVoxel>& gvd,
-                                         const GraphExtractorInterface* extractor) {
-  ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
-
+                                         const Eigen::Isometry3d& world_T_sensor,
+                                         const Layer<TsdfVoxel>& tsdf) {
   std_msgs::Header header;
-  header.frame_id = config_.odom_frame;
+  header.frame_id = HydraConfig::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
-  visualizeGvd(header, gvd);
-
-  if (extractor) {
-    visualizeGraph(header, extractor->getGraph());
-    visualizeGvdGraph(header, extractor->getGvdGraph());
-  }
-
-  if (config_.show_block_outlines) {
-    visualizeBlocks(header, gvd);
-  }
-
-  const auto compression = dynamic_cast<const CompressionGraphExtractor*>(extractor);
-  if (!compression) {
-    return;
-  }
-
-  MarkerArray markers;
-  pubs_->publish("gvd_cluster_viz", [&](MarkerArray& markers) {
-    const std::string ns = "gvd_cluster_graph";
-    if (compression->getGvdGraph().empty() && published_gvd_clusters_) {
-      published_gvd_graph_ = false;
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_nodes"));
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_edges"));
-      return true;
-    }
-
-    markers = showGvdClusters(compression->getGvdGraph(),
-                              compression->getCompressedNodeInfo(),
-                              compression->getCompressedRemapping(),
-                              config_.gvd,
-                              config_.colormap,
-                              ns);
-
-    if (markers.markers.empty()) {
-      return false;
-    }
-
-    markers.markers.at(0).header = header;
-    markers.markers.at(1).header = header;
-    published_gvd_clusters_ = true;
-    return true;
-  });
-}
-
-void ReconstructionVisualizer::visualizeError(uint64_t timestamp_ns,
-                                              const Layer<GvdVoxel>& lhs,
-                                              const Layer<GvdVoxel>& rhs,
-                                              double threshold) {
-  pubs_->publish("error_viz", [&](Marker& msg) {
-    msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
-    msg.header.frame_id = config_.odom_frame;
-    msg.header.stamp.fromNSec(timestamp_ns);
+  pubs_->publish("tsdf_viz", [&](Marker& msg) {
+    msg = makeTsdfMarker(
+        config_, header, tsdf, world_T_sensor, colorVoxelByDist, "tsdf_distance_slice");
 
     if (msg.points.size()) {
       return true;
     } else {
-      LOG(INFO) << "no voxels with error above threshold";
+      LOG(INFO) << "visualizing empty TSDF slice";
       return false;
     }
   });
-}
 
-void ReconstructionVisualizer::visualizeGraph(const std_msgs::Header& header,
-                                              const SceneGraphLayer& graph) {
-  if (graph.nodes().empty()) {
-    LOG(INFO) << "visualizing empty graph!";
-    return;
-  }
-
-  pubs_->publish("graph_viz", [&](MarkerArray& markers) {
-    const std::string node_ns = config_.topology_marker_ns + "_nodes";
-    Marker node_marker = makeCentroidMarkers(
-        header, config_.graph_layer, graph, config_.graph, node_ns, config_.colormap);
-    markers.markers.push_back(node_marker);
-
-    if (!graph.edges().empty()) {
-      Marker edge_marker = makeLayerEdgeMarkers(header,
-                                                config_.graph_layer,
-                                                graph,
-                                                config_.graph,
-                                                NodeColor::Zero(),
-                                                config_.topology_marker_ns + "_edges");
-      markers.markers.push_back(edge_marker);
-    }
-
-    return true;
-  });
-
-  publishFreespace(header, graph);
-  publishGraphLabels(header, graph);
-}
-
-void ReconstructionVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
-                                                 const GvdGraph& graph) const {
-  pubs_->publish("gvd_graph_viz", [&](MarkerArray& markers) {
-    const std::string ns = config_.topology_marker_ns + "_gvd_graph";
-    if (graph.empty() && published_gvd_graph_) {
-      published_gvd_graph_ = false;
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_nodes"));
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_edges"));
-      return true;
-    }
-
-    markers = makeGvdGraphMarkers(graph, config_.gvd, config_.colormap, ns);
-    if (markers.markers.empty()) {
-      return false;
-    }
-
-    markers.markers.at(0).header = header;
-    markers.markers.at(1).header = header;
-    published_gvd_graph_ = true;
-    return true;
-  });
-}
-
-void ReconstructionVisualizer::visualizeGvd(const std_msgs::Header& header,
-                                            const Layer<GvdVoxel>& gvd) const {
-  pubs_->publish("esdf_viz", [&](Marker& msg) {
-    msg = makeEsdfMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
+  pubs_->publish("tsdf_weight_viz", [&](Marker& msg) {
+    msg = makeTsdfMarker(
+        config_, header, tsdf, world_T_sensor, colorVoxelByWeight, "tsdf_weight_slice");
 
     if (msg.points.size()) {
       return true;
     } else {
-      LOG(INFO) << "visualizing empty ESDF slice";
       return false;
     }
   });
-
-  pubs_->publish("gvd_viz", [&](Marker& msg) {
-    msg = makeGvdMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty GVD slice";
-      return false;
-    }
-  });
-
-  pubs_->publish("surface_viz", [&](Marker& msg) {
-    msg = makeSurfaceVoxelMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty surface slice";
-      return false;
-    }
-  });
-}
-
-void ReconstructionVisualizer::visualizeBlocks(const std_msgs::Header& header,
-                                               const Layer<GvdVoxel>& gvd) const {
-  pubs_->publish("voxel_block_viz", [&](Marker& msg) {
-    msg = makeBlocksMarker(gvd, config_.outline_scale);
-    msg.header = header;
-    msg.ns = "topology_server_blocks";
-    return true;
-  });
-}
-
-void ReconstructionVisualizer::publishFreespace(const std_msgs::Header& header,
-                                                const SceneGraphLayer& graph) {
-  const std::string label_ns = config_.topology_marker_ns + "_freespace";
-
-  MarkerArray spheres = makePlaceSpheres(header, graph, label_ns, 0.15);
-
-  MarkerArray delete_markers;
-  for (size_t id = 0; id < previous_spheres_; ++id) {
-    Marker delete_label;
-    delete_label.action = Marker::DELETE;
-    delete_label.id = id;
-    delete_label.ns = label_ns;
-    delete_markers.markers.push_back(delete_label);
-  }
-  previous_spheres_ = spheres.markers.size();
-
-  // there's not really a clean way to delay computation on either of these markers, so
-  // we just assign the messages in the callbacks
-  pubs_->publish("freespace_viz", [&](MarkerArray& msg) {
-    msg = delete_markers;
-    return true;
-  });
-  pubs_->publish("freespace_viz", [&](MarkerArray& msg) {
-    msg = spheres;
-    return true;
-  });
-
-  pubs_->publish("freespace_graph_viz", [&](MarkerArray& markers) {
-    const std::string node_ns = config_.topology_marker_ns + "_freespace_nodes";
-    auto freespace_conf = config_.graph_layer;
-    freespace_conf.use_sphere_marker = false;
-    freespace_conf.marker_scale = 0.08;
-    freespace_conf.marker_alpha = 0.5;
-    Marker node_marker = makeCentroidMarkers(
-        header, freespace_conf, graph, config_.graph, node_ns, [](const auto&) {
-          return NodeColor::Zero();
-        });
-    markers.markers.push_back(node_marker);
-
-    if (!graph.edges().empty()) {
-      Marker edge_marker =
-          makeLayerEdgeMarkers(header,
-                               config_.graph_layer,
-                               graph,
-                               config_.graph,
-                               NodeColor::Zero(),
-                               config_.topology_marker_ns + "_freespace_edges");
-      markers.markers.push_back(edge_marker);
-    }
-
-    return true;
-  });
-}
-
-void ReconstructionVisualizer::publishGraphLabels(const std_msgs::Header& header,
-                                                  const SceneGraphLayer& graph) {
-  if (!config_.graph_layer.use_label) {
-    return;
-  }
-
-  const std::string label_ns = config_.topology_marker_ns + "_labels";
-
-  MarkerArray labels;
-  for (const auto& id_node_pair : graph.nodes()) {
-    const SceneGraphNode& node = *id_node_pair.second;
-    Marker label =
-        makeTextMarker(header, config_.graph_layer, node, config_.graph, label_ns);
-    labels.markers.push_back(label);
-  }
-
-  std::set<int> current_ids;
-  for (const auto& label : labels.markers) {
-    current_ids.insert(label.id);
-  }
-
-  std::set<int> ids_to_delete;
-  for (auto previous : previous_labels_) {
-    if (!current_ids.count(previous)) {
-      ids_to_delete.insert(previous);
-    }
-  }
-  previous_labels_ = current_ids;
-
-  MarkerArray delete_markers;
-  for (auto to_delete : ids_to_delete) {
-    Marker delete_label;
-    delete_label.action = Marker::DELETE;
-    delete_label.id = to_delete;
-    delete_label.ns = label_ns;
-    delete_markers.markers.push_back(delete_label);
-  }
-
-  // there's not really a clean way to delay computation on either of these markers, so
-  // we just assign the messages in the callbacks
-  pubs_->publish("graph_label_viz", [&](MarkerArray& msg) {
-    msg = delete_markers;
-    return true;
-  });
-  pubs_->publish("graph_label_viz", [&](MarkerArray& msg) {
-    msg = labels;
-    return true;
-  });
-}
-
-void ReconstructionVisualizer::graphConfigCb(LayerConfig& config, uint32_t) {
-  config_.graph_layer = config;
-}
-
-void ReconstructionVisualizer::colormapCb(ColormapConfig& config, uint32_t) {
-  config_.colormap = config;
-}
-
-void ReconstructionVisualizer::gvdConfigCb(GvdVisualizerConfig& config, uint32_t) {
-  config_.gvd = config;
-  config_.graph.places_colormap_min_distance = config.gvd_min_distance;
-  config_.graph.places_colormap_max_distance = config.gvd_max_distance;
-}
-
-void ReconstructionVisualizer::setupConfigServers() {
-  startRqtServer(
-      "gvd_visualizer", gvd_config_server_, &ReconstructionVisualizer::gvdConfigCb);
-
-  startRqtServer("graph_visualizer",
-                 graph_config_server_,
-                 &ReconstructionVisualizer::graphConfigCb);
-
-  startRqtServer(
-      "visualizer_colormap", colormap_server_, &ReconstructionVisualizer::colormapCb);
 }
 
 }  // namespace hydra

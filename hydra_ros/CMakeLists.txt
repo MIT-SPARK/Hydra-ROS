@@ -7,8 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
-# TODO(nathan) find hydra independently
-# TODO(nathan) think about private deps
+# TODO(nathan) find hydra independently TODO(nathan) think about private deps
 find_package(
   catkin REQUIRED
   COMPONENTS dynamic_reconfigure
@@ -60,27 +59,28 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
-  src/pipeline/hydra_ros_pipeline.cpp
-  src/pipeline/ros_backend.cpp
-  src/pipeline/ros_backend_publisher.cpp
-  src/pipeline/ros_frontend.cpp
-  src/pipeline/ros_frontend_publisher.cpp
-  src/pipeline/ros_lcd_registration.cpp
-  src/pipeline/ros_reconstruction.cpp
-  src/pipeline/ros_reconstruction_config.cpp
+  src/backend/ros_backend.cpp
+  src/backend/ros_backend_publisher.cpp
+  src/common/hydra_ros_pipeline.cpp
+  src/frontend/ros_frontend.cpp
+  src/frontend/ros_frontend_publisher.cpp
+  src/loop_closure/ros_lcd_registration.cpp
+  src/reconstruction/data_receiver.cpp
+  src/reconstruction/image_receiver.cpp
+  src/reconstruction/pointcloud_adaptor.cpp
+  src/reconstruction/pointcloud_receiver.cpp
+  src/reconstruction/ros_reconstruction.cpp
+  src/reconstruction/ros_reconstruction_config.cpp
+  src/reconstruction/ros_sensors.cpp
   src/utils/dsg_streaming_interface.cpp
-  src/utils/image_color_adaptor.cpp
-  src/utils/image_depth_adaptor.cpp
-  src/utils/image_label_adaptor.cpp
-  src/utils/image_receiver.cpp
-  src/utils/image_to_pointcloud.cpp
+  src/utils/lookup_tf.cpp
   src/utils/mask_nodelet.cpp
   src/utils/node_utilities.cpp
-  src/utils/pointcloud_adaptor.cpp
   src/visualizer/colormap_utilities.cpp
   src/visualizer/mesh_plugin.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
   src/visualizer/gvd_visualization_utilities.cpp
+  src/visualizer/places_visualizer.cpp
   src/visualizer/reconstruction_visualizer.cpp
   src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp
@@ -105,11 +105,11 @@ target_link_libraries(dsg_optimizer_node ${PROJECT_NAME})
 add_executable(gvd_validator_node src/nodes/gvd_validator_node.cpp)
 target_link_libraries(gvd_validator_node ${PROJECT_NAME})
 
+add_executable(hydra_reconstruction_node src/nodes/hydra_reconstruction_node.cpp)
+target_link_libraries(hydra_reconstruction_node ${PROJECT_NAME})
+
 add_executable(hydra_ros_node src/nodes/hydra_node.cpp)
 target_link_libraries(hydra_ros_node ${PROJECT_NAME})
-
-add_executable(hydra_topology_node src/nodes/hydra_topology_node.cpp)
-target_link_libraries(hydra_topology_node ${PROJECT_NAME})
 
 add_executable(hydra_visualizer_node src/nodes/hydra_visualizer_node.cpp)
 target_link_libraries(hydra_visualizer_node ${PROJECT_NAME})
@@ -129,8 +129,8 @@ install(
   TARGETS ${PROJECT_NAME}
           dsg_optimizer_node
           gvd_validator_node
+          hydra_reconstruction_node
           hydra_ros_node
-          hydra_topology_node
           hydra_visualizer_node
           rotate_tf_node
           scene_graph_logger_node

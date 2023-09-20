@@ -33,35 +33,27 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <dynamic_reconfigure/server.h>
 #include <hydra/common/module.h>
-#include <hydra/places/gvd_voxel.h>
-#include <hydra_ros/GvdVisualizerConfig.h>
+#include <ros/ros.h>
 #include <voxblox/core/layer.h>
+#include <voxblox/core/voxel.h>
 
 #include "hydra_ros/visualizer/visualizer_types.h"
 
 namespace hydra {
-namespace places {
-class GraphExtractorInterface;
-class GvdGraph;
-}  // namespace places
 
 class MarkerGroupPub;
 
-using hydra_ros::GvdVisualizerConfig;
-
 struct ReconstructionVisualizerConfig {
-  std::string odom_frame = "odom";
-  std::string topology_marker_ns = "topology_graph";
-  bool show_block_outlines = false;
-  bool use_gvd_block_outlines = false;
-  double outline_scale = 0.01;
-
-  ColormapConfig colormap;
-  GvdVisualizerConfig gvd;
-  VisualizerConfig graph;
-  LayerConfig graph_layer;
+  double min_weight = 0.0;
+  double max_weight = 10.0;
+  double min_distance = 0.0;
+  double max_distance = 2.0;
+  double marker_alpha = 0.5;
+  bool use_relative_height = true;
+  double slice_height = 0.0;
+  double min_observation_weight = 1.0e-5;
+  ColormapConfig colors;
 };
 
 class ReconstructionVisualizer : public Module {
@@ -79,61 +71,13 @@ class ReconstructionVisualizer : public Module {
   std::string printInfo() const override;
 
   void visualize(uint64_t timestamp_ns,
-                 const voxblox::Layer<places::GvdVoxel>& gvd,
-                 const places::GraphExtractorInterface* extractor = nullptr);
-
-  void visualizeError(uint64_t timestamp_ns,
-                      const voxblox::Layer<places::GvdVoxel>& lhs,
-                      const voxblox::Layer<places::GvdVoxel>& rhs,
-                      double threshold);
-
- private:
-  void visualizeGraph(const std_msgs::Header& header, const SceneGraphLayer& graph);
-
-  void visualizeGvd(const std_msgs::Header& header,
-                    const voxblox::Layer<places::GvdVoxel>& gvd) const;
-
-  void visualizeGvdGraph(const std_msgs::Header& header,
-                         const places::GvdGraph& gvd_graph) const;
-
-  void visualizeBlocks(const std_msgs::Header& header,
-                       const voxblox::Layer<places::GvdVoxel>& gvd) const;
-
-  void publishGraphLabels(const std_msgs::Header& header, const SceneGraphLayer& graph);
-
-  void publishFreespace(const std_msgs::Header& header, const SceneGraphLayer& graph);
-
-  void gvdConfigCb(GvdVisualizerConfig& config, uint32_t level);
-
-  void graphConfigCb(LayerConfig& config, uint32_t level);
-
-  void colormapCb(ColormapConfig& config, uint32_t level);
-
-  void setupConfigServers();
-
-  template <typename Config, typename Callback>
-  void startRqtServer(const std::string& config_ns,
-                      std::unique_ptr<dynamic_reconfigure::Server<Config>>& server,
-                      const Callback& callback) {
-    ros::NodeHandle config_nh(nh_, config_ns);
-    server.reset(new dynamic_reconfigure::Server<Config>(config_nh));
-    server->setCallback(boost::bind(callback, this, _1, _2));
-  }
+                 const Eigen::Isometry3d& world_T_sensor,
+                 const voxblox::Layer<voxblox::TsdfVoxel>& tsdf);
 
  private:
   ros::NodeHandle nh_;
   std::unique_ptr<MarkerGroupPub> pubs_;
-
   ReconstructionVisualizerConfig config_;
-  std::set<int> previous_labels_;
-  size_t previous_spheres_;
-
-  mutable bool published_gvd_graph_;
-  mutable bool published_gvd_clusters_;
-
-  std::unique_ptr<dynamic_reconfigure::Server<GvdVisualizerConfig>> gvd_config_server_;
-  std::unique_ptr<dynamic_reconfigure::Server<LayerConfig>> graph_config_server_;
-  std::unique_ptr<dynamic_reconfigure::Server<ColormapConfig>> colormap_server_;
 };
 
 }  // namespace hydra

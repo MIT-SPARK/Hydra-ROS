@@ -21,7 +21,6 @@
     <arg name="use_gt_frame" default="true"/>
     <arg name="robot_frame" default="$(arg robot_name)/lamp" if="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
-    <arg name="world_frame" default="$(arg robot_name)/map"/>
     <arg name="sensor_frame" default="$(arg robot_name)/forward_color_optical_frame"/>
 
     <arg name="run_name"/>

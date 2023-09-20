@@ -33,10 +33,11 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/parsing/ros.h>
+#include <hydra/common/hydra_config.h>
 #include <kimera_pgmo/DeformationGraph.h>
 
-#include "hydra_ros/pipeline/ros_backend.h"
-#include "hydra_ros/pipeline/ros_frontend.h"
+#include "hydra_ros/backend/ros_backend.h"
+#include "hydra_ros/frontend/ros_frontend.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
 namespace hydra {
@@ -75,10 +76,10 @@ struct DsgOptimizer {
 
   void do_optimize() {
     // TODO(nathan) maybe pull robot id from somewhere
-    RobotPrefixConfig prefix(0);
+    HydraConfig::instance().setRobotId(0);
     SharedModuleState::Ptr state(new SharedModuleState());
-    backend = config::createFromROS<BackendModule>(
-        nh, prefix, frontend_dsg, backend_dsg, state);
+    backend =
+        config::createFromROS<BackendModule>(nh, frontend_dsg, backend_dsg, state);
     LOG(ERROR) << "Loading backend state!";
     backend->loadState(frontend_filepath, dgrf_filepath);
     LOG(ERROR) << "Loaded backend state!";

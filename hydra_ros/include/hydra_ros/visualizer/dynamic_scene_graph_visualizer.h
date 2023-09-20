@@ -206,7 +206,7 @@ class DynamicSceneGraphVisualizer {
 
   bool need_redraw_;
   bool periodic_redraw_;
-  std::string world_frame_;
+  std::string visualizer_frame_;
   std::string visualizer_ns_;
   std::string visualizer_layer_ns_;
 

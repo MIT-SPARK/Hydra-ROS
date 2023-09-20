@@ -80,7 +80,8 @@ class PlacesFactorGraphViz {
 
   virtual ~PlacesFactorGraphViz() = default;
 
-  void draw(char vertex_prefix,
+  void draw(const std::string& frame_id,
+            char vertex_prefix,
             const SceneGraphLayer& places,
             const MinimumSpanningTreeInfo& mst_info,
             const kimera_pgmo::DeformationGraph& deformations);

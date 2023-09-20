@@ -34,8 +34,8 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/mesh_plugin.h"
 
+#include <hydra/common/semantic_color_map.h>
 #include <kimera_pgmo/utils/CommonFunctions.h>
-#include <kimera_semantics/color.h>
 #include <mesh_msgs/TriangleMeshStamped.h>
 
 namespace hydra {
@@ -49,7 +49,7 @@ MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
   std::string label_colormap = "";
   nh_.getParam("label_colormap", label_colormap);
   if (!label_colormap.empty()) {
-    colormap_ = kimera::SemanticColorMap::fromFile(label_colormap);
+    colormap_ = SemanticColorMap::fromCsv(label_colormap);
     if (!colormap_) {
       ROS_WARN_STREAM("Unable to load colormap from " << label_colormap);
     }

@@ -51,6 +51,7 @@ using voxblox::FloatingPoint;
 using voxblox::Layer;
 using voxblox::MeshLayer;
 using voxblox::TsdfVoxel;
+using dsg_utils::computeRatio;
 
 MarkerGroupPub::MarkerGroupPub(const ros::NodeHandle& nh) : nh_(nh) {}
 
@@ -77,12 +78,6 @@ void MarkerGroupPub::publish(const std::string& name, const ArrayCallback& func)
   if (func(msg)) {
     iter->second.publish(msg);
   }
-}
-
-double computeRatio(double min, double max, double value) {
-  double ratio = (value - min) / (max - min);
-  ratio = !std::isfinite(ratio) ? 0.0 : ratio;
-  return ratio;
 }
 
 double getRatioFromDistance(const GvdVisualizerConfig& config, const GvdVoxel& voxel) {

@@ -14,7 +14,7 @@ class DsgPublisher:
         self._publish_mesh = publish_mesh
         self._pub = rospy.Publisher(topic, hydra_msgs.msg.DsgUpdate, queue_size=1)
 
-    def publish(self, G, stamp: Optional[rospy.Time] = None, frame_id: str = "world"):
+    def publish(self, G, stamp: Optional[rospy.Time] = None, frame_id: str = "odom"):
         """Send a graph."""
         header = std_msgs.msg.Header()
         header.stamp = stamp if stamp is not None else rospy.Time.now()

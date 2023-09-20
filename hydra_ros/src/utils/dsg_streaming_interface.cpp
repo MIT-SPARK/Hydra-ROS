@@ -43,11 +43,13 @@
 namespace hydra {
 
 DsgSender::DsgSender(const ros::NodeHandle& nh,
+                     const std::string& frame_id,
                      const std::string& timer_name,
                      bool publish_mesh,
                      double min_mesh_separation_s,
                      bool serialize_dsg_mesh)
     : nh_(nh),
+      frame_id_(frame_id),
       timer_name_(timer_name),
       publish_mesh_(publish_mesh),
       min_mesh_separation_s_(min_mesh_separation_s),
@@ -91,7 +93,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
 
   mesh_msgs::TriangleMeshStamped msg;
   msg.header.stamp.fromNSec(timestamp_ns);
-  msg.header.frame_id = "world";
+  msg.header.frame_id = frame_id_;
   msg.mesh = kimera_pgmo::PolygonMeshToTriangleMeshMsg(*graph.getMeshVertices(),
                                                        *graph.getMeshFaces());
   mesh_pub_.publish(msg);

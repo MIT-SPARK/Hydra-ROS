@@ -8,7 +8,7 @@
     <arg name="use_gt_frame" default="false"/>
     <arg name="robot_frame" default="$(arg robot_name)/base" if="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="$(arg robot_name)/kimera_base" unless="$(arg use_gt_frame)"/>
-    <arg name="world_frame" default="$(arg robot_name)/odom"/>
+    <arg name="odom_frame" default="$(arg robot_name)/odom"/>
     <arg name="sensor_frame" default="$(arg robot_name)/forward_color_optical_frame" unless="$(arg use_phoenix_pointcloud)"/>
     <arg name="sensor_frame" default="$(arg robot_name)/ouster_center_link" if="$(arg use_phoenix_pointcloud)"/>
     <arg name="use_compressed_transport" default="true"/>
@@ -26,6 +26,7 @@
 
     <arg name="reconstruction_config_path" default="$(find hydra)/config/phoenix/reconstruction_config.yaml" unless="$(arg use_phoenix_pointcloud)"/>
     <arg name="reconstruction_config_path" default="$(find hydra)/config/phoenix/lidar_reconstruction_config.yaml" if="$(arg use_phoenix_pointcloud)"/>
+    <arg name="sensor_config_path" default="$(find hydra_ros)/config/sensors/warty_phoenix_lidar.yaml" if="$(arg use_phoenix_pointcloud)"/>
     <include unless="$(arg use_phoenix_pointcloud)" file="$(find hydra_ros)/launch/utils/data_sources/phoenix_pointcloud.launch" pass_all_args="true"/>
 
     <!-- Phoenix-related params -->

@@ -122,8 +122,7 @@ MarkerArray makeLeafEdges(const PMGraphPluginConfig& config,
   fillPoseWithIdentity(edges);
   fillPoseWithIdentity(vertices);
 
-  const auto vertex_positions =
-      dgraph.getInitialPositionsVertices(vertex_prefix);
+  const auto vertex_positions = dgraph.getInitialPositionsVertices(vertex_prefix);
 
   std::set<size_t> seen;
   for (const auto& id_node_pair : layer.nodes()) {
@@ -278,7 +277,8 @@ PlacesFactorGraphViz::PlacesFactorGraphViz(const ros::NodeHandle& nh)
   marker_pub_ = nh_.advertise<MarkerArray>("places_factor_graph", 10);
 }
 
-void PlacesFactorGraphViz::draw(char vertex_prefix,
+void PlacesFactorGraphViz::draw(const std::string& frame_id,
+                                char vertex_prefix,
                                 const SceneGraphLayer& places,
                                 const MinimumSpanningTreeInfo& mst_info,
                                 const DeformationGraph& deformations) {
@@ -286,7 +286,7 @@ void PlacesFactorGraphViz::draw(char vertex_prefix,
   viz_config.layer_z_step = 0.0;
 
   std_msgs::Header header;
-  header.frame_id = "world";
+  header.frame_id = frame_id;
   header.stamp = ros::Time::now();
 
   MarkerArray msg =

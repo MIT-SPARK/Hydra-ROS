@@ -37,11 +37,9 @@
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
 
-namespace kimera {
-class SemanticColorMap;
-}  // namespace kimera
-
 namespace hydra {
+
+class SemanticColorMap;
 
 class MeshPlugin : public DsgVisualizerPlugin {
  public:
@@ -66,7 +64,7 @@ class MeshPlugin : public DsgVisualizerPlugin {
   bool color_by_label_;
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
-  std::unique_ptr<kimera::SemanticColorMap> colormap_;
+  std::unique_ptr<SemanticColorMap> colormap_;
 };
 
 }  // namespace hydra

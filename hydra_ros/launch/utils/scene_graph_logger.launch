@@ -5,8 +5,7 @@
   <arg name="dsg_topic" default="/hydra_ros_node/dsg"/>
   <arg name="dsg_mesh_topic" default="/hydra_ros_node/pgmo/optimized_mesh"/>
 
-  <node pkg="hydra_ros" type="scene_graph_logger_node" name="scene_graph_logger_node"
-        output="log">
+  <node pkg="hydra_ros" type="scene_graph_logger_node" name="scene_graph_logger_node" output="log">
     <param name="output_path" value="$(arg output_path)"/>
     <param name="output_every_num" value="$(arg output_every_num)"/>
 

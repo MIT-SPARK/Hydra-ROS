@@ -6,14 +6,16 @@
     <arg name="use_gt_semantics" default="true"/>
     <arg name="robot_frame" default="base_link_kimera" unless="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="base_link_gt" if="$(arg use_gt_frame)"/>
+    <arg name="odom_frame" default="world" if="$(arg use_gt_frame)"/>
+    <arg name="sensor_frame" default="left_cam" if="$(arg use_gt_frame)"/>
+    <arg name="sensor_frame" default="left_cam_kimera" unless="$(arg use_gt_frame)"/>
     <arg name="use_image_interface" default="false"/>
 
     <!-- simulator semantics -->
     <arg name="labelspace_name" default="uhumans2_office" if="$(arg use_gt_semantics)"/>
-    <arg name="semantic_map_dir" default="$(find kimera_semantics_ros)/cfg"/>
-    <arg name="semantic_map_file" default="tesse_multiscene_office1_segmentation_mapping.csv"/>
-    <arg name="semantic_map_path"
-         default="$(arg semantic_map_dir)/$(arg semantic_map_file)"
+    <arg name="semantic_map_dir" default="$(find hydra_ros)/config/color"/>
+    <arg name="semantic_map_file" default="$(arg labelspace_name).csv"/>
+    <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"
          if="$(arg use_gt_semantics)"/>
 
     <!-- non-gt semantics -->
@@ -24,21 +26,23 @@
     <arg name="pointcloud_topic" value="semantic_pointcloud"/>
 
     <arg name="rgb_topic" default="/tesse/left_cam/rgb/image_raw" if="$(arg use_image_interface)"/>
-    <arg name="rgb_info_topic" default="/tesse/left_cam/camera_info" if="$(arg use_image_interface)"/>
+    <arg name="rgb_info_topic" default="/tesse/left_cam/camera_info"/>
     <arg name="depth_topic" default="/tesse/depth_cam/mono/image_raw"/>
     <arg name="label_topic" default="/semantic/image_raw" unless="$(arg use_gt_semantics)"/>
     <arg name="label_topic" default="/tesse/seg_cam/rgb/image_raw" if="$(arg use_gt_semantics)"/>
     <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
-    <include file="$(find hydra_ros)/launch/utils/data_sources/uhumans2_pointcloud.launch" pass_all_args="true"/>
+    <include file="$(find hydra_ros)/launch/sources/uhumans2_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/uhumans2"/>
         <arg name="dsg_output_prefix" default="uhumans2"/>
-        <arg name="extrinsics" default="$(find hydra)/config/extrinsics/uhumans2.yaml"/>
         <arg name="rviz_file" default="uhumans2.rviz"/>
         <arg name="override_default_lcd" default="true"/>
         <arg name="use_oriented_bounding_boxes" default="false"/>
     </include>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="fake_world_tf" args="0 0 0 0 0 0 1 map world" if="$(arg use_gt_frame)"/>
+
 </launch>
