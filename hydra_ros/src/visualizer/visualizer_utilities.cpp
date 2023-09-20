@@ -871,6 +871,10 @@ Marker makeDynamicCentroidMarkers(const std_msgs::Header& header,
 
   marker.points.reserve(layer.numNodes());
   for (const auto& node : layer.nodes()) {
+    if (!node) {
+      continue;
+    }
+
     geometry_msgs::Point node_centroid;
     tf2::convert(node->attributes().position, node_centroid);
     node_centroid.z += getZOffset(layer_offset_scale, visualizer_config);

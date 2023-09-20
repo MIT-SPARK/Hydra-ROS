@@ -33,16 +33,16 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/config_utilities.h>
+#include <config_utilities/formatting/asl.h>
+#include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/ros.h>
-#include <glog/logging.h>
 #include <hydra/common/hydra_config.h>
-#include <hydra/utils/log_utilities.h>
 
 #include "hydra_ros/reconstruction/ros_reconstruction.h"
 #include "hydra_ros/utils/node_utilities.h"
 
 int main(int argc, char* argv[]) {
-  ros::init(argc, argv, "hydra_topology_node");
+  ros::init(argc, argv, "hydra_reconstruction_node");
 
   FLAGS_minloglevel = 3;
   FLAGS_logtostderr = 1;
@@ -50,20 +50,25 @@ int main(int argc, char* argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
+  google::InstallFailureSignalHandler();
+  config::Settings().setLogger("glog");
+  config::Settings().print_width = 100;
+  config::Settings().print_indent = 45;
 
   ros::NodeHandle nh("~");
+  const int robot_id = nh.param<int>("robot_id", 0);
+  const auto hydra_config = config::fromRos<hydra::PipelineConfig>(nh);
+  hydra::HydraConfig::init(hydra_config, robot_id);
 
-  const auto log_config = config::fromRos<hydra::LogConfig>(nh);
-  auto logs = std::make_shared<hydra::LogSetup>(log_config);
-
-  hydra::configureTimers(nh, logs);
-  hydra::HydraConfig::instance().setRobotId(nh.param<int>("robot_id", 0));
   auto module = config::createFromROS<hydra::ReconstructionModule>(nh, nullptr);
   module->start();
-
-  ros::spin();
-
+  hydra::spinAndWait(nh);
   module->stop();
-  module->save(*logs);
+  const auto& logs = hydra::HydraConfig::instance().getLogs();
+  if (logs) {
+    module->save(*logs);
+  }
+
+  hydra::HydraConfig::exit();
   return 0;
 }

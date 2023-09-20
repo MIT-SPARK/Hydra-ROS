@@ -17,7 +17,7 @@
            pass_all_args="true"
            if="$(arg start_rviz)"/>
 
-  <node pkg="hydra_ros" name="$(anon hydra_visualizer_node)" type="hydra_visualizer_node"
+  <node pkg="hydra_ros" name="$(arg visualizer_ns)" type="hydra_visualizer_node"
         output="screen"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">

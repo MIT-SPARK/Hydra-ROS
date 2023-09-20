@@ -41,9 +41,7 @@
 namespace hydra {
 
 struct HydraRosConfig {
-  bool enable_lcd = false;
   bool use_ros_backend = false;
-  bool do_reconstruction = true;
   bool enable_frontend_output = true;
   bool visualize_places = false;
   std::string places_visualizer_namespace = "~";
@@ -55,10 +53,7 @@ void declare_config(HydraRosConfig& conf);
 
 class HydraRosPipeline : public HydraPipeline {
  public:
-  HydraRosPipeline(const HydraRosConfig& config,
-                   const ros::NodeHandle& nh,
-                   int robot_id = 0,
-                   const LogSetup::Ptr& log_setup = nullptr);
+  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
 
   virtual ~HydraRosPipeline();
 

@@ -7,12 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
-# TODO(nathan) find hydra independently TODO(nathan) think about private deps
+find_package(hydra REQUIRED)
 find_package(
   catkin REQUIRED
   COMPONENTS dynamic_reconfigure
              geometry_msgs
-             hydra
              hydra_msgs
              image_transport
              kimera_pgmo
@@ -40,7 +39,6 @@ catkin_package(
   CATKIN_DEPENDS
   dynamic_reconfigure
   geometry_msgs
-  hydra
   hydra_msgs
   image_transport
   kimera_pgmo
@@ -52,7 +50,7 @@ catkin_package(
   tf2_ros
   visualization_msgs
   voxblox_ros
-  DEPENDS
+  DEPENDS hydra
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
@@ -92,7 +90,7 @@ target_include_directories(
 )
 target_link_libraries(
   ${PROJECT_NAME}
-  PUBLIC ${catkin_LIBRARIES}
+  PUBLIC ${catkin_LIBRARIES} hydra::hydra
   PRIVATE ${OpenCV_LIBRARIES}
 )
 add_dependencies(

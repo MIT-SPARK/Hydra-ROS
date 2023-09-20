@@ -32,19 +32,14 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <config_utilities/config_utilities.h>
 #include <config_utilities/formatting/asl.h>
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/ros.h>
-#include <config_utilities/settings.h>
-#include <config_utilities/validation.h>
 #include <hydra/common/hydra_config.h>
-#include <hydra/utils/log_utilities.h>
-#include <hydra/utils/timing_utilities.h>
 
 #include "hydra_ros/common/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
-
-using hydra::timing::ElapsedTimeRecorder;
 
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "hydra_node");
@@ -61,28 +56,14 @@ int main(int argc, char* argv[]) {
   config::Settings().print_indent = 45;
 
   ros::NodeHandle nh("~");
-  const auto log_config = config::fromRos<hydra::LogConfig>(nh);
-  auto logs = std::make_shared<hydra::LogSetup>(log_config);
-  hydra::configureTimers(nh, logs);
-  hydra::parseObjectNamesFromRos(nh);
+  const int robot_id = nh.param<int>("robot_id", 0);
+  hydra::HydraRosPipeline hydra(nh, robot_id);
 
-  int robot_id = 0;
-  nh.getParam("robot_id", robot_id);
-  const auto frames = config::fromRos<hydra::FrameConfig>(nh);
-  hydra::HydraConfig::instance().setFrames(frames);
-
-  const auto map =
-      config::fromRos<hydra::VolumetricMap::Config>(nh, "reconstruction/map");
-  hydra::HydraConfig::instance().setMapConfig(map);
-
-  const auto config = config::checkValid(config::fromRos<hydra::HydraRosConfig>(nh));
-  hydra::HydraRosPipeline hydra(config, nh, robot_id, logs);
   hydra.start();
-
   hydra::spinAndWait(nh);
-
-  LOG(WARNING) << "Stopping Hydra";
   hydra.stop();
-  hydra.save(*logs);
+  hydra.save();
+  hydra::HydraConfig::exit();
+
   return 0;
 }

@@ -57,9 +57,7 @@ namespace hydra {
 void declare_config(HydraRosConfig& conf) {
   using namespace config;
   name("HydraRosConfig");
-  field(conf.enable_lcd, "enable_lcd");
   field(conf.use_ros_backend, "use_ros_backend");
-  field(conf.do_reconstruction, "do_reconstruction");
   field(conf.enable_frontend_output, "enable_frontend_output");
   field(conf.visualize_places, "visualize_places");
   field(conf.places_visualizer_namespace, "places_visualizer_namespace");
@@ -68,25 +66,19 @@ void declare_config(HydraRosConfig& conf) {
         "reconstruction_visualizer_namespace");
 }
 
-HydraRosPipeline::HydraRosPipeline(const HydraRosConfig& config,
-                                   const ros::NodeHandle& node_handle,
-                                   int robot_id,
-                                   const LogSetup::Ptr& log_setup)
-    : HydraPipeline(robot_id, log_setup), config_(config), nh_(node_handle) {
-  const auto label_space =
-      config::checkValid(config::fromRos<hydra::LabelSpaceConfig>(nh_));
-  VLOG(1) << "Loaded label space:" << std::endl << config::toString(label_space);
-  HydraConfig::instance().setLabelSpaceConfig(label_space);
-
+HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
+    : HydraPipeline(config::fromRos<PipelineConfig>(nh), robot_id),
+      config_(config::checkValid(config::fromRos<HydraRosConfig>(nh))),
+      nh_(nh) {
+  const auto& pipeline_config = HydraConfig::instance().getConfig();
   initFrontend();
+  initBackend();
 
-  if (config_.do_reconstruction) {
+  if (pipeline_config.enable_reconstruction) {
     initReconstruction();
   }
 
-  initBackend();
-
-  if (config_.enable_lcd) {
+  if (pipeline_config.enable_lcd) {
     initLCD();
   }
 }
@@ -95,8 +87,11 @@ HydraRosPipeline::~HydraRosPipeline() {}
 
 void HydraRosPipeline::initFrontend() {
   // explict type for shared_ptr
-  FrontendModule::Ptr frontend = config::createFromROS<FrontendModule>(
-      ros::NodeHandle(nh_, "frontend"), frontend_dsg_, shared_state_, log_setup_);
+  FrontendModule::Ptr frontend =
+      config::createFromROS<FrontendModule>(ros::NodeHandle(nh_, "frontend"),
+                                            frontend_dsg_,
+                                            shared_state_,
+                                            HydraConfig::instance().getLogs());
   modules_["frontend"] = frontend;
 
   if (!config_.enable_frontend_output) {
@@ -163,7 +158,7 @@ void HydraRosPipeline::initBackend() {
                                            frontend_dsg_,
                                            backend_dsg_,
                                            shared_state_,
-                                           log_setup_);
+                                           HydraConfig::instance().getLogs());
 
   modules_["backend"] = backend;
   if (!modules_.at("backend")) {

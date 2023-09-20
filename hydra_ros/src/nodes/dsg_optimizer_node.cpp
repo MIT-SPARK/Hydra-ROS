@@ -76,7 +76,7 @@ struct DsgOptimizer {
 
   void do_optimize() {
     // TODO(nathan) maybe pull robot id from somewhere
-    HydraConfig::instance().setRobotId(0);
+    HydraConfig::init(PipelineConfig{}, 0);
     SharedModuleState::Ptr state(new SharedModuleState());
     backend =
         config::createFromROS<BackendModule>(nh, frontend_dsg, backend_dsg, state);

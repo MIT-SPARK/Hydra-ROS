@@ -59,8 +59,4 @@ void spinUntilExitRequested();
 
 void spinAndWait(const ros::NodeHandle& nh);
 
-void configureTimers(const ros::NodeHandle& nh, const LogSetup::Ptr& setup);
-
-void parseObjectNamesFromRos(const ros::NodeHandle& node_handle);
-
 }  // namespace hydra
