@@ -21,7 +21,6 @@
     <include file="$(find hydra_ros)/launch/sources/sidpac_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/sidpac"/>
         <arg name="dsg_output_prefix" default="sidpac"/>
         <arg name="rviz_file" default="sidpac.rviz"/>

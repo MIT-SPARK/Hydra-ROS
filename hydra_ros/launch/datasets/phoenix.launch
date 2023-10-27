@@ -35,7 +35,6 @@
 
     <include file="$(find hydra_ros)/launch/hydra.launch" ns="$(arg robot_name)" pass_all_args="true">
         <arg name="zmq_ip" value="$(arg zmq_ip)"/>
-        <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
         <arg name="extrinsics_mode" value="USE_TF" if="$(arg use_gt_frame)"/>
         <arg name="extrinsics_mode" value="USE_KIMERA" unless="$(arg use_gt_frame)"/>

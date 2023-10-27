@@ -28,7 +28,6 @@
     <include file="$(find hydra_ros)/launch/sources/a1_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/d455_outdoor"/>
         <arg name="extrinsics_type" value="kimera"/>
         <arg name="kimera_sensor_filepath" default="$(find hydra_vio_configs)/config/robots/a1_center_external/LeftCameraParams.yaml"/>

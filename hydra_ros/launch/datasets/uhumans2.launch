@@ -23,7 +23,7 @@
     <arg name="semantic_map_path"
          default="$(find semantic_recolor)/config/colors/$(arg labelspace_name).csv"
          unless="$(arg use_gt_semantics)"/>
-    <arg name="pointcloud_topic" value="semantic_pointcloud"/>
+    <arg name="pointcloud_topic" default="semantic_pointcloud"/>
 
     <arg name="rgb_topic" default="/tesse/left_cam/rgb/image_raw" if="$(arg use_image_interface)"/>
     <arg name="rgb_info_topic" default="/tesse/left_cam/camera_info"/>
@@ -35,7 +35,6 @@
     <include file="$(find hydra_ros)/launch/sources/uhumans2_pointcloud.launch" pass_all_args="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="config_dir" default="$(find hydra)/config/uhumans2"/>
         <arg name="dsg_output_prefix" default="uhumans2"/>
         <arg name="rviz_file" default="uhumans2.rviz"/>

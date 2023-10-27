@@ -13,7 +13,6 @@
     <arg name="color_places_by_distance" default="true"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="use_gt_frame" value="true"/>
         <arg name="dsg_output_prefix" default="kitti_360"/>
         <arg name="config_dir" default="$(find hydra)/config/kitti_360"/>

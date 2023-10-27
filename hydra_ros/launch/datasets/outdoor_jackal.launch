@@ -31,7 +31,6 @@
     </include>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-        <arg name="robot_id" default="0"/>
         <arg name="extrinsics_mode" value="USE_TF"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
         <arg name="config_dir" default="$(find hydra)/config/d455_outdoor"/>

@@ -25,7 +25,7 @@
     <include file="$(find hydra_ros)/launch/sources/jackal_pointcloud.launch"
              pass_all_args="true"/>
 
-    <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+    <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true" ns="$(arg robot_name)">
         <arg name="config_dir" default="$(find hydra)/config/simmons_jackal"/>
         <arg name="rviz_file" default="$(arg robot_name).rviz"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
