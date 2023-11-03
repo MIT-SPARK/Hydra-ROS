@@ -32,6 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#pragma once
 #include <hydra/backend/backend_config.h>
 #include <hydra/common/module.h>
 #include <hydra/common/robot_prefix_config.h>
