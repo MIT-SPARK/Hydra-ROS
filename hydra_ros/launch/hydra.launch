@@ -194,7 +194,7 @@
 
     <include file="$(find pose_graph_tools)/launch/posegraph_view.launch"
              if="$(arg start_pose_graph_viewer)">
-        <arg name="frame_id"      value="$(arg odom_frame)" />
+        <arg name="frame_id"      value="$(arg map_frame)" />
         <arg name="graph_topic"   value="pose_graph" />
         <arg name="ns"            value="hydra_ros_node/pgmo"/>
     </include>

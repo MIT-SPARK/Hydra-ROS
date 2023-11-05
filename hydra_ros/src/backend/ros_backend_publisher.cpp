@@ -110,7 +110,8 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
     times.push_back(node->timestamp.count());
   }
 
-  const auto& pose_graph = dgraph.getPoseGraph(id_timestamps);
+  const auto& pose_graph =
+      dgraph.getPoseGraph(id_timestamps, HydraConfig::instance().getFrames().map);
   pose_graph_pub_.publish(*pose_graph);
 }
 
@@ -121,7 +122,11 @@ void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgr
 
   Marker mm_edges_msg;
   Marker pm_edges_msg;
-  kimera_pgmo::fillDeformationGraphMarkers(dgraph, stamp, mm_edges_msg, pm_edges_msg);
+  kimera_pgmo::fillDeformationGraphMarkers(dgraph,
+                                           stamp,
+                                           mm_edges_msg,
+                                           pm_edges_msg,
+                                           HydraConfig::instance().getFrames().map);
 
   if (!mm_edges_msg.points.empty()) {
     mesh_mesh_edges_pub_.publish(mm_edges_msg);
