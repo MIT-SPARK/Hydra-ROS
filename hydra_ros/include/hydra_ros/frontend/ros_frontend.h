@@ -51,7 +51,7 @@ namespace hydra {
 
 using hydra_msgs::ActiveLayer;
 using hydra_msgs::ActiveMesh;
-using pose_graph_tools::PoseGraph;
+using pose_graph_tools_msgs::PoseGraph;
 
 using ObjectCloudPub = SemanticRosPublishers<uint8_t, MeshSegmenter::MeshVertexCloud>;
 using MeshVertexCloud = MeshSegmenter::MeshVertexCloud;

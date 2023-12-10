@@ -43,7 +43,7 @@ using kimera_pgmo::DeformationGraph;
 using kimera_pgmo::KimeraPgmoConfig;
 using kimera_pgmo::KimeraPgmoMesh;
 using mesh_msgs::TriangleMeshStamped;
-using pose_graph_tools::PoseGraph;
+using pose_graph_tools_msgs::PoseGraph;
 using visualization_msgs::Marker;
 
 RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh,

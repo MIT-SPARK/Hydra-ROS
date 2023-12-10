@@ -40,13 +40,16 @@
 
 namespace hydra {
 
+using kimera_pgmo::KimeraPgmoMesh;
+using pose_graph_tools_msgs::PoseGraph;
+
 class RosBackend : public BackendModule {
  public:
   using Policy =
       message_filters::sync_policies::ApproximateTime<kimera_pgmo::KimeraPgmoMesh,
-                                                      pose_graph_tools::PoseGraph>;
+                                                      pose_graph_tools_msgs::PoseGraph>;
   using Sync = message_filters::Synchronizer<Policy>;
-  using PoseGraphSub = message_filters::Subscriber<pose_graph_tools::PoseGraph>;
+  using PoseGraphSub = message_filters::Subscriber<pose_graph_tools_msgs::PoseGraph>;
   using MeshSub = message_filters::Subscriber<kimera_pgmo::KimeraPgmoMesh>;
 
   RosBackend(const BackendConfig& config,
@@ -59,10 +62,11 @@ class RosBackend : public BackendModule {
 
   std::string printInfo() const override;
 
-  void inputCallback(const kimera_pgmo::KimeraPgmoMesh::ConstPtr& mesh,
-                     const pose_graph_tools::PoseGraph::ConstPtr& deformation_graph);
+  void inputCallback(
+      const kimera_pgmo::KimeraPgmoMesh::ConstPtr& mesh,
+      const pose_graph_tools_msgs::PoseGraph::ConstPtr& deformation_graph);
 
-  void poseGraphCallback(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+  void poseGraphCallback(const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg);
 
  protected:
   void publishOutputs(const pcl::PolygonMesh& mesh, size_t timestamp_ns) const;
@@ -75,7 +79,7 @@ class RosBackend : public BackendModule {
 
  protected:
   ros::NodeHandle nh_;
-  std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graph_queue_;
+  std::list<pose_graph_tools_msgs::PoseGraph::ConstPtr> pose_graph_queue_;
   kimera_pgmo::KimeraPgmoMesh::ConstPtr latest_mesh_msg_;
 
   ros::Subscriber pose_graph_sub_;

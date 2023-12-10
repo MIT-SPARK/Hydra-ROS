@@ -32,59 +32,79 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/backend/ros_backend.h"
+#pragma once
 
+#include <config_utilities/config.h>
+#include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
+#include <glog/logging.h>
+#include <hydra/utils/timing_utilities.h>
+#include <ros/ros.h>
+#include <spark_dsg/zmq_interface.h>
+#include <std_srvs/Empty.h>
+
+#include <fstream>
+
+#include "hydra_ros/utils/dsg_streaming_interface.h"
+#include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
+#include "hydra_ros/visualizer/mesh_plugin.h"
+
+using DsgVisualizer = hydra::DynamicSceneGraphVisualizer;
+using spark_dsg::getDefaultLayerIds;
 
 namespace hydra {
 
-using kimera_pgmo::DeformationGraph;
-using kimera_pgmo::KimeraPgmoConfig;
-using kimera_pgmo::KimeraPgmoMesh;
-using mesh_msgs::TriangleMeshStamped;
-using pose_graph_tools_msgs::PoseGraph;
-using visualization_msgs::Marker;
+struct HydraVisualizerConfig {
+  bool load_graph = false;
+  bool use_zmq = false;
+  std::string scene_graph_filepath = "";
+  std::string visualizer_ns = "/hydra_dsg_visualizer";
+  std::string mesh_plugin_ns = "dsg_mesh";
+  std::string output_path = "";
+  std::string zmq_url = "tcp://127.0.0.1:8001";
+  size_t zmq_num_threads = 2;
+  size_t zmq_poll_time_ms = 10;
+};
 
-RosBackend::RosBackend(const BackendConfig& config,
-                       const SharedDsgInfo::Ptr& dsg,
-                       const SharedDsgInfo::Ptr& backend_dsg,
-                       const SharedModuleState::Ptr& state,
-                       const LogSetup::Ptr& log_setup)
-    : BackendModule(config, dsg, backend_dsg, state, log_setup), nh_("~") {
-  pose_graph_sub_ = nh_.subscribe(
-      "pose_graph_incremental", 10000, &RosBackend::poseGraphCallback, this);
-
-  mesh_sub_.reset(new MeshSub(nh_, "pgmo/ful_mesh", 1));
-  deformation_graph_sub_.reset(
-      new PoseGraphSub(nh_, "pgmo/mesh_graph_incremental", 100));
-  sync_.reset(new Sync(Policy(10), *mesh_sub_, *deformation_graph_sub_));
-  sync_->registerCallback(boost::bind(&RosBackend::inputCallback, this, _1, _2));
+void declare_config(HydraVisualizerConfig& config) {
+  using namespace config;
+  name("HydraVisualizerConfig");
+  field(config.load_graph, "load_graph");
+  field(config.use_zmq, "use_zmq");
+  field(config.scene_graph_filepath, "scene_graph_filepath");
+  field(config.visualizer_ns, "visualizer_ns");
+  field(config.mesh_plugin_ns, "mesh_plugin_ns");
+  field(config.output_path, "output_path");
+  field(config.zmq_url, "zmq_url");
+  field(config.zmq_num_threads, "zmq_num_threads");
 }
 
-RosBackend::~RosBackend() {}
+struct HydraVisualizer {
+  HydraVisualizer(const ros::NodeHandle& nh);
+  ~HydraVisualizer();
 
-std::string RosBackend::printInfo() const {
-  std::stringstream ss;
-  ss << config::toString(config_);
-  return ss.str();
-}
+  void loadGraph();
 
-void RosBackend::inputCallback(const KimeraPgmoMesh::ConstPtr& mesh,
-                               const PoseGraph::ConstPtr& deformation_graph) {
-  latest_mesh_msg_ = mesh;
-  have_new_mesh_ = true;
+  bool handleReload(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
+  bool handleRedraw(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
 
-  auto input = std::make_shared<BackendInput>();
-  input->deformation_graph = deformation_graph;
-  input->timestamp_ns = mesh->header.stamp.toNSec();
-  input->pose_graphs = pose_graph_queue_;
-  pose_graph_queue_.clear();
+  void addPlugin(DsgVisualizerPlugin::Ptr plugin);
+  void clearPlugins();
 
-  state_->backend_queue.push(input);
-}
+  void spinRos();
+  void spinFile();
+  void spinZmq();
+  void spin();
 
-void RosBackend::poseGraphCallback(const PoseGraph::ConstPtr& msg) {
-  pose_graph_queue_.push_back(msg);
-}
+  ros::NodeHandle nh_;
+  std::shared_ptr<DsgVisualizer> visualizer_;
+  std::unique_ptr<DsgReceiver> receiver_;
+  std::unique_ptr<spark_dsg::ZmqReceiver> zmq_receiver_;
+  HydraVisualizerConfig config_;
+  std::unique_ptr<std::ofstream> size_log_file_;
+  ros::ServiceServer reload_service_;
+  ros::ServiceServer redraw_service_;
+};
 
 }  // namespace hydra

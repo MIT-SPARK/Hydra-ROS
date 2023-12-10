@@ -439,6 +439,10 @@ bool DynamicSceneGraphVisualizer::hasConfigChanged() const {
     has_changed |= id_manager_pair.second->hasChange();
   }
 
+  for (const auto& plugin : plugins_) {
+    has_changed |= plugin->hasChange();
+  }
+
   return has_changed;
 }
 
@@ -451,6 +455,10 @@ void DynamicSceneGraphVisualizer::clearConfigChangeFlags() {
 
   for (auto& id_manager_pair : dynamic_configs_) {
     id_manager_pair.second->clearChangeFlag();
+  }
+
+  for (const auto& plugin : plugins_) {
+    plugin->clearChangeFlag();
   }
 }
 

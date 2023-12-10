@@ -43,7 +43,7 @@
         <param name="frontend_filepath" value="$(arg dsg_dir)/$(arg frontend_path)"/>
     </node>
 
-    <include file="$(find pose_graph_tools)/launch/posegraph_view.launch" >
+    <include file="$(find pose_graph_tools_ros)/launch/posegraph_view.launch" >
         <arg name="frame_id"      value="map" />
         <arg name="graph_topic"   value="/dsg_optimizer_node/pgmo/pose_graph" />
         <arg name="ns"            value="dsg_optimizer_node/pgmo"/>

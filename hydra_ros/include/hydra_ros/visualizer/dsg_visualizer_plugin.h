@@ -52,6 +52,10 @@ class DsgVisualizerPlugin {
   virtual void reset(const std_msgs::Header& header,
                      const DynamicSceneGraph& graph) = 0;
 
+  // Let plugins request changes.
+  virtual bool hasChange() const { return false; }
+  virtual void clearChangeFlag() {}
+
  protected:
   ros::NodeHandle nh_;
 };

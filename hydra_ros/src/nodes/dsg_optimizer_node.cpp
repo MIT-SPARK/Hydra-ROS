@@ -85,7 +85,7 @@ struct DsgOptimizer {
     LOG(ERROR) << "Loaded backend state!";
 
     BackendInput input;
-    input.deformation_graph.reset(new pose_graph_tools::PoseGraph());
+    input.deformation_graph.reset(new pose_graph_tools_msgs::PoseGraph());
     backend->spinOnce(input, true);
 
     visualizer->setGraph(backend_dsg->graph);

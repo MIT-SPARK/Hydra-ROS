@@ -38,6 +38,7 @@
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -54,9 +55,10 @@ class ConfigManager {
  public:
   using Ptr = std::shared_ptr<ConfigManager<Config>>;
   using Server = dynamic_reconfigure::Server<Config>;
+  using UpdateCallback = std::function<void()>;
 
   ConfigManager(const ros::NodeHandle& nh, const std::string& ns)
-      : nh_(nh, ns), changed_(true) {
+      : nh_(nh, ns), changed_(true), on_update_callback_([]() {}) {
     server_ = std::make_unique<Server>(nh_);
     server_->setCallback(boost::bind(&ConfigManager<Config>::update, this, _1, _2));
   }
@@ -66,11 +68,16 @@ class ConfigManager {
   void clearChangeFlag() { changed_ = false; }
 
   const Config& get() const { return config_; };
+  
+  void setUpdateCallback(UpdateCallback callback) {
+    on_update_callback_ = std::move(callback);
+  }
 
  private:
   void update(Config& config, uint32_t) {
     config_ = config;
     changed_ = true;
+    on_update_callback_();
   }
 
   ros::NodeHandle nh_;
@@ -79,6 +86,8 @@ class ConfigManager {
   Config config_;
 
   std::unique_ptr<Server> server_;
+
+  UpdateCallback on_update_callback_;
 };
 
 void clearPrevMarkers(const std_msgs::Header& header,
@@ -103,15 +112,23 @@ class DynamicSceneGraphVisualizer {
     plugins_.push_back(plugin);
   }
 
+  void clearPlugins() { plugins_.clear(); }
+
   void start(bool periodic_redraw = false);
 
   bool redraw();
 
-  inline void setGraphUpdated() { need_redraw_ = true; }
+  void setGraphUpdated() { need_redraw_ = true; }
 
   void setGraph(const DynamicSceneGraph::Ptr& scene_graph, bool need_reset = true);
 
   void reset();
+
+  bool graphIsSet() const { return scene_graph_.operator bool(); }
+
+  void setNeedRedraw() { need_redraw_ = true; }
+
+  DynamicSceneGraph::Ptr getGraph() const { return scene_graph_; }
 
  protected:
   virtual void resetImpl(const std_msgs::Header& header, MarkerArray& msg);

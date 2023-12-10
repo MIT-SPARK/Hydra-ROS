@@ -43,7 +43,7 @@
 
 namespace hydra {
 
-using pose_graph_tools::PoseGraph;
+using pose_graph_tools_msgs::PoseGraph;
 using sensor_msgs::PointCloud2;
 
 RosReconstruction::RosReconstruction(const RosReconstructionConfig& config,

@@ -35,7 +35,7 @@
 #pragma once
 #include <geometry_msgs/Pose.h>
 #include <hydra/reconstruction/reconstruction_module.h>
-#include <pose_graph_tools/PoseGraph.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
 #include <ros/ros.h>
 #include <tf2_ros/transform_listener.h>
 
@@ -55,9 +55,9 @@ class RosReconstruction : public ReconstructionModule {
 
   std::string printInfo() const override;
 
-  void handlePoseGraph(const pose_graph_tools::PoseGraph::ConstPtr& pose_graph);
+  void handlePoseGraph(const pose_graph_tools_msgs::PoseGraph::ConstPtr& pose_graph);
 
-  void handleAgentNodeMeasurements(const pose_graph_tools::PoseGraph::ConstPtr& msg);
+  void handleAgentNodeMeasurements(const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg);
 
  protected:
   void dataSpin();
@@ -76,8 +76,8 @@ class RosReconstruction : public ReconstructionModule {
   std::unique_ptr<std::thread> data_thread_;
 
   std::mutex pose_graph_mutex_;
-  std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
-  pose_graph_tools::PoseGraph::ConstPtr agent_node_measurements_;
+  std::list<pose_graph_tools_msgs::PoseGraph::ConstPtr> pose_graphs_;
+  pose_graph_tools_msgs::PoseGraph::ConstPtr agent_node_measurements_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<ReconstructionModule,

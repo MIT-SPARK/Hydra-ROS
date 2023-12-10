@@ -16,13 +16,15 @@ find_package(
              image_transport
              kimera_pgmo
              pcl_ros
-             pose_graph_tools
              roscpp
              std_msgs
              tf2_eigen
              tf2_ros
              visualization_msgs
              voxblox_ros
+             pose_graph_tools
+             pose_graph_tools_ros
+             pose_graph_tools_msgs
 )
 
 catkin_python_setup()
@@ -43,13 +45,15 @@ catkin_package(
   image_transport
   kimera_pgmo
   pcl_ros
-  pose_graph_tools
   roscpp
   std_msgs
   tf2_eigen
   tf2_ros
   visualization_msgs
   voxblox_ros
+  pose_graph_tools
+  pose_graph_tools_ros
+  pose_graph_tools_msgs
   DEPENDS hydra
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
@@ -79,6 +83,7 @@ add_library(
   src/visualizer/dynamic_scene_graph_visualizer.cpp
   src/visualizer/gvd_visualization_utilities.cpp
   src/visualizer/places_visualizer.cpp
+  src/visualizer/hydra_visualizer.cpp
   src/visualizer/reconstruction_visualizer.cpp
   src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp

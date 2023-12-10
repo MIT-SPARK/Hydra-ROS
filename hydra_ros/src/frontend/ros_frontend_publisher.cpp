@@ -39,7 +39,7 @@
 namespace hydra {
 
 using kimera_pgmo::KimeraPgmoMeshDelta;
-using pose_graph_tools::PoseGraph;
+using pose_graph_tools_msgs::PoseGraph;
 
 RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
     : nh_(node_handle, "frontend") {

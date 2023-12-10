@@ -36,7 +36,7 @@
 
 #include <hydra/utils/timing_utilities.h>
 #include <kimera_pgmo/utils/CommonFunctions.h>
-#include <pose_graph_tools/LcdFrameRegistration.h>
+#include <pose_graph_tools_msgs/LcdFrameRegistration.h>
 #include <ros/service.h>
 #include <tf2_eigen/tf2_eigen.h>
 
@@ -90,7 +90,7 @@ RegistrationSolution DsgAgentSolver::solve(const DynamicSceneGraph& dsg,
   }
 
   uint64_t timestamp;
-  pose_graph_tools::LcdFrameRegistration msg;
+  pose_graph_tools_msgs::LcdFrameRegistration msg;
   msg.request.query_robot = getRobotIdFromNode(dsg, query_id);
   msg.request.match_robot = getRobotIdFromNode(dsg, match_id);
   msg.request.query = getFrameIdFromNode(dsg, query_id);

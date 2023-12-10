@@ -1,12 +1,24 @@
 find_package(
   catkin REQUIRED
              nodelet
+             pose_graph_tools_msgs
+             roscpp
+             tf2_eigen
+             tf2_ros
+             visualization_msgs
+             glog_catkin
 )
 find_package(cv_bridge REQUIRED)
 
 catkin_package(
   CATKIN_DEPENDS
   nodelet
+  pose_graph_tools_ros
+  pose_graph_tools_msgs
+  roscpp
+  tf2_eigen
+  tf2_ros
+  visualization_msgs
   DEPENDS
   INCLUDE_DIRS include ${EIGEN3_INCLUDE_DIRS}
   LIBRARIES ${PROJECT_NAME}

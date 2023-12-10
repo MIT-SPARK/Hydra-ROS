@@ -220,10 +220,11 @@ void HydraRosPipeline::initLCD() {
   }
 }
 
-void HydraRosPipeline::bowCallback(const pose_graph_tools::BowQueries::ConstPtr& msg) {
+void HydraRosPipeline::bowCallback(
+    const pose_graph_tools_msgs::BowQueries::ConstPtr& msg) {
   for (const auto& query : msg->queries) {
-    shared_state_->visual_lcd_queue.push(
-        pose_graph_tools::BowQuery::ConstPtr(new pose_graph_tools::BowQuery(query)));
+    shared_state_->visual_lcd_queue.push(pose_graph_tools_msgs::BowQuery::ConstPtr(
+        new pose_graph_tools_msgs::BowQuery(query)));
   }
 }
 

@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
+#include <glog/logging.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/utils/display_utilities.h>
 #include <hydra/utils/timing_utilities.h>
@@ -123,7 +124,7 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
   }
 
   const auto size_bytes = getHumanReadableMemoryString(msg->layer_contents.size());
-  ROS_INFO_STREAM("Received dsg update message of " << size_bytes);
+  VLOG(5) << "Received dsg update message of " << size_bytes;
   try {
     if (!graph_) {
       graph_ = spark_dsg::readGraph(msg->layer_contents);

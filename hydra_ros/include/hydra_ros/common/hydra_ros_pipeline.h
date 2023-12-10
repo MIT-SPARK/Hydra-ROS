@@ -35,7 +35,7 @@
 #pragma once
 #include <hydra/common/hydra_pipeline.h>
 #include <hydra_msgs/QueryFreespace.h>
-#include <pose_graph_tools/BowQueries.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
 #include <ros/ros.h>
 
 namespace hydra {
@@ -57,7 +57,7 @@ class HydraRosPipeline : public HydraPipeline {
 
   virtual ~HydraRosPipeline();
 
-  void bowCallback(const pose_graph_tools::BowQueries::ConstPtr& msg);
+  void bowCallback(const pose_graph_tools_msgs::BowQueries::ConstPtr& msg);
 
   bool handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
                           hydra_msgs::QueryFreespace::Response& res);
