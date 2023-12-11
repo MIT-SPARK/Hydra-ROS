@@ -34,12 +34,6 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
-#include <config_utilities/config.h>
-#include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
-#include <config_utilities/printing.h>
-#include <glog/logging.h>
-#include <hydra/utils/timing_utilities.h>
 #include <ros/ros.h>
 #include <spark_dsg/zmq_interface.h>
 #include <std_srvs/Empty.h>
@@ -50,35 +44,25 @@
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 #include "hydra_ros/visualizer/mesh_plugin.h"
 
+namespace hydra {
+
 using DsgVisualizer = hydra::DynamicSceneGraphVisualizer;
 using spark_dsg::getDefaultLayerIds;
-
-namespace hydra {
 
 struct HydraVisualizerConfig {
   bool load_graph = false;
   bool use_zmq = false;
   std::string scene_graph_filepath = "";
   std::string visualizer_ns = "/hydra_dsg_visualizer";
-  std::string mesh_plugin_ns = "dsg_mesh";
   std::string output_path = "";
   std::string zmq_url = "tcp://127.0.0.1:8001";
   size_t zmq_num_threads = 2;
   size_t zmq_poll_time_ms = 10;
+
+  std::map<std::string, std::string> plugins{{"dsg_mesh", "MeshPlugin"}};
 };
 
-void declare_config(HydraVisualizerConfig& config) {
-  using namespace config;
-  name("HydraVisualizerConfig");
-  field(config.load_graph, "load_graph");
-  field(config.use_zmq, "use_zmq");
-  field(config.scene_graph_filepath, "scene_graph_filepath");
-  field(config.visualizer_ns, "visualizer_ns");
-  field(config.mesh_plugin_ns, "mesh_plugin_ns");
-  field(config.output_path, "output_path");
-  field(config.zmq_url, "zmq_url");
-  field(config.zmq_num_threads, "zmq_num_threads");
-}
+void declare_config(HydraVisualizerConfig& config);
 
 struct HydraVisualizer {
   HydraVisualizer(const ros::NodeHandle& nh);

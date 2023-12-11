@@ -513,6 +513,7 @@ void DynamicSceneGraphVisualizer::deleteLayer(const std_msgs::Header& header,
   deleteMultiMarker(header, getLayerNodeNamespace(layer.id), msg);
   deleteMultiMarker(header, getLayerEdgeNamespace(layer.id), msg);
   deleteMultiMarker(header, getLayerBboxNamespace(layer.id), msg);
+  deleteMultiMarker(header, getLayerBboxEdgeNamespace(layer.id), msg);
 
   const std::string label_ns = getLayerLabelNamespace(layer.id);
   for (const auto& node : prev_labels_.at(layer.id)) {
@@ -594,6 +595,16 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     }
   }
 
+  if (config.use_collapsed_label) {
+    for (const auto& id_node_pair : layer.nodes()) {
+      const Node& node = *id_node_pair.second;
+
+      Marker label = makeTextMarkerNoHeight(header, config, node, viz_config, label_ns);
+      msg.markers.push_back(label);
+      curr_labels_.at(layer.id).insert(node.id);
+    }
+  }
+
   if (config.use_bounding_box) {
     const std::string bbox_ns = getLayerBboxNamespace(layer.id);
     const std::string bbox_edge_ns = getLayerBboxEdgeNamespace(layer.id);
@@ -611,13 +622,7 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
       // TODO(nathan) consider warning
       return;
     }
-    for (const auto& id_node_pair : layer.nodes()) {
-      const Node& node = *id_node_pair.second;
 
-      Marker label = makeTextMarkerNoHeight(header, config, node, viz_config, label_ns);
-      msg.markers.push_back(label);
-      curr_labels_.at(layer.id).insert(node.id);
-    }
   }
 
   clearPrevMarkers(

@@ -1,0 +1,18 @@
+---
+plugins:
+  gt_regions: GtRegionPlugin
+  #places_basis_points: BasisPointPlugin
+
+places_basis_points:
+  show_voxblox_connections: false
+  draw_basis_points: true
+  basis_point_scale: 0.1
+  places_node_scale: 0.1
+
+gt_regions:
+  draw_labels: true
+  label_offset: 2.0
+  fill_polygons: false
+  use_boundary_color: true
+  line_width: 0.20
+  label_scale: 1.0

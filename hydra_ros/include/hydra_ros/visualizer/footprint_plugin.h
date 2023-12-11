@@ -32,24 +32,47 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <glog/logging.h>
+#pragma once
+#include <config_utilities/factory.h>
+#include <std_srvs/SetBool.h>
 
-#include "hydra_ros/visualizer/hydra_visualizer.h"
+#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "dsg_visualizer_node");
+namespace hydra {
 
-  FLAGS_minloglevel = 0;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+class SemanticColorMap;
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+struct FootprintPluginConfig {
+  bool use_place_radius = false;
+  bool draw_boundaries = true;
+  bool draw_boundary_vertices = false;
+  double line_width = 0.1;
+  double line_alpha = 0.8;
+  double mesh_alpha = 0.6;
+  double footprint_radius = 0.5;
+  size_t num_samples = 100;
+  LayerId layer_id = DsgLayers::PLACES;
+};
 
-  ros::NodeHandle nh("~");
-  hydra::HydraVisualizer node(nh);
-  node.spin();
+class FootprintPlugin : public DsgVisualizerPlugin {
+ public:
+  FootprintPlugin(const ros::NodeHandle& nh, const std::string& name);
 
-  return 0;
-}
+  virtual ~FootprintPlugin();
+
+  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  const FootprintPluginConfig config;
+
+ protected:
+  ros::Publisher pub_;
+  std::set<std::string> namespaces_;
+
+  inline static const auto registration_ = config::
+      Registration<DsgVisualizerPlugin, FootprintPlugin, ros::NodeHandle, std::string>(
+          "FootprintPlugin");
+};
+
+}  // namespace hydra

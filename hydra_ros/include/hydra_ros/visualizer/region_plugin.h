@@ -32,24 +32,50 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <glog/logging.h>
+#pragma once
+#include <config_utilities/factory.h>
+#include <std_srvs/SetBool.h>
 
-#include "hydra_ros/visualizer/hydra_visualizer.h"
+#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "dsg_visualizer_node");
+namespace hydra {
 
-  FLAGS_minloglevel = 0;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+class SemanticColorMap;
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+struct RegionPluginConfig {
+  bool use_convex = false;
+  bool skip_unknown = true;
+  bool use_nodes_only = false;
+  bool draw_labels = true;
+  double line_width = 0.1;
+  double line_alpha = 0.8;
+  double hull_alpha = 5.0;
+  double mesh_alpha = 0.6;
+  double label_scale = 0.7;
+  double inflation_radius = 0.5;
+  std::string region_colormap = "";
+};
 
-  ros::NodeHandle nh("~");
-  hydra::HydraVisualizer node(nh);
-  node.spin();
+class RegionPlugin : public DsgVisualizerPlugin {
+ public:
+  RegionPlugin(const ros::NodeHandle& nh, const std::string& name);
 
-  return 0;
-}
+  virtual ~RegionPlugin();
+
+  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  const RegionPluginConfig config;
+
+ protected:
+  ros::Publisher pub_;
+  std::unique_ptr<SemanticColorMap> colormap_;
+  std::set<int> published_labels_;
+
+  inline static const auto registration_ = config::
+      Registration<DsgVisualizerPlugin, RegionPlugin, ros::NodeHandle, std::string>(
+          "RegionPlugin");
+};
+
+}  // namespace hydra

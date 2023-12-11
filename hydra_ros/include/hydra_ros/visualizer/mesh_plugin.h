@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/factory.h>
 #include <std_srvs/SetBool.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
@@ -65,6 +66,10 @@ class MeshPlugin : public DsgVisualizerPlugin {
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
   std::unique_ptr<SemanticColorMap> colormap_;
+
+  inline static const auto registration_ = config::
+      Registration<DsgVisualizerPlugin, MeshPlugin, ros::NodeHandle, std::string>(
+          "MeshPlugin");
 };
 
 }  // namespace hydra

@@ -8,6 +8,7 @@ marker_color_mode: 2  # parent
 marker_alpha: 0.9
 use_sphere_marker: true
 use_label: false
+use_collapsed_label: false
 label_height: 1.0
 label_scale: 0.5
 use_bounding_box: false

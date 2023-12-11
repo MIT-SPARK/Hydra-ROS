@@ -33,63 +33,108 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/utils/minimum_spanning_tree.h>
-#include <kimera_pgmo/DeformationGraph.h>
-#include <visualization_msgs/Marker.h>
-
-#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
-#include "hydra_ros/visualizer/visualizer_types.h"
+#include <hydra/common/dsg_types.h>
 
 namespace hydra {
 
-struct PMGraphPluginConfig {
-  explicit PMGraphPluginConfig(const ros::NodeHandle& nh);
-
-  double mesh_edge_scale = 0.005;
-  double mesh_edge_alpha = 0.8;
-  double mesh_marker_scale = 0.1;
-  double mesh_marker_alpha = 0.8;
-  NodeColor leaf_color;
-  NodeColor interior_color;
-  NodeColor invalid_color;
-  LayerConfig layer_config;
+struct Vertex {
+  Eigen::Vector2d pos;
+  size_t id;
 };
 
-class MeshPlaceConnectionsPlugin : public DsgVisualizerPlugin {
- public:
-  MeshPlaceConnectionsPlugin(const ros::NodeHandle& nh, const std::string& name);
+struct TriangleView {
+  const Vertex* v0 = nullptr;
+  const Vertex* v1 = nullptr;
+  const Vertex* v2 = nullptr;
 
-  virtual ~MeshPlaceConnectionsPlugin() = default;
+  bool valid() const;
 
-  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  inline operator bool() const { return valid(); }
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  double interiorAngle(bool ccw = false) const;
 
- protected:
-  ros::Publisher marker_pub_;
-  PMGraphPluginConfig config_;
-  bool published_nodes_;
-  bool published_edges_;
+  bool isConvex(bool ccw = false) const;
+
+  bool isInside(const Eigen::Vector2d& p) const;
+
+  bool adjacent(const TriangleView& other) const;
+
+  std::array<size_t, 3> face() const;
 };
 
-class PlacesFactorGraphViz {
+class Polygon;
+
+class TriangleIter {
  public:
-  using Ptr = std::shared_ptr<PlacesFactorGraphViz>;
+  using iterator_category = std::forward_iterator_tag;
+  using difference_type = std::ptrdiff_t;
+  using value_type = TriangleView;
+  using pointer = const TriangleView*;
+  using reference = const TriangleView&;
 
-  explicit PlacesFactorGraphViz(const ros::NodeHandle& nh);
+ public:
+  TriangleIter(const Polygon* polygon, std::list<size_t>::const_iterator iter);
 
-  virtual ~PlacesFactorGraphViz() = default;
+  reference operator*() const;
+  pointer operator->() const;
 
-  void draw(const std::string& frame_id,
-            char vertex_prefix,
-            const SceneGraphLayer& places,
-            const MinimumSpanningTreeInfo& mst_info,
-            const kimera_pgmo::DeformationGraph& deformations);
+  TriangleIter& operator++();
+  TriangleIter operator++(int);
 
- protected:
-  ros::NodeHandle nh_;
-  ros::Publisher marker_pub_;
-  PMGraphPluginConfig config_;
+  TriangleIter next() const;
+  TriangleIter prev() const;
+
+  friend bool operator==(const TriangleIter& lhs, const TriangleIter& rhs);
+  friend bool operator!=(const TriangleIter& lhs, const TriangleIter& rhs);
+  friend Polygon;
+
+ private:
+  void setView();
+
+ private:
+  TriangleView view_;
+  const Polygon* polygon_;
+  std::list<size_t>::const_iterator iter_;
+};
+
+class Polygon {
+ public:
+  explicit Polygon(const std::vector<Vertex>& vertices);
+
+  static Polygon fromSceneGraph(const DynamicSceneGraph& graph,
+                                const std::vector<NodeId>& vertex_nodes);
+
+  static Polygon fromPoints(const Eigen::MatrixXd& points);
+
+  TriangleIter begin() const;
+
+  TriangleIter end() const;
+
+  const std::list<size_t>& active() const;
+
+  const Vertex* vertex(size_t idx) const;
+
+  size_t size() const;
+
+  bool isEar(const TriangleView& triangle) const;
+
+  bool isWindingOrderCCW() const;
+
+  std::vector<std::array<size_t, 3>> triangulate(bool use_first_ear = false);
+
+ private:
+  void filter();
+
+  TriangleIter erase(TriangleIter iter);
+
+  TriangleIter minAngleEar(const std::vector<bool>& ears) const;
+
+  TriangleIter getFirstEar(const std::vector<bool>& ears) const;
+
+ private:
+  bool is_ccw_;
+  std::list<size_t> active_;
+  std::vector<Vertex> vertices_;
 };
 
 }  // namespace hydra

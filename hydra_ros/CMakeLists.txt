@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenCV REQUIRED)
 find_package(hydra REQUIRED)
+find_package(PCL REQUIRED COMPONENTS surface common search)
 find_package(
   catkin REQUIRED
   COMPONENTS dynamic_reconfigure
@@ -78,12 +79,18 @@ add_library(
   src/utils/lookup_tf.cpp
   src/utils/mask_nodelet.cpp
   src/utils/node_utilities.cpp
+  src/utils/ear_clipping.cpp
+  src/visualizer/basis_point_plugin.cpp
   src/visualizer/colormap_utilities.cpp
-  src/visualizer/mesh_plugin.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
+  src/visualizer/gt_region_plugin.cpp
   src/visualizer/gvd_visualization_utilities.cpp
+  src/visualizer/footprint_plugin.cpp
+  src/visualizer/mesh_plugin.cpp
   src/visualizer/places_visualizer.cpp
   src/visualizer/hydra_visualizer.cpp
+  src/visualizer/polygon_utilities.cpp
+  src/visualizer/region_plugin.cpp
   src/visualizer/reconstruction_visualizer.cpp
   src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp
@@ -91,12 +98,12 @@ add_library(
 target_include_directories(
   ${PROJECT_NAME}
   PUBLIC include ${catkin_INCLUDE_DIRS}
-  PRIVATE ${OpenCV_INCLUDE_DIRS}
+  PRIVATE ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS}
 )
 target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC ${catkin_LIBRARIES} hydra::hydra
-  PRIVATE ${OpenCV_LIBRARIES}
+  PRIVATE ${OpenCV_LIBRARIES} ${PCL_LIBRARIES}
 )
 add_dependencies(
   ${PROJECT_NAME} ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS}
@@ -117,6 +124,9 @@ target_link_libraries(hydra_ros_node ${PROJECT_NAME})
 add_executable(hydra_visualizer_node src/nodes/hydra_visualizer_node.cpp)
 target_link_libraries(hydra_visualizer_node ${PROJECT_NAME})
 
+add_executable(mesh_publisher_node src/nodes/mesh_publisher_node.cpp)
+target_link_libraries(mesh_publisher_node ${PROJECT_NAME})
+
 add_executable(rotate_tf_node src/nodes/rotate_tf_node.cpp)
 target_include_directories(rotate_tf_node PUBLIC ${catkin_INCLUDE_DIRS})
 target_link_libraries(rotate_tf_node PUBLIC ${catkin_LIBRARIES})
@@ -135,6 +145,7 @@ install(
           hydra_reconstruction_node
           hydra_ros_node
           hydra_visualizer_node
+          mesh_publisher_node
           rotate_tf_node
           scene_graph_logger_node
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}

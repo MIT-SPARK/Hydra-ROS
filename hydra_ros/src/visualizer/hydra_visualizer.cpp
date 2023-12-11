@@ -35,17 +35,40 @@
 
 #include "hydra_ros/visualizer/hydra_visualizer.h"
 
-#include <fstream>
+#include <config_utilities/config.h>
+#include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/printing.h>
+#include <glog/logging.h>
+#include <hydra/utils/timing_utilities.h>
 
 namespace hydra {
 
+void declare_config(HydraVisualizerConfig& config) {
+  using namespace config;
+  name("HydraVisualizerConfig");
+  field(config.load_graph, "load_graph");
+  field(config.use_zmq, "use_zmq");
+  field(config.scene_graph_filepath, "scene_graph_filepath");
+  field(config.visualizer_ns, "visualizer_ns");
+  field(config.output_path, "output_path");
+  field(config.zmq_url, "zmq_url");
+  field(config.zmq_num_threads, "zmq_num_threads");
+  field(config.plugins, "plugins");
+}
+
 HydraVisualizer::HydraVisualizer(const ros::NodeHandle& nh) : nh_(nh) {
-  config_ = config::fromRos<hydra::HydraVisualizerConfig>(nh);
+  const auto yaml_node = config::internal::rosToYaml(nh);
+  VLOG(5) << "ROS Config: " << std::endl << yaml_node;
+
+  config_ = config::fromRos<HydraVisualizerConfig>(nh);
   ROS_INFO_STREAM("Config: " << std::endl << config_);
 
-  ros::NodeHandle viz_nh(config_.visualizer_ns);
-  visualizer_.reset(new DsgVisualizer(viz_nh, getDefaultLayerIds()));
-  visualizer_->addPlugin(std::make_shared<MeshPlugin>(viz_nh, config_.mesh_plugin_ns));
+  visualizer_.reset(new DsgVisualizer(nh_, getDefaultLayerIds()));
+
+  for (auto&& [name, plugin_type] : config_.plugins) {
+    visualizer_->addPlugin(config::create<DsgVisualizerPlugin>(plugin_type, nh_, name));
+  }
 
   if (!config_.output_path.empty()) {
     size_log_file_.reset(
@@ -191,8 +214,6 @@ void HydraVisualizer::addPlugin(DsgVisualizerPlugin::Ptr plugin) {
   visualizer_->addPlugin(std::move(plugin));
 }
 
-void HydraVisualizer::clearPlugins() {
-  visualizer_->clearPlugins();
-}
+void HydraVisualizer::clearPlugins() { visualizer_->clearPlugins(); }
 
 }  // namespace hydra

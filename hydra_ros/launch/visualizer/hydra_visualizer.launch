@@ -10,6 +10,9 @@
   <arg name="start_rviz" default="true" doc="automatically start rviz"/>
   <arg name="verbosity" default="0" doc="visualizer verbosity"/>
 
+  <arg name="mesh_filepath" default=""/>
+  <arg name="start_mesh_publisher" value="$(eval 'false' if arg('mesh_filepath') == '' else 'true')"/>
+
   <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_params.xml"
            pass_all_args="true"/>
 
@@ -17,13 +20,23 @@
            pass_all_args="true"
            if="$(arg start_rviz)"/>
 
-  <node pkg="hydra_ros" name="$(arg visualizer_ns)" type="hydra_visualizer_node"
+  <arg name="viz_debug" default="false"/>
+  <arg name="viz_launch_prefix" value="gdb -ex run --args" if="$(arg viz_debug)"/>
+  <arg name="viz_launch_prefix" value="" unless="$(arg viz_debug)"/>
+
+  <node pkg="hydra_ros" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
+        launch-prefix="$(arg viz_launch_prefix)"
         output="screen"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
-    <param name="visualizer_ns" value="$(arg visualizer_ns)"/>
     <param name="scene_graph_filepath" value="$(arg scene_graph_path)"/>
     <param name="load_graph" value="true"/>
+  </node>
+
+  <node pkg="hydra_ros" type="mesh_publisher_node" name="mesh_publisher_node"
+        if="$(arg start_mesh_publisher)">
+      <param name="mesh_filepath" value="$(arg mesh_filepath)"/>
+      <param name="mesh_frame" value="$(arg visualizer_frame)"/>
   </node>
 
   <group if="$(arg publish_view_transforms)">

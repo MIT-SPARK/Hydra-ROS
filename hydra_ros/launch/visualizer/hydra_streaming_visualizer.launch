@@ -16,6 +16,10 @@
   <arg name="rviz_file" default="hydra_streaming_visualizer.rviz"/>
   <arg name="color_mesh_by_label" default="true"/>
 
+  <arg name="viz_debug" default="false"/>
+  <arg name="viz_launch_prefix" value="gdb -ex run --args" if="$(arg viz_debug)"/>
+  <arg name="viz_launch_prefix" value="" unless="$(arg viz_debug)"/>
+
   <arg name="verbosity" default="0"/>
 
   <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_params.xml"
@@ -25,11 +29,11 @@
            pass_all_args="true"
            if="$(arg start_rviz)"/>
 
-  <node pkg="hydra_ros" type="hydra_visualizer_node" name="hydra_visualizer_node"
+  <node pkg="hydra_ros" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
+        launch-prefix="$(arg viz_launch_prefix)"
         output="log"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
-    <param name="visualizer_ns" value="$(arg visualizer_ns)"/>
     <param name="scene_graph_filepath" value=""/>
     <param name="output_path" value=""/>
     <param name="load_graph" value="false"/>

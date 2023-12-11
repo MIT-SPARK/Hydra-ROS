@@ -8,6 +8,7 @@ marker_color_mode: 0 # default
 marker_alpha: 0.8
 use_sphere_marker: false
 use_label: true
+use_collapsed_label: false
 label_height: 1.25
 label_scale: 1.0
 use_bounding_box: false

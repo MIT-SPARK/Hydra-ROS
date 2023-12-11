@@ -22,6 +22,7 @@
     <arg name="robot_frame" default="$(arg robot_name)/lamp" if="$(arg use_gt_frame)"/>
     <arg name="robot_frame" default="base_link" unless="$(arg use_gt_frame)"/>
     <arg name="sensor_frame" default="$(arg robot_name)/forward_color_optical_frame"/>
+    <arg name="visualizer_frame" default="$(arg robot_name)/map"/>
 
     <arg name="run_name"/>
     <arg name="dataset_path"/>

@@ -2,6 +2,7 @@
   <arg name="viz_config_dir" default="$(find hydra_ros)/config"/>
   <arg name="viz_config_name" default="hydra_visualizer"/>
   <arg name="viz_config_path" default="$(arg viz_config_dir)/$(arg viz_config_name)"/>
+  <arg name="viz_plugins_path" default="$(find hydra_ros)/config/visualizer_plugins.yaml"/>
 
   <arg name="visualizer_ns" default="hydra_visualizer"/>
   <arg name="visualizer_frame" default="map"/>
@@ -9,6 +10,7 @@
   <arg name="semantic_map_path" default=""/>
   <arg name="color_mesh_by_label" default="false"/>
   <arg name="mesh_namespace" default="dsg_mesh"/>
+  <arg name="gt_regions_path" default=""/>
 
   <group ns="$(arg visualizer_ns)">
     <param name="visualizer_frame" value="$(arg visualizer_frame)"/>
@@ -21,6 +23,9 @@
     <param name="config/color_places_by_distance" value="$(arg color_places_by_distance)"/>
     <param name="$(arg mesh_namespace)/label_colormap" value="$(arg semantic_map_path)"/>
     <param name="$(arg mesh_namespace)/color_by_label" value="$(arg color_mesh_by_label)"/>
+    <param name="plugins/$(arg mesh_namespace)" value="MeshPlugin"/>
+    <param name="gt_regions/gt_regions_filepath" value="$(arg gt_regions_path)"/>
+    <rosparam file="$(arg viz_plugins_path)"/>
   </group>
 
 </launch>

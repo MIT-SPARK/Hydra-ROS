@@ -33,63 +33,75 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/utils/minimum_spanning_tree.h>
-#include <kimera_pgmo/DeformationGraph.h>
-#include <visualization_msgs/Marker.h>
+#include <config_utilities/factory.h>
+#include <visualization_msgs/MarkerArray.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
-#include "hydra_ros/visualizer/visualizer_types.h"
 
 namespace hydra {
 
-struct PMGraphPluginConfig {
-  explicit PMGraphPluginConfig(const ros::NodeHandle& nh);
+using visualization_msgs::Marker;
+using visualization_msgs::MarkerArray;
 
-  double mesh_edge_scale = 0.005;
-  double mesh_edge_alpha = 0.8;
-  double mesh_marker_scale = 0.1;
-  double mesh_marker_alpha = 0.8;
-  NodeColor leaf_color;
-  NodeColor interior_color;
-  NodeColor invalid_color;
-  LayerConfig layer_config;
+struct GtRegionPluginConfig {
+  std::string gt_regions_filepath = "";
+  bool skip_unknown = true;
+  bool draw_labels = false;
+  bool fill_polygons = true;
+  bool draw_polygon_boundaries = true;
+  bool draw_polygon_vertices = true;
+  double line_width = 0.05;
+  double line_alpha = 0.8;
+  double mesh_alpha = 0.6;
+  double label_scale = 0.7;
+  double label_offset = 0.0;
+  double z_offset = 0.1;
+  bool use_boundary_color = true;
 };
 
-class MeshPlaceConnectionsPlugin : public DsgVisualizerPlugin {
- public:
-  MeshPlaceConnectionsPlugin(const ros::NodeHandle& nh, const std::string& name);
+struct Region {
+  Eigen::MatrixXd points;
+  Eigen::Vector3d centroid;
+  std::string name;
+  std_msgs::ColorRGBA color;
+};
 
-  virtual ~MeshPlaceConnectionsPlugin() = default;
+class GtRegionPlugin : public DsgVisualizerPlugin {
+ public:
+  GtRegionPlugin(const ros::NodeHandle& nh, const std::string& name);
+
+  virtual ~GtRegionPlugin();
 
   void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 
- protected:
-  ros::Publisher marker_pub_;
-  PMGraphPluginConfig config_;
-  bool published_nodes_;
-  bool published_edges_;
-};
-
-class PlacesFactorGraphViz {
- public:
-  using Ptr = std::shared_ptr<PlacesFactorGraphViz>;
-
-  explicit PlacesFactorGraphViz(const ros::NodeHandle& nh);
-
-  virtual ~PlacesFactorGraphViz() = default;
-
-  void draw(const std::string& frame_id,
-            char vertex_prefix,
-            const SceneGraphLayer& places,
-            const MinimumSpanningTreeInfo& mst_info,
-            const kimera_pgmo::DeformationGraph& deformations);
+  const GtRegionPluginConfig config;
 
  protected:
-  ros::NodeHandle nh_;
-  ros::Publisher marker_pub_;
-  PMGraphPluginConfig config_;
+  std::optional<size_t> getFillMarker(const std_msgs::Header& header,
+                                      visualization_msgs::MarkerArray& msg);
+
+  std::optional<size_t> getBoundaryMarker(const std_msgs::Header& header,
+                                          visualization_msgs::MarkerArray& msg);
+
+  std::optional<size_t> getVertexMarker(const std_msgs::Header& header,
+                                        visualization_msgs::MarkerArray& msg);
+
+  void addLabelMarker(const std_msgs::Header& header,
+                      const Region& region,
+                      visualization_msgs::MarkerArray& msg);
+
+  ros::Publisher pub_;
+  std::vector<Region> regions_;
+  std::map<std::string, size_t> published_labels_;
+  int fill_index_ = -1;
+  int boundary_index_ = -1;
+  int vertex_index_ = -1;
+
+  inline static const auto registration_ = config::
+      Registration<DsgVisualizerPlugin, GtRegionPlugin, ros::NodeHandle, std::string>(
+          "GtRegionPlugin");
 };
 
 }  // namespace hydra

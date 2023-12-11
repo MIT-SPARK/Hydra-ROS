@@ -32,24 +32,63 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <glog/logging.h>
+#pragma once
+#include <config_utilities/factory.h>
+#include <visualization_msgs/MarkerArray.h>
 
-#include "hydra_ros/visualizer/hydra_visualizer.h"
+#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "dsg_visualizer_node");
+namespace hydra {
 
-  FLAGS_minloglevel = 0;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+struct BasisPointPluginConfig {
+  bool show_voxblox_connections = false;
+  bool draw_basis_points = true;
+  bool places_use_sphere = false;
+  bool draw_places_labels = false;
+  double places_label_scale = 0.2;
+  double places_node_scale = 0.2;
+  double places_node_alpha = 0.8;
+  double places_edge_scale = 0.05;
+  double places_edge_alpha = 0.5;
+  double basis_point_scale = 0.1;
+  double basis_point_alpha = 0.8;
+  std::string label_colormap = "";
+};
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+class SemanticColorMap;
 
-  ros::NodeHandle nh("~");
-  hydra::HydraVisualizer node(nh);
-  node.spin();
+class BasisPointPlugin : public DsgVisualizerPlugin {
+ public:
+  BasisPointPlugin(const ros::NodeHandle& nh, const std::string& name);
 
-  return 0;
-}
+  virtual ~BasisPointPlugin() = default;
+
+  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  const BasisPointPluginConfig config;
+
+ protected:
+  void drawNodes(const std_msgs::Header& header,
+                 const DynamicSceneGraph& graph,
+                 visualization_msgs::MarkerArray& msg) const;
+
+  void drawEdges(const std_msgs::Header& header,
+                 const DynamicSceneGraph& graph,
+                 visualization_msgs::MarkerArray& msg) const;
+
+  void drawBasisPoints(const std_msgs::Header& header,
+                       const DynamicSceneGraph& graph,
+                       visualization_msgs::MarkerArray& msg) const;
+
+  ros::Publisher pub_;
+  mutable std::set<std::string> published_;
+  std::unique_ptr<SemanticColorMap> colormap_;
+
+  inline static const auto registration_ = config::
+      Registration<DsgVisualizerPlugin, BasisPointPlugin, ros::NodeHandle, std::string>(
+          "BasisPointPlugin");
+};
+
+}  // namespace hydra

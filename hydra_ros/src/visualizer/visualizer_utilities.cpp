@@ -36,6 +36,8 @@
 
 #include <tf2_eigen/tf2_eigen.h>
 
+#include <random>
+
 #include "hydra_ros/visualizer/colormap_utilities.h"
 
 namespace hydra {
@@ -307,6 +309,14 @@ Marker makeTextMarker(const std_msgs::Header& header,
   fillPoseWithIdentity(marker.pose);
   tf2::convert(node.attributes().position, marker.pose.position);
   marker.pose.position.z += getZOffset(config, visualizer_config) + config.label_height;
+
+  if (config.add_label_jitter) {
+    static std::random_device rd;
+    static std::mt19937 gen(rd());
+    std::uniform_real_distribution dist(-1.0, 1.0);
+    const auto z_jitter = config.label_jitter_scale * dist(gen);
+    marker.pose.position.z += z_jitter;
+  }
 
   return marker;
 }

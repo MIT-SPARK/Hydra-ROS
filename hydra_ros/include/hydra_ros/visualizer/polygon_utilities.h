@@ -1,3 +1,4 @@
+
 /* -----------------------------------------------------------------------------
  * Copyright 2022 Massachusetts Institute of Technology.
  * All Rights Reserved
@@ -32,24 +33,42 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <glog/logging.h>
+#pragma once
 
-#include "hydra_ros/visualizer/hydra_visualizer.h"
+#include <hydra/common/dsg_types.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <visualization_msgs/Marker.h>
 
-int main(int argc, char** argv) {
-  ros::init(argc, argv, "dsg_visualizer_node");
+#include <Eigen/Dense>
+#include <optional>
 
-  FLAGS_minloglevel = 0;
-  FLAGS_logtostderr = 1;
-  FLAGS_colorlogtostderr = 1;
+namespace hydra {
 
-  google::ParseCommandLineFlags(&argc, &argv, true);
-  google::InitGoogleLogging(argv[0]);
-  google::InstallFailureSignalHandler();
+double getMeanChildHeight(const DynamicSceneGraph& graph, const SceneGraphNode& parent);
 
-  ros::NodeHandle nh("~");
-  hydra::HydraVisualizer node(nh);
-  node.spin();
+double getMeanNeighborHeight(const SceneGraphLayer& graph,
+                             const SceneGraphNode& parent,
+                             double neighborhood = 10.0,
+                             bool use_nearest_node_finder = false);
 
-  return 0;
-}
+Eigen::MatrixXd getCirclePolygon(const SceneGraphNode& node,
+                                 double radius,
+                                 size_t num_samples);
+
+Eigen::MatrixXd getHullPolygon(const pcl::PointCloud<pcl::PointXYZ>::Ptr& points,
+                               double alpha,
+                               bool use_convex);
+
+void makeFilledPolygon(const Eigen::MatrixXd& points,
+                       const std_msgs::ColorRGBA& color,
+                       visualization_msgs::Marker& marker,
+                       std::optional<double> height = std::nullopt);
+
+void makePolygonBoundary(const Eigen::MatrixXd& points,
+                         const std_msgs::ColorRGBA& color,
+                         visualization_msgs::Marker& edges,
+                         std::optional<double> height = std::nullopt,
+                         visualization_msgs::Marker* corners = nullptr);
+
+}  // namespace hydra
