@@ -95,9 +95,9 @@
     <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
     <arg name="launch_prefix" value="" unless="$(arg debug)"/>
 
-    <node pkg="hydra_ros" 
-          type="hydra_ros_node" 
-          name="hydra_ros_node" 
+    <node pkg="hydra_ros"
+          type="hydra_ros_node"
+          name="hydra_ros_node"
           launch-prefix="$(arg launch_prefix)"
           args="--minloglevel=$(arg min_glog_level) -v=$(arg verbosity) $(arg glog_file_args)"
           required="true"
@@ -172,7 +172,7 @@
         <param name="lcd/use_gnn_descriptors" value="$(arg use_gnn_descriptors)"/>
         <param name="lcd/gnn_lcd/object_model_path" value="$(arg lcd_gnn_object_model)"/>
         <param name="lcd/gnn_lcd/places_model_path" value="$(arg lcd_gnn_places_model)"/>
-        <param name="lcd/gnn_lcd/label_embeddings_file" value="$(arg lcd_gnn_label_embeddings)" 
+        <param name="lcd/gnn_lcd/label_embeddings_file" value="$(arg lcd_gnn_label_embeddings)"
                if="$(arg use_gnn_descriptors)"/>
         <!-- visualization -->
         <param name="visualize_places" value="$(arg visualize_places)"/>
@@ -184,12 +184,12 @@
     <rosparam file="$(arg places_viz_config_path)" ns="/places_visualizer"/>
     <rosparam file="$(arg reconstruction_viz_config_path)" ns="/reconstruction_visualizer"/>
     <!-- goes outside to make sure params actually override -->
-    <rosparam file="$(arg sensor_config_path)" ns="hydra_ros_node/reconstruction/sensor" 
+    <rosparam file="$(arg sensor_config_path)" ns="hydra_ros_node/reconstruction/sensor"
               if="$(eval len(arg('sensor_config_path')) > 0)"/>
     <rosparam file="$(arg param_overrides_file)" ns="hydra_ros_node"/>
 
-    <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" 
-             pass_all_args="true" 
+    <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch"
+             pass_all_args="true"
              if="$(arg start_visualizer)">
         <arg name="visualizer_frame" default="$(arg map_frame)"/>
     </include>
@@ -199,10 +199,9 @@
         <arg name="graph_topic" value="pose_graph" />
         <arg name="ns" value="hydra_ros_node/pgmo"/>
     </include>
-</group>
 
-<include if="$(arg start_logger)" file="$(find hydra_ros)/launch/utils/scene_graph_logger.launch" pass_all_args="true">
-    <arg name="output_path" value="$(arg dsg_path)"/>
-</include>
+    <include if="$(arg start_logger)" file="$(find hydra_ros)/launch/utils/scene_graph_logger.launch" pass_all_args="true">
+        <arg name="output_path" value="$(arg dsg_path)"/>
+    </include>
 
 </launch>
