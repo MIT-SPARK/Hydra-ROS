@@ -76,13 +76,26 @@ Visualization Manager:
     - Class: rviz/Group
       Displays:
         - Class: rviz/MarkerArray
-          Enabled: false
+          Enabled: true
           Marker Topic: /hydra_dsg_visualizer/dsg_markers
           Name: Scene Graph (Static)
           Namespaces:
-            {}
+            interlayer_edges_3_2: true
+            interlayer_edges_4_3: true
+            interlayer_edges_5_4: true
+            layer_bounding_boxes_2: true
+            layer_bounding_boxes_edges_2: true
+            layer_edges_3: true
+            layer_edges_4: true
+            layer_labels_2: true
+            layer_labels_4: true
+            layer_labels_5: true
+            layer_nodes_2: true
+            layer_nodes_3: true
+            layer_nodes_4: true
+            layer_nodes_5: true
           Queue Size: 100
-          Value: false
+          Value: true
         - Class: rviz/MarkerArray
           Enabled: true
           Marker Topic: /hydra_dsg_visualizer/dynamic_layers_viz
@@ -99,7 +112,7 @@ Visualization Manager:
             Faces Alpha: 1
             Faces Color: 0; 255; 0
             Value: Vertex Color
-          Enabled: false
+          Enabled: true
           Mesh Buffer Size: 1
           Name: Mesh (TriangleMesh)
           Show Normals:
@@ -112,14 +125,6 @@ Visualization Manager:
             Wireframe Alpha: 1
             Wireframe Color: 0; 0; 0
           Topic: /hydra_dsg_visualizer/dsg_mesh
-          Value: false
-        - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /hydra_dsg_visualizer/dsg_regions
-          Name: Regions
-          Namespaces:
-            {}
-          Queue Size: 100
           Value: true
       Enabled: true
       Name: Scene Graph
@@ -272,9 +277,7 @@ Visualization Manager:
       Marker Topic: /hydra_dsg_visualizer/places_basis_points
       Name: Basis Points
       Namespaces:
-        places_parent_edges: true
-        places_parent_graph_nodes: true
-        places_parents: true
+        {}
       Queue Size: 100
       Value: true
   Enabled: true
@@ -305,7 +308,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 5.762840270996094
+      Distance: 55.590049743652344
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -313,17 +316,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -11.460176467895508
-        Y: 28.98668670654297
-        Z: 5.15659236907959
+        X: -8.39536190032959
+        Y: 23.26816749572754
+        Z: 12.132055282592773
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7447978854179382
+      Pitch: 0.5797980427742004
       Target Frame: <Fixed Frame>
-      Yaw: 2.976716995239258
+      Yaw: 2.441714286804199
     Saved: ~
 Window Geometry:
   Depth:
