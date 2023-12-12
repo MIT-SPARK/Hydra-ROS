@@ -18,12 +18,10 @@ rosbag play path/to/rosbag --clock
 
 ### Using Kimera-VIO
 
-:warning: Kimera-VIO functionality is in a pre-release state. Support is limited (and functionality may be brittle).
-
 You can configure your workspace to also include Kimera-VIO by:
 ```
 roscd && cd ../src
-vcs import . < hydra/install/vio_public_overlay.rosinstall
+vcs import . < hydra/install/vio_overlay.rosinstall
 
 catkin build
 ```
