@@ -92,7 +92,7 @@ class DsgReceiver {
 
   bool has_update_;
   DynamicSceneGraph::Ptr graph_;
-  std::unique_ptr<pcl::PolygonMesh> mesh_;
+  Mesh::Ptr mesh_;
 
   std::unique_ptr<LogCallback> log_callback_;
 };

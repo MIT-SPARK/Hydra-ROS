@@ -44,7 +44,6 @@ class SemanticColorMap;
 
 class MeshPlugin : public DsgVisualizerPlugin {
  public:
-  using Vertices = DynamicSceneGraph::MeshVertices;
   using Labels = std::vector<uint32_t>;
   using LabelsPtr = std::shared_ptr<Labels>;
 
@@ -58,9 +57,6 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
  protected:
   bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
-
-  Vertices::Ptr colorVerticesByLabel(const Vertices::Ptr& vertices,
-                                     const LabelsPtr& labels) const;
 
   bool color_by_label_;
   ros::Publisher mesh_pub_;

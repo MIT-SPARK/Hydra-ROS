@@ -51,7 +51,7 @@
 
 namespace hydra {
 
-using FlannStruct = pcl::KdTreeFLANN<pcl::PointXYZRGBA>;
+using FlannStruct = pcl::KdTreeFLANN<pcl::PointXYZ>;
 
 Eigen::MatrixXd getConcaveHull(const DynamicSceneGraph& graph,
                                const SceneGraphNode& parent,
@@ -75,23 +75,30 @@ Eigen::MatrixXd getMeshConcaveHull(const DynamicSceneGraph& graph,
                                    double inflation_radius,
                                    double alpha,
                                    bool use_convex) {
-  const auto vertices = graph.getMeshVertices();
+  const auto mesh = graph.mesh();
+  if (!mesh || mesh->empty()) {
+    return {};
+  }
 
   pcl::PointCloud<pcl::PointXYZ>::Ptr points(new pcl::PointCloud<pcl::PointXYZ>());
   for (const auto& child : parent.children()) {
     const SceneGraphNode& child_node = graph.getNode(child).value();
     const auto& attrs = child_node.attributes<PlaceNodeAttributes>();
     for (const auto idx : attrs.pcl_mesh_connections) {
-      const auto& basis = vertices->at(idx);
+      const auto basis = mesh->pos(idx);
       pcl::Indices neighbors;
       std::vector<float> distances;
-      flann.radiusSearch(basis, inflation_radius, neighbors, distances);
+      pcl::PointXYZ pcl_basis;
+      pcl_basis.x = basis.x();
+      pcl_basis.y = basis.y();
+      pcl_basis.z = basis.z();
+      flann.radiusSearch(pcl_basis, inflation_radius, neighbors, distances);
       for (const auto n_idx : neighbors) {
-        const auto& p_n = vertices->at(n_idx);
+        const auto p_n = mesh->pos(n_idx);
         auto& p = points->emplace_back();
-        p.x = p_n.x;
-        p.y = p_n.y;
-        p.z = p_n.z;
+        p.x = p_n.x();
+        p.y = p_n.y();
+        p.z = p_n.z();
       }
     }
   }
@@ -165,9 +172,21 @@ void RegionPlugin::draw(const std_msgs::Header& header,
   msg.markers[2].scale.y = config.line_width;
   msg.markers[2].scale.z = config.line_width;
 
-  const auto vertices = graph.getMeshVertices();
-  pcl::KdTreeFLANN<pcl::PointXYZRGBA> flann;
-  flann.setInputCloud(vertices);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
+  auto mesh = graph.mesh();
+  if (mesh && !mesh->empty()) {
+    for (size_t i = 0; i < mesh->numVertices(); ++i) {
+      const auto pos = mesh->pos(i);
+      pcl::PointXYZ p;
+      p.x = pos.x();
+      p.y = pos.y();
+      p.z = pos.z();
+      cloud->push_back(p);
+    }
+  }
+
+  FlannStruct flann;
+  flann.setInputCloud(cloud);
 
   const auto& regions = graph.getLayer(DsgLayers::ROOMS);
   for (auto&& [id, node] : regions.nodes()) {

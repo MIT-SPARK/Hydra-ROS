@@ -65,7 +65,6 @@ add_library(
   src/backend/ros_backend.cpp
   src/backend/ros_backend_publisher.cpp
   src/common/hydra_ros_pipeline.cpp
-  src/frontend/ros_frontend.cpp
   src/frontend/ros_frontend_publisher.cpp
   src/loop_closure/ros_lcd_registration.cpp
   src/reconstruction/data_receiver.cpp
@@ -87,6 +86,7 @@ add_library(
   src/visualizer/gvd_visualization_utilities.cpp
   src/visualizer/footprint_plugin.cpp
   src/visualizer/mesh_plugin.cpp
+  src/visualizer/object_visualizer.cpp
   src/visualizer/places_visualizer.cpp
   src/visualizer/hydra_visualizer.cpp
   src/visualizer/polygon_utilities.cpp

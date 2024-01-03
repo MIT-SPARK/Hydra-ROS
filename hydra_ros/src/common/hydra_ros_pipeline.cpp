@@ -39,16 +39,17 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <hydra/common/hydra_config.h>
+#include <hydra/frontend/frontend_module.h>
 #include <hydra/loop_closure/loop_closure_module.h>
 
 #include <memory>
 
 #include "hydra_ros/backend/ros_backend.h"
 #include "hydra_ros/backend/ros_backend_publisher.h"
-#include "hydra_ros/frontend/ros_frontend.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
 #include "hydra_ros/reconstruction/ros_reconstruction.h"
+#include "hydra_ros/visualizer/object_visualizer.h"
 #include "hydra_ros/visualizer/places_visualizer.h"
 #include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
@@ -59,6 +60,7 @@ void declare_config(HydraRosConfig& conf) {
   name("HydraRosConfig");
   field(conf.use_ros_backend, "use_ros_backend");
   field(conf.enable_frontend_output, "enable_frontend_output");
+  field(conf.visualize_objects, "visualize_objects");
   field(conf.visualize_places, "visualize_places");
   field(conf.places_visualizer_namespace, "places_visualizer_namespace");
   field(conf.visualize_reconstruction, "visualize_reconstruction");
@@ -110,6 +112,16 @@ void HydraRosPipeline::initFrontend() {
                                         std::placeholders::_1,
                                         std::placeholders::_2,
                                         std::placeholders::_3));
+
+  if (config_.visualize_objects) {
+    auto obj_conf = config::fromRos<ObjectVisualizerConfig>(nh_);
+    const auto viz = std::make_shared<ObjectVisualizer>(obj_conf);
+    frontend->addObjectVisualizationCallback(
+        [&viz](const auto& cloud, const auto& indices, const auto& labels) {
+          viz->visualize(cloud, indices, labels);
+        });
+    modules_["object_visualizer"] = viz;
+  }
 
   if (config_.visualize_places) {
     const auto viz =

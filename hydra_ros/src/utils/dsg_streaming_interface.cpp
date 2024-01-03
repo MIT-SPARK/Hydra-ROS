@@ -40,6 +40,7 @@
 #include <hydra/utils/timing_utilities.h>
 #include <kimera_pgmo/utils/CommonFunctions.h>
 #include <spark_dsg/graph_binary_serialization.h>
+#include <spark_dsg/pgmo_mesh_traits.h>
 
 namespace hydra {
 
@@ -78,7 +79,8 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
     return;
   }
 
-  if (graph.isMeshEmpty()) {
+  auto mesh = graph.mesh();
+  if (!mesh || mesh->empty()) {
     return;
   }
 
@@ -95,8 +97,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   mesh_msgs::TriangleMeshStamped msg;
   msg.header.stamp.fromNSec(timestamp_ns);
   msg.header.frame_id = frame_id_;
-  msg.mesh = kimera_pgmo::PolygonMeshToTriangleMeshMsg(*graph.getMeshVertices(),
-                                                       *graph.getMeshFaces());
+  kimera_pgmo::fillTriangleMeshMsg(*mesh, msg.mesh);
   mesh_pub_.publish(msg);
 }
 
@@ -139,20 +140,20 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
   }
 
   if (mesh_) {
-    graph_->setMeshDirectly(*mesh_);
+    graph_->setMesh(mesh_);
   }
 }
 
 void DsgReceiver::handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg) {
   timing::ScopedTimer timer("receive_mesh", msg->header.stamp.toNSec());
   if (!mesh_) {
-    mesh_.reset(new pcl::PolygonMesh());
+    mesh_ = std::make_shared<Mesh>();
   }
 
-  *mesh_ = kimera_pgmo::TriangleMeshMsgToPolygonMesh(msg->mesh);
+  kimera_pgmo::fillFromTriangleMeshMsg(msg->mesh, *mesh_);
 
   if (graph_) {
-    graph_->setMeshDirectly(*mesh_);
+    graph_->setMesh(mesh_);
   }
 
   has_update_ = true;

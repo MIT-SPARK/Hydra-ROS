@@ -5,3 +5,4 @@
 *.ccls*
 *.vscode/
 *.ipynb_checkpoints/
+**/compile_commands.json

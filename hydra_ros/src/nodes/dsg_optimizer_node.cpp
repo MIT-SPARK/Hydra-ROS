@@ -34,10 +34,10 @@
  * -------------------------------------------------------------------------- */
 #include <config_utilities/parsing/ros.h>
 #include <hydra/common/hydra_config.h>
+#include <hydra/frontend/frontend_module.h>
 #include <kimera_pgmo/DeformationGraph.h>
 
 #include "hydra_ros/backend/ros_backend.h"
-#include "hydra_ros/frontend/ros_frontend.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
 namespace hydra {

@@ -68,8 +68,6 @@ void declare_config(BasisPointPluginConfig& config) {
   field(config.label_colormap, "label_colormap");
 }
 
-using MeshCloud = pcl::PointCloud<pcl::PointXYZRGBA>;
-
 struct BasisPoint {
   double x;
   double y;
@@ -81,7 +79,7 @@ struct BasisPoint {
 
 std::vector<BasisPoint> getBasisPoints(const PlaceNodeAttributes& attrs,
                                        bool use_voxblox,
-                                       const MeshCloud* vertices,
+                                       const spark_dsg::Mesh* vertices,
                                        const SemanticColorMap* colormap) {
   std::vector<BasisPoint> to_return;
   if (!use_voxblox && !vertices) {
@@ -104,14 +102,15 @@ std::vector<BasisPoint> getBasisPoints(const PlaceNodeAttributes& attrs,
     }
   } else {
     for (const auto idx : attrs.pcl_mesh_connections) {
-      const auto& p = vertices->at(idx);
+      const auto pos = vertices->pos(idx);
+      const auto color = vertices->colors.at(idx);
       auto& basis_point = to_return.emplace_back();
-      basis_point.x = p.x;
-      basis_point.y = p.y;
-      basis_point.z = p.z;
-      basis_point.r = p.r / 255.0;
-      basis_point.g = p.g / 255.0;
-      basis_point.b = p.b / 255.0;
+      basis_point.x = pos.x();
+      basis_point.y = pos.y();
+      basis_point.z = pos.z();
+      basis_point.r = color.r / 255.0;
+      basis_point.g = color.g / 255.0;
+      basis_point.b = color.b / 255.0;
     }
   }
 
@@ -217,7 +216,6 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
   marker.color.a = config.places_edge_alpha;
 
   const auto& layer = graph.getLayer(DsgLayers::PLACES);
-  const auto vertices = graph.getMeshVertices();
   for (const auto& id_node_pair : layer.nodes()) {
     auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
 
@@ -225,7 +223,7 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
     tf2::convert(attrs.position, start);
 
     const auto basis_points = getBasisPoints(
-        attrs, config.show_voxblox_connections, vertices.get(), colormap_.get());
+        attrs, config.show_voxblox_connections, graph.mesh().get(), colormap_.get());
     for (const auto& basis_point : basis_points) {
       marker.points.push_back(start);
       auto& point = marker.points.emplace_back();
@@ -241,8 +239,8 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
 void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
                                        const DynamicSceneGraph& graph,
                                        MarkerArray& msg) const {
-  const auto vertices = graph.getMeshVertices();
-  if (!config.show_voxblox_connections && !vertices) {
+  const auto mesh = graph.mesh();
+  if (!config.show_voxblox_connections && !mesh) {
     return;
   }
 
@@ -261,7 +259,7 @@ void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
   for (const auto& id_node_pair : layer.nodes()) {
     auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
     const auto basis_points = getBasisPoints(
-        attrs, config.show_voxblox_connections, vertices.get(), colormap_.get());
+        attrs, config.show_voxblox_connections, mesh.get(), colormap_.get());
     for (const auto& basis_point : basis_points) {
       auto& point = marker.points.emplace_back();
       point.x = basis_point.x;

@@ -33,48 +33,59 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/hydra_pipeline.h>
-#include <hydra_msgs/QueryFreespace.h>
-#include <pose_graph_tools_msgs/BowQueries.h>
+#include <hydra/common/module.h>
+#include <hydra/frontend/mesh_segmenter.h>
+#include <kimera_pgmo/MeshDelta.h>
 #include <ros/ros.h>
+
+#include "hydra_ros/utils/semantic_ros_publishers.h"
 
 namespace hydra {
 
-struct HydraRosConfig {
-  bool use_ros_backend = false;
-  bool enable_frontend_output = true;
-  bool visualize_objects = false;
-  bool visualize_places = false;
-  std::string places_visualizer_namespace = "~";
-  bool visualize_reconstruction = false;
-  std::string reconstruction_visualizer_namespace = "~";
+using ObjectCloudPub =
+    SemanticRosPublishers<uint32_t, pcl::PointCloud<pcl::PointXYZRGBA>>;
+
+struct ObjectVisualizerConfig {
+  std::string module_ns = "~";
+  bool enable_active_mesh_pub = false;
+  bool enable_segmented_mesh_pub = false;
 };
 
-void declare_config(HydraRosConfig& conf);
+void declare_config(ObjectVisualizerConfig& conf);
 
-class HydraRosPipeline : public HydraPipeline {
+class ObjectVisualizer : public Module {
  public:
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
+  explicit ObjectVisualizer(const ObjectVisualizerConfig& config);
 
-  virtual ~HydraRosPipeline();
+  ~ObjectVisualizer();
 
-  void bowCallback(const pose_graph_tools_msgs::BowQueries::ConstPtr& msg);
+  void start() override;
 
-  bool handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
-                          hydra_msgs::QueryFreespace::Response& res);
+  void stop() override;
+
+  void save(const LogSetup& logs) override;
+
+  std::string printInfo() const override;
+
+  void visualize(const kimera_pgmo::MeshDelta& delta,
+                 const std::vector<size_t>& active,
+                 const LabelIndices& label_indices) const;
 
  protected:
-  const HydraRosConfig config_;
+  void publishActiveVertices(const kimera_pgmo::MeshDelta& delta,
+                             const std::vector<size_t>& active,
+                             const LabelIndices& label_indices) const;
+
+  void publishObjectClouds(const kimera_pgmo::MeshDelta& delta,
+                           const std::vector<size_t>& active,
+                           const LabelIndices& label_indices) const;
+
+ protected:
+  const ObjectVisualizerConfig config_;
   ros::NodeHandle nh_;
 
-  ros::Subscriber bow_sub_;
-  ros::ServiceServer freespace_server_;
-
- private:
-  void initFrontend();
-  void initBackend();
-  void initReconstruction();
-  void initLCD();
+  ros::Publisher active_vertices_pub_;
+  std::unique_ptr<ObjectCloudPub> segmented_vertices_pub_;
 };
 
 }  // namespace hydra
