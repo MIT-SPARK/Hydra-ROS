@@ -220,12 +220,11 @@ class DynamicSceneGraphVisualizer {
   DynamicSceneGraph::Ptr scene_graph_;
 
   ros::NodeHandle nh_;
+  ros::NodeHandle config_nh_;
 
   bool need_redraw_;
   bool periodic_redraw_;
   std::string visualizer_frame_;
-  std::string visualizer_ns_;
-  std::string visualizer_layer_ns_;
 
   ros::WallTimer visualizer_loop_timer_;
 

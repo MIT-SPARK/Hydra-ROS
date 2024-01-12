@@ -71,15 +71,12 @@ void clearPrevMarkers(const std_msgs::Header& header,
 
 DynamicSceneGraphVisualizer::DynamicSceneGraphVisualizer(
     const ros::NodeHandle& nh, const DynamicSceneGraph::LayerIds& layer_ids)
-    : nh_(nh),
-      need_redraw_(false),
-      periodic_redraw_(false),
-      visualizer_frame_("map"),
-      visualizer_ns_(nh.resolveName("config")),
-      visualizer_layer_ns_(nh.resolveName("config/layer")) {
+    : nh_(nh), need_redraw_(false), periodic_redraw_(false), visualizer_frame_("map") {
   nh_.param("visualizer_frame", visualizer_frame_, visualizer_frame_);
-  nh_.param("visualizer_ns", visualizer_ns_, visualizer_ns_);
-  nh_.param("visualizer_layer_ns", visualizer_layer_ns_, visualizer_layer_ns_);
+
+  std::string config_ns = "~";
+  nh_.param("config_ns", config_ns, config_ns);
+  config_nh_ = ros::NodeHandle(config_ns);
 
   dsg_pub_ = nh_.advertise<MarkerArray>("dsg_markers", 1, true);
 
@@ -164,10 +161,9 @@ void DynamicSceneGraphVisualizer::setGraph(const DynamicSceneGraph::Ptr& scene_g
 
 const DynamicLayerConfig& DynamicSceneGraphVisualizer::getConfig(LayerId layer) {
   if (!dynamic_configs_.count(layer)) {
-    const std::string ns = visualizer_ns_ + "/dynamic_layer/" + std::to_string(layer);
-
-    ros::NodeHandle nh("");
-    dynamic_configs_[layer] = std::make_shared<DynamicLayerConfigManager>(nh, ns);
+    const std::string ns = "config/dynamic_layer/" + std::to_string(layer);
+    dynamic_configs_[layer] =
+        std::make_shared<DynamicLayerConfigManager>(config_nh_, ns);
   }
 
   return dynamic_configs_.at(layer)->get();
@@ -488,15 +484,14 @@ void DynamicSceneGraphVisualizer::addMultiMarkerIfValid(const Marker& marker,
 
 void DynamicSceneGraphVisualizer::setupConfigs(
     const DynamicSceneGraph::LayerIds& layer_ids) {
-  ros::NodeHandle nh("");
-  visualizer_config_.reset(new VisualizerConfigManager(nh, visualizer_ns_));
+  visualizer_config_.reset(new VisualizerConfigManager(config_nh_, "config"));
 
-  const std::string colormap_ns = visualizer_ns_ + "/places_colormap";
-  places_colormap_.reset(new ColormapConfigManager(nh, colormap_ns));
+  const std::string colormap_ns = "config/places_colormap";
+  places_colormap_.reset(new ColormapConfigManager(config_nh_, colormap_ns));
 
   for (const auto& layer : layer_ids) {
-    const std::string layer_ns = visualizer_layer_ns_ + std::to_string(layer);
-    layer_configs_[layer] = std::make_shared<LayerConfigManager>(nh, layer_ns);
+    const std::string layer_ns = "config/layer" + std::to_string(layer);
+    layer_configs_[layer] = std::make_shared<LayerConfigManager>(config_nh_, layer_ns);
   }
 }
 
@@ -622,7 +617,6 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
       // TODO(nathan) consider warning
       return;
     }
-
   }
 
   clearPrevMarkers(
