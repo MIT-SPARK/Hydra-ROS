@@ -43,16 +43,12 @@ namespace hydra {
 class SemanticColorMap;
 
 struct RegionPluginConfig {
-  bool use_convex = false;
   bool skip_unknown = true;
-  bool use_nodes_only = false;
   bool draw_labels = true;
   double line_width = 0.1;
   double line_alpha = 0.8;
-  double hull_alpha = 5.0;
   double mesh_alpha = 0.6;
   double label_scale = 0.7;
-  double inflation_radius = 0.5;
   std::string region_colormap = "";
 };
 

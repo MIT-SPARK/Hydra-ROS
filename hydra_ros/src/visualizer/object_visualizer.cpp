@@ -36,13 +36,12 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 #include <hydra/common/hydra_config.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/point_cloud.h>
 
 namespace hydra {
 
-using VertexCloud = pcl::PointCloud<pcl::PointXYZRGBA>;
+using visualization_msgs::Marker;
 
 void declare_config(ObjectVisualizerConfig& conf) {
   using namespace config;
@@ -50,15 +49,18 @@ void declare_config(ObjectVisualizerConfig& conf) {
   field(conf.module_ns, "module_ns");
   field(conf.enable_active_mesh_pub, "enable_active_mesh_pub");
   field(conf.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
+  field(conf.point_scale, "point_scale");
+  field(conf.point_alpha, "point_alpha");
+  field(conf.use_spheres, "use_spheres");
 }
 
 ObjectVisualizer::ObjectVisualizer(const ObjectVisualizerConfig& config)
-    : config_(config), nh_(config.module_ns) {
-  if (config_.enable_active_mesh_pub) {
-    active_vertices_pub_ = nh_.advertise<VertexCloud>("active_vertices", 1, true);
+    : config(config::checkValid(config)), nh_(config.module_ns) {
+  if (config.enable_active_mesh_pub) {
+    active_vertices_pub_ = nh_.advertise<Marker>("active_vertices", 1, true);
   }
 
-  if (config_.enable_segmented_mesh_pub) {
+  if (config.enable_segmented_mesh_pub) {
     segmented_vertices_pub_.reset(new ObjectCloudPub("object_vertices", nh_));
   }
 }
@@ -73,7 +75,7 @@ void ObjectVisualizer::save(const LogSetup&) {}
 
 std::string ObjectVisualizer::printInfo() const {
   std::stringstream ss;
-  ss << config::toString(config_);
+  ss << config::toString(config);
   return ss.str();
 }
 
@@ -87,30 +89,53 @@ void ObjectVisualizer::visualize(const kimera_pgmo::MeshDelta& delta,
 void ObjectVisualizer::publishActiveVertices(const kimera_pgmo::MeshDelta& delta,
                                              const std::vector<size_t>& active,
                                              const LabelIndices&) const {
-  VertexCloud::Ptr active_cloud(new VertexCloud());
-  active_cloud->reserve(active.size());
-  for (const auto idx : active) {
-    active_cloud->push_back(delta.vertex_updates->at(idx));
-  }
-
-  active_cloud->header.frame_id = HydraConfig::instance().getFrames().odom;
-  pcl_conversions::toPCL(ros::Time::now(), active_cloud->header.stamp);
-  active_vertices_pub_.publish(active_cloud);
+  visualization_msgs::Marker msg;
+  msg.header.stamp = ros::Time::now();
+  msg.header.frame_id = HydraConfig::instance().getFrames().odom;
+  msg.ns = "active_vertices";
+  msg.id = 0;
+  fillMarkerFromCloud(delta, active, msg);
+  active_vertices_pub_.publish(msg);
 }
 
 void ObjectVisualizer::publishObjectClouds(const kimera_pgmo::MeshDelta& delta,
                                            const std::vector<size_t>&,
                                            const LabelIndices& label_indices) const {
   for (auto&& [label, indices] : label_indices) {
-    VertexCloud label_cloud;
-    label_cloud.reserve(indices.size());
-    for (const auto idx : indices) {
-      label_cloud.push_back(delta.vertex_updates->at(idx));
-    }
+    visualization_msgs::Marker msg;
+    msg.header.stamp = ros::Time::now();
+    msg.header.frame_id = HydraConfig::instance().getFrames().odom;
+    msg.ns = "label_vertices_" + std::to_string(label);
+    msg.id = 0;
+    fillMarkerFromCloud(delta, indices, msg);
+    segmented_vertices_pub_->publish(label, msg);
+  }
+}
 
-    label_cloud.header.frame_id = HydraConfig::instance().getFrames().odom;
-    pcl_conversions::toPCL(ros::Time::now(), label_cloud.header.stamp);
-    segmented_vertices_pub_->publish(label, label_cloud);
+void ObjectVisualizer::fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
+                                           const std::vector<size_t>& indices,
+                                           Marker& msg) const {
+  msg.type = config.use_spheres ? Marker::SPHERE_LIST : Marker::CUBE_LIST;
+  msg.action = visualization_msgs::Marker::ADD;
+
+  msg.scale.x = config.point_scale;
+  msg.scale.y = config.point_scale;
+  msg.scale.z = config.point_scale;
+  msg.pose.orientation.w = 1.0;
+
+  msg.points.reserve(indices.size());
+  msg.colors.reserve(indices.size());
+  for (const auto idx : indices) {
+    const auto& p = delta.vertex_updates->at(idx);
+    auto& point = msg.points.emplace_back();
+    point.x = p.x;
+    point.y = p.y;
+    point.z = p.z;
+    auto& color = msg.colors.emplace_back();
+    color.r = p.r / 255.0f;
+    color.g = p.g / 255.0f;
+    color.b = p.b / 255.0f;
+    color.a = config.point_alpha;
   }
 }
 

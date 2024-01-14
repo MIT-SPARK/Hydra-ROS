@@ -36,7 +36,6 @@
 #include "hydra_ros/utils/ear_clipping.h"
 
 #include <glog/logging.h>
-#include <pcl/surface/convex_hull.h>
 
 #include <numeric>
 
@@ -224,32 +223,8 @@ void Polygon::filter() {
 }
 
 bool Polygon::isWindingOrderCCW() const {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr points(new pcl::PointCloud<pcl::PointXYZ>());
-  std::vector<bool> is_convex;
-  for (const auto& triangle : *this) {
-    auto& p = points->emplace_back();
-    p.x = triangle.v1->pos.x();
-    p.y = triangle.v1->pos.y();
-    p.z = 0.0;
-    is_convex.push_back(triangle.isConvex(true));
-  }
-
-  pcl::ConvexHull<pcl::PointXYZ> hull;
-  hull.setDimension(2);
-  hull.setInputCloud(points);
-
-  pcl::PointCloud<pcl::PointXYZ> out;
-  hull.reconstruct(out);
-
-  pcl::PointIndices pcl_indices;
-  hull.getHullPointIndices(pcl_indices);
-
-  size_t num_ccw = 0;
-  for (const auto& idx : pcl_indices.indices) {
-    num_ccw += is_convex.at(idx) ? 1 : 0;
-  }
-
-  return num_ccw > pcl_indices.indices.size() - num_ccw;
+  // TODO(nathan) convex hull implementation is ccw
+  return true;
 }
 
 Polygon Polygon::fromSceneGraph(const DynamicSceneGraph& graph,

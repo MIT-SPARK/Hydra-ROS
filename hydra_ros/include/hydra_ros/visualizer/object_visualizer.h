@@ -37,24 +37,27 @@
 #include <hydra/frontend/mesh_segmenter.h>
 #include <kimera_pgmo/MeshDelta.h>
 #include <ros/ros.h>
+#include <visualization_msgs/Marker.h>
 
 #include "hydra_ros/utils/semantic_ros_publishers.h"
 
 namespace hydra {
 
-using ObjectCloudPub =
-    SemanticRosPublishers<uint32_t, pcl::PointCloud<pcl::PointXYZRGBA>>;
-
 struct ObjectVisualizerConfig {
   std::string module_ns = "~";
   bool enable_active_mesh_pub = false;
   bool enable_segmented_mesh_pub = false;
+  double point_scale = 0.1;
+  double point_alpha = 0.7;
+  bool use_spheres = false;
 };
 
 void declare_config(ObjectVisualizerConfig& conf);
 
 class ObjectVisualizer : public Module {
  public:
+  using ObjectCloudPub = SemanticRosPublishers<uint32_t, visualization_msgs::Marker>;
+
   explicit ObjectVisualizer(const ObjectVisualizerConfig& config);
 
   ~ObjectVisualizer();
@@ -71,6 +74,8 @@ class ObjectVisualizer : public Module {
                  const std::vector<size_t>& active,
                  const LabelIndices& label_indices) const;
 
+  const ObjectVisualizerConfig config;
+
  protected:
   void publishActiveVertices(const kimera_pgmo::MeshDelta& delta,
                              const std::vector<size_t>& active,
@@ -81,7 +86,10 @@ class ObjectVisualizer : public Module {
                            const LabelIndices& label_indices) const;
 
  protected:
-  const ObjectVisualizerConfig config_;
+  void fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
+                           const std::vector<size_t>& indices,
+                           visualization_msgs::Marker& marker) const;
+
   ros::NodeHandle nh_;
 
   ros::Publisher active_vertices_pub_;

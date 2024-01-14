@@ -36,8 +36,6 @@
 #pragma once
 
 #include <hydra/common/dsg_types.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Dense>
@@ -56,9 +54,8 @@ Eigen::MatrixXd getCirclePolygon(const SceneGraphNode& node,
                                  double radius,
                                  size_t num_samples);
 
-Eigen::MatrixXd getHullPolygon(const pcl::PointCloud<pcl::PointXYZ>::Ptr& points,
-                               double alpha,
-                               bool use_convex);
+Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
+                                      const SceneGraphNode& parent);
 
 void makeFilledPolygon(const Eigen::MatrixXd& points,
                        const std_msgs::ColorRGBA& color,

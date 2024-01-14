@@ -36,7 +36,7 @@
 
 #include <glog/logging.h>
 #include <hydra/utils/nearest_neighbor_utilities.h>
-#include <pcl/surface/concave_hull.h>
+#include <spark_dsg/bounding_box_extraction.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/utils/ear_clipping.h"
@@ -108,37 +108,34 @@ Eigen::MatrixXd getCirclePolygon(const SceneGraphNode& node,
   return footprint;
 }
 
-Eigen::MatrixXd getHullPolygon(const pcl::PointCloud<pcl::PointXYZ>::Ptr& points,
-                               double alpha,
-                               bool use_convex) {
-  pcl::PointIndices pcl_indices;
-  if (use_convex) {
-    pcl::ConvexHull<pcl::PointXYZ> hull;
-    hull.setInputCloud(points);
-    hull.setDimension(2);
+struct NodeAdaptor : public ::spark_dsg::bounding_box::PointAdaptor {
+  NodeAdaptor(const DynamicSceneGraph* graph, const std::vector<NodeId>& nodes)
+      : graph(graph), nodes(nodes) {}
 
-    pcl::PointCloud<pcl::PointXYZ> out;
-    hull.reconstruct(out);
-    hull.getHullPointIndices(pcl_indices);
-  } else {
-    pcl::ConcaveHull<pcl::PointXYZ> hull;
-    hull.setKeepInformation(true);
-    hull.setInputCloud(points);
-    hull.setAlpha(alpha);
-    hull.setDimension(2);
+  size_t size() const override { return nodes.size(); }
 
-    pcl::PointCloud<pcl::PointXYZ> out;
-    hull.reconstruct(out);
-    hull.getHullPointIndices(pcl_indices);
+  Eigen::Vector3f get(size_t index) const override {
+    if (!graph) {
+      throw std::runtime_error("invalid graph!");
+    }
+
+    return graph->getPosition(nodes.at(index)).cast<float>();
   }
 
-  Eigen::MatrixXd hull_points(3, pcl_indices.indices.size());
+  const DynamicSceneGraph* graph;
+  const std::vector<NodeId>& nodes;
+};
+
+Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
+                                      const SceneGraphNode& parent) {
+  std::vector<NodeId> children(parent.children().begin(), parent.children().end());
+  const NodeAdaptor adaptor(&graph, children);
+  std::list<size_t> hull_indices = ::spark_dsg::bounding_box::get2dConvexHull(adaptor);
+
+  Eigen::MatrixXd hull_points(3, hull_indices.size());
   size_t i = 0;
-  for (const auto idx : pcl_indices.indices) {
-    const auto& p = points->at(idx);
-    hull_points(0, i) = p.x;
-    hull_points(1, i) = p.y;
-    hull_points(2, i) = p.z;
+  for (const auto idx : hull_indices) {
+    hull_points.col(i) = graph.getPosition(children.at(idx));
     ++i;
   }
 

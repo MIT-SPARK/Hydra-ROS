@@ -34,7 +34,6 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <dynamic_reconfigure/server.h>
-#include <pcl/PolygonMesh.h>
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 

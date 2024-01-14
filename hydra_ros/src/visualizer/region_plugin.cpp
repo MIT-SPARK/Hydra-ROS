@@ -41,7 +41,6 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
-#include <pcl/kdtree/kdtree_flann.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -51,80 +50,17 @@
 
 namespace hydra {
 
-using FlannStruct = pcl::KdTreeFLANN<pcl::PointXYZ>;
-
-Eigen::MatrixXd getConcaveHull(const DynamicSceneGraph& graph,
-                               const SceneGraphNode& parent,
-                               double alpha,
-                               bool use_convex) {
-  pcl::PointCloud<pcl::PointXYZ>::Ptr points(new pcl::PointCloud<pcl::PointXYZ>());
-  for (const auto& child : parent.children()) {
-    const auto pos = graph.getPosition(child);
-    auto& p = points->emplace_back();
-    p.x = pos.x();
-    p.y = pos.y();
-    p.z = pos.z();
-  }
-
-  return getHullPolygon(points, alpha, use_convex);
-}
-
-Eigen::MatrixXd getMeshConcaveHull(const DynamicSceneGraph& graph,
-                                   const FlannStruct& flann,
-                                   const SceneGraphNode& parent,
-                                   double inflation_radius,
-                                   double alpha,
-                                   bool use_convex) {
-  const auto mesh = graph.mesh();
-  if (!mesh || mesh->empty()) {
-    return {};
-  }
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr points(new pcl::PointCloud<pcl::PointXYZ>());
-  for (const auto& child : parent.children()) {
-    const SceneGraphNode& child_node = graph.getNode(child).value();
-    const auto& attrs = child_node.attributes<PlaceNodeAttributes>();
-    for (const auto idx : attrs.pcl_mesh_connections) {
-      const auto basis = mesh->pos(idx);
-      pcl::Indices neighbors;
-      std::vector<float> distances;
-      pcl::PointXYZ pcl_basis;
-      pcl_basis.x = basis.x();
-      pcl_basis.y = basis.y();
-      pcl_basis.z = basis.z();
-      flann.radiusSearch(pcl_basis, inflation_radius, neighbors, distances);
-      for (const auto n_idx : neighbors) {
-        const auto p_n = mesh->pos(n_idx);
-        auto& p = points->emplace_back();
-        p.x = p_n.x();
-        p.y = p_n.y();
-        p.z = p_n.z();
-      }
-    }
-  }
-
-  LOG(ERROR) << "Using " << points->size() << " points for "
-             << NodeSymbol(parent.id).getLabel() << " with alpha " << alpha;
-
-  return getHullPolygon(points, alpha, use_convex);
-}
-
 void declare_config(RegionPluginConfig& config) {
   using namespace config;
   name("RegionPluginConfig");
-  field(config.use_convex, "use_convex");
   field(config.skip_unknown, "skip_unknown");
-  field(config.use_nodes_only, "use_nodes_only");
   field(config.draw_labels, "draw_labels");
   field(config.line_width, "line_width");
   field(config.line_alpha, "line_alpha");
-  field(config.hull_alpha, "hull_alpha");
-  field(config.inflation_radius, "inflation_radius");
   field(config.region_colormap, "region_colormap");
 
   check(config.line_width, GT, 0.0, "line_width");
   check(config.line_alpha, GT, 0.0, "line_alpha");
-  check(config.hull_alpha, GT, 0.0, "hull_alpha");
 }
 
 RegionPlugin::RegionPlugin(const ros::NodeHandle& nh, const std::string& name)
@@ -172,22 +108,6 @@ void RegionPlugin::draw(const std_msgs::Header& header,
   msg.markers[2].scale.y = config.line_width;
   msg.markers[2].scale.z = config.line_width;
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>());
-  auto mesh = graph.mesh();
-  if (mesh && !mesh->empty()) {
-    for (size_t i = 0; i < mesh->numVertices(); ++i) {
-      const auto pos = mesh->pos(i);
-      pcl::PointXYZ p;
-      p.x = pos.x();
-      p.y = pos.y();
-      p.z = pos.z();
-      cloud->push_back(p);
-    }
-  }
-
-  FlannStruct flann;
-  flann.setInputCloud(cloud);
-
   const auto& regions = graph.getLayer(DsgLayers::ROOMS);
   for (auto&& [id, node] : regions.nodes()) {
     const auto& attrs = node->attributes<SemanticNodeAttributes>();
@@ -200,18 +120,8 @@ void RegionPlugin::draw(const std_msgs::Header& header,
     color.b = attrs.color.z() / 255.0;
     color.a = config.line_alpha;
 
-    double mean_z = getMeanChildHeight(graph, *node);
-    Eigen::MatrixXd hull_points;
-    if (config.use_nodes_only) {
-      hull_points = getConcaveHull(graph, *node, config.hull_alpha, config.use_convex);
-    } else {
-      hull_points = getMeshConcaveHull(graph,
-                                       flann,
-                                       *node,
-                                       config.inflation_radius,
-                                       config.hull_alpha,
-                                       config.use_convex);
-    }
+    const double mean_z = getMeanChildHeight(graph, *node);
+    auto hull_points = getChildrenConvexHull(graph, *node);
 
     if (config.draw_labels) {
       const auto& pos = attrs.position;

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.16)
 project(hydra_ros)
 
 add_compile_options(-Wall -Wextra)
@@ -6,23 +6,22 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(OpenCV REQUIRED)
+find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 find_package(hydra REQUIRED)
-find_package(PCL REQUIRED COMPONENTS surface common search)
+find_package(PCL REQUIRED COMPONENTS common)
 find_package(
   catkin REQUIRED
-  COMPONENTS dynamic_reconfigure
+  COMPONENTS cv_bridge
+             dynamic_reconfigure
              geometry_msgs
              hydra_msgs
              image_transport
              kimera_pgmo
-             pcl_ros
              roscpp
              std_msgs
              tf2_eigen
              tf2_ros
              visualization_msgs
-             voxblox_ros
              pose_graph_tools
              pose_graph_tools_ros
              pose_graph_tools_msgs
@@ -40,22 +39,21 @@ generate_dynamic_reconfigure_options(
 
 catkin_package(
   CATKIN_DEPENDS
+  cv_bridge
   dynamic_reconfigure
   geometry_msgs
   hydra_msgs
   image_transport
   kimera_pgmo
-  pcl_ros
   roscpp
   std_msgs
   tf2_eigen
   tf2_ros
   visualization_msgs
-  voxblox_ros
   pose_graph_tools
   pose_graph_tools_ros
   pose_graph_tools_msgs
-  DEPENDS hydra
+  DEPENDS hydra PCL OpenCV
   INCLUDE_DIRS include
   LIBRARIES ${PROJECT_NAME}
 )
@@ -76,7 +74,6 @@ add_library(
   src/reconstruction/ros_sensors.cpp
   src/utils/dsg_streaming_interface.cpp
   src/utils/lookup_tf.cpp
-  src/utils/mask_nodelet.cpp
   src/utils/node_utilities.cpp
   src/utils/ear_clipping.cpp
   src/visualizer/basis_point_plugin.cpp
@@ -112,9 +109,6 @@ add_dependencies(
 add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
 target_link_libraries(dsg_optimizer_node ${PROJECT_NAME})
 
-add_executable(gvd_validator_node src/nodes/gvd_validator_node.cpp)
-target_link_libraries(gvd_validator_node ${PROJECT_NAME})
-
 add_executable(hydra_reconstruction_node src/nodes/hydra_reconstruction_node.cpp)
 target_link_libraries(hydra_reconstruction_node ${PROJECT_NAME})
 
@@ -141,7 +135,6 @@ endif()
 install(
   TARGETS ${PROJECT_NAME}
           dsg_optimizer_node
-          gvd_validator_node
           hydra_reconstruction_node
           hydra_ros_node
           hydra_visualizer_node
