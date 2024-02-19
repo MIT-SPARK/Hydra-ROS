@@ -75,6 +75,7 @@ struct HydraVisualizer {
 
   void addPlugin(DsgVisualizerPlugin::Ptr plugin);
   void clearPlugins();
+  inline DynamicSceneGraphVisualizer& getVisualizer() { return *visualizer_; }
 
   void spinRos();
   void spinFile();

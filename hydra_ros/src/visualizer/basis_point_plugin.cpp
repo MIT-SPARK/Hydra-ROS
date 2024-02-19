@@ -131,8 +131,10 @@ BasisPointPlugin::BasisPointPlugin(const ros::NodeHandle& nh, const std::string&
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 }
 
-void BasisPointPlugin::draw(const std_msgs::Header& header,
+void BasisPointPlugin::draw(const ConfigManager&,
+                            const std_msgs::Header& header,
                             const DynamicSceneGraph& graph) {
+  // TODO(nathan) actual use dynamic configs
   if (!graph.hasLayer(DsgLayers::PLACES)) {
     reset(header, graph);
     return;

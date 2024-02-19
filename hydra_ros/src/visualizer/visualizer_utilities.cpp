@@ -57,9 +57,17 @@ inline double getRatio(double min, double max, double value) {
   return ratio;
 }
 
-inline NodeColor getDistanceColor(const VisualizerConfig& config,
-                                  const ColormapConfig& colors,
-                                  double distance) {
+inline void fillPoseWithIdentity(geometry_msgs::Pose& pose) {
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), pose.orientation);
+}
+
+}  // namespace
+
+NodeColor getDistanceColor(const VisualizerConfig& config,
+                           const ColormapConfig& colors,
+                           double distance) {
   if (config.places_colormap_max_distance <= config.places_colormap_min_distance) {
     // TODO(nathan) consider warning
     return NodeColor::Zero();
@@ -71,14 +79,6 @@ inline NodeColor getDistanceColor(const VisualizerConfig& config,
 
   return dsg_utils::interpolateColorMap(colors, ratio);
 }
-
-inline void fillPoseWithIdentity(geometry_msgs::Pose& pose) {
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), pose.orientation);
-}
-
-}  // namespace
 
 Marker makeDeleteMarker(const std_msgs::Header& header,
                         size_t id,
@@ -172,7 +172,8 @@ Marker makeEdgesToBoundingBoxes(const std_msgs::Header& header,
                                 const LayerConfig& config,
                                 const SceneGraphLayer& layer,
                                 const VisualizerConfig& visualizer_config,
-                                const std::string& ns) {
+                                const std::string& ns,
+                                const ColorFunction& func) {
   Marker marker;
   marker.header = header;
   marker.type = Marker::LINE_LIST;
@@ -189,7 +190,8 @@ Marker makeEdgesToBoundingBoxes(const std_msgs::Header& header,
   Eigen::MatrixXf corners(3, 8);
   for (const auto& id_node_pair : layer.nodes()) {
     const auto& attrs = id_node_pair.second->attributes<SemanticNodeAttributes>();
-    const auto color = makeColorMsg(attrs.color, config.bounding_box_alpha);
+    const auto color =
+        makeColorMsg(func(*id_node_pair.second), config.bounding_box_alpha);
     fillCornersFromBbox(attrs.bounding_box, corners);
 
     geometry_msgs::Point node_centroid;
@@ -216,7 +218,8 @@ Marker makeLayerWireframeBoundingBoxes(const std_msgs::Header& header,
                                        const LayerConfig& config,
                                        const SceneGraphLayer& layer,
                                        const VisualizerConfig& visualizer_config,
-                                       const std::string& ns) {
+                                       const std::string& ns,
+                                       const ColorFunction& func) {
   Marker marker;
   marker.header = header;
   marker.type = Marker::LINE_LIST;
@@ -235,7 +238,8 @@ Marker makeLayerWireframeBoundingBoxes(const std_msgs::Header& header,
   Eigen::MatrixXf corners(3, 8);
   for (const auto& id_node_pair : layer.nodes()) {
     const auto& attrs = id_node_pair.second->attributes<SemanticNodeAttributes>();
-    const auto color = makeColorMsg(attrs.color, config.bounding_box_alpha);
+    const auto color =
+        makeColorMsg(func(*id_node_pair.second), config.bounding_box_alpha);
     fillCornersFromBbox(attrs.bounding_box, corners);
     addWireframeToMarker(corners, color, marker);
   }
@@ -247,15 +251,15 @@ Marker makeBoundingBoxMarker(const std_msgs::Header& header,
                              const LayerConfig& config,
                              const Node& node,
                              const VisualizerConfig& visualizer_config,
-                             const std::string& ns) {
+                             const std::string& ns,
+                             const ColorFunction& func) {
   Marker marker;
   marker.header = header;
   marker.type = Marker::CUBE;
   marker.action = Marker::ADD;
   marker.id = node.id;
   marker.ns = ns;
-  marker.color = makeColorMsg(node.attributes<SemanticNodeAttributes>().color,
-                              config.bounding_box_alpha);
+  marker.color = makeColorMsg(func(node), config.bounding_box_alpha);
 
   BoundingBox bounding_box = node.attributes<SemanticNodeAttributes>().bounding_box;
 
@@ -302,7 +306,12 @@ Marker makeTextMarker(const std_msgs::Header& header,
   marker.type = Marker::TEXT_VIEW_FACING;
   marker.action = Marker::ADD;
   marker.lifetime = ros::Duration(0);
-  marker.text = node.attributes<SemanticNodeAttributes>().name;
+  std::string name;
+  try {
+    name = node.attributes<SemanticNodeAttributes>().name;
+  } catch (const std::exception&) {
+  }
+  marker.text = name.empty() ? NodeSymbol(node.id).getLabel() : name;
   marker.scale.z = config.label_scale;
   marker.color = makeColorMsg(NodeColor::Zero());
 

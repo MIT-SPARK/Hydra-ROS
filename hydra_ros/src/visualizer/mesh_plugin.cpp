@@ -73,7 +73,7 @@ kimera_pgmo::traits::Face pgmoGetFace(const ColoredLabelAdaptor& mesh, size_t i)
 }
 
 MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name), color_by_label_(false) {
+    : DsgVisualizerPlugin(nh, name), color_by_label_(false), need_redraw_(false) {
   nh_.getParam("color_by_label", color_by_label_);
 
   std::string label_colormap = "";
@@ -93,14 +93,9 @@ MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
 
 MeshPlugin::~MeshPlugin() {}
 
-bool MeshPlugin::handleService(std_srvs::SetBool::Request& req,
-                               std_srvs::SetBool::Response& res) {
-  color_by_label_ = req.data;
-  res.success = true;
-  return true;
-}
-
-void MeshPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) {
+void MeshPlugin::draw(const ConfigManager&,
+                      const std_msgs::Header& header,
+                      const DynamicSceneGraph& graph) {
   auto mesh = graph.mesh();
   if (!mesh || mesh->empty()) {
     return;
@@ -128,6 +123,18 @@ void MeshPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&)
   mesh_msgs::TriangleMeshStamped msg;
   msg.header = header;
   mesh_pub_.publish(msg);
+}
+
+bool MeshPlugin::hasChange() const { return need_redraw_; }
+
+void MeshPlugin::clearChangeFlag() { need_redraw_ = false; }
+
+bool MeshPlugin::handleService(std_srvs::SetBool::Request& req,
+                               std_srvs::SetBool::Response& res) {
+  color_by_label_ = req.data;
+  res.success = true;
+  need_redraw_ = true;
+  return true;
 }
 
 }  // namespace hydra

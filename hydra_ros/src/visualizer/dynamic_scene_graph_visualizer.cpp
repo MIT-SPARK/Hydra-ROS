@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
+#include <glog/logging.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
@@ -69,24 +70,15 @@ void clearPrevMarkers(const std_msgs::Header& header,
   prev_nodes = curr_nodes;
 }
 
-DynamicSceneGraphVisualizer::DynamicSceneGraphVisualizer(
-    const ros::NodeHandle& nh, const DynamicSceneGraph::LayerIds& layer_ids)
+DynamicSceneGraphVisualizer::DynamicSceneGraphVisualizer(const ros::NodeHandle& nh)
     : nh_(nh), need_redraw_(false), periodic_redraw_(false), visualizer_frame_("map") {
   nh_.param("visualizer_frame", visualizer_frame_, visualizer_frame_);
 
   std::string config_ns = "~";
   nh_.param("config_ns", config_ns, config_ns);
-  config_nh_ = ros::NodeHandle(config_ns);
+  config_manager_ = std::make_shared<ConfigManager>(ros::NodeHandle(config_ns));
 
   dsg_pub_ = nh_.advertise<MarkerArray>("dsg_markers", 1, true);
-
-  setupConfigs(layer_ids);
-
-  for (const auto& id : layer_ids) {
-    prev_labels_[id] = {};
-    curr_labels_[id] = {};
-  }
-
   dynamic_layers_viz_pub_ = nh_.advertise<MarkerArray>("dynamic_layers_viz", 1, true);
 }
 
@@ -122,11 +114,15 @@ bool DynamicSceneGraphVisualizer::redraw() {
     return false;
   }
 
-  need_redraw_ |= hasConfigChanged();
+  need_redraw_ |= config_manager_->hasChange();
+  for (const auto& plugin : plugins_) {
+    need_redraw_ |= plugin->hasChange();
+  }
 
   if (!need_redraw_) {
     return false;
   }
+
   need_redraw_ = false;
 
   std_msgs::Header header;
@@ -140,7 +136,11 @@ bool DynamicSceneGraphVisualizer::redraw() {
     dsg_pub_.publish(msg);
   }
 
-  clearConfigChangeFlags();
+  config_manager_->clearChangeFlags();
+  for (auto& plugin : plugins_) {
+    plugin->clearChangeFlag();
+  }
+
   return true;
 }
 
@@ -151,22 +151,26 @@ void DynamicSceneGraphVisualizer::setGraph(const DynamicSceneGraph::Ptr& scene_g
     return;
   }
 
+  if (need_reset || !scene_graph_) {
+    config_manager_->reset(*scene_graph);
+  }
+
   if (need_reset) {
     reset();
+
+    for (const auto& id : scene_graph->layer_ids) {
+      prev_labels_[id] = {};
+      curr_labels_[id] = {};
+    }
   }
 
   scene_graph_ = scene_graph;
   need_redraw_ = true;
 }
 
-const DynamicLayerConfig& DynamicSceneGraphVisualizer::getConfig(LayerId layer) {
-  if (!dynamic_configs_.count(layer)) {
-    const std::string ns = "config/dynamic_layer/" + std::to_string(layer);
-    dynamic_configs_[layer] =
-        std::make_shared<DynamicLayerConfigManager>(config_nh_, ns);
-  }
-
-  return dynamic_configs_.at(layer)->get();
+void DynamicSceneGraphVisualizer::setLayerColorFunction(LayerId layer,
+                                                        const ColorFunction& func) {
+  layer_colors_[layer] = func;
 }
 
 inline double getDynamicHue(const DynamicLayerConfig& config, char prefix) {
@@ -251,25 +255,18 @@ void DynamicSceneGraphVisualizer::deleteDynamicLayer(const std_msgs::Header& hea
 
 void DynamicSceneGraphVisualizer::drawDynamicLayers(const std_msgs::Header& header,
                                                     MarkerArray& msg) {
-  const VisualizerConfig& viz_config = visualizer_config_->get();
-
-  for (const auto& id_layer_map_pair : scene_graph_->dynamicLayers()) {
-    const LayerId layer_id = id_layer_map_pair.first;
-    if (!layer_configs_.count(layer_id)) {
-      continue;
-    }
-
-    const DynamicLayerConfig& config = getConfig(layer_id);
+  const VisualizerConfig& viz_config = config_manager_->getVisualizerConfig();
+  for (auto&& [layer_id, sublayers] : scene_graph_->dynamicLayers()) {
+    const DynamicLayerConfig& config = config_manager_->getDynamicLayerConfig(layer_id);
 
     size_t viz_layer_idx = 0;
-    for (const auto& prefix_layer_pair : id_layer_map_pair.second) {
+    for (auto&& [prefix, layer] : sublayers) {
       if (!config.visualize) {
-        deleteDynamicLayer(header, prefix_layer_pair.first, msg);
+        deleteDynamicLayer(header, prefix, msg);
         continue;
       }
 
-      const DynamicSceneGraphLayer& layer = *prefix_layer_pair.second;
-      drawDynamicLayer(header, layer, config, viz_config, viz_layer_idx, msg);
+      drawDynamicLayer(header, *layer, config, viz_config, viz_layer_idx, msg);
       viz_layer_idx++;
     }
   }
@@ -317,35 +314,39 @@ void DynamicSceneGraphVisualizer::resetImpl(const std_msgs::Header& header,
 
 void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header,
                                              MarkerArray& msg) {
-  for (const auto& id_layer_pair : scene_graph_->layers()) {
-    if (!layer_configs_.count(id_layer_pair.first)) {
+  // this is janky, figure out how to do this better
+  for (const auto& callback : callbacks_) {
+    callback(scene_graph_);
+  }
+
+  const auto& visualizer_config = config_manager_->getVisualizerConfig();
+  for (auto&& [layer_id, layer] : scene_graph_->layers()) {
+    const auto layer_config = config_manager_->getLayerConfig(layer_id);
+    if (!layer_config) {
       continue;
     }
 
-    LayerConfig config = layer_configs_.at(id_layer_pair.first)->get();
-    const SceneGraphLayer& layer = *(id_layer_pair.second);
-
-    if (!config.visualize) {
-      deleteLayer(header, layer, msg);
+    if (!layer_config->visualize) {
+      deleteLayer(header, *layer, msg);
     } else {
-      drawLayer(header, layer, config, msg);
+      drawLayer(header, *layer, *layer_config, msg);
     }
   }
 
-  if (visualizer_config_->get().draw_mesh_edges) {
+  if (visualizer_config.draw_mesh_edges) {
     drawLayerMeshEdges(header, mesh_edge_source_layer_, mesh_edge_ns_, msg);
   }
 
   std::map<LayerId, LayerConfig> all_configs;
-  for (const auto& id_manager_pair : layer_configs_) {
-    all_configs[id_manager_pair.first] = id_manager_pair.second->get();
+  for (const auto layer_id : scene_graph_->layer_ids) {
+    all_configs[layer_id] = *CHECK_NOTNULL(config_manager_->getLayerConfig(layer_id));
   }
 
   MarkerArray interlayer_edge_markers =
       makeGraphEdgeMarkers(header,
                            *scene_graph_,
                            all_configs,
-                           visualizer_config_->get(),
+                           visualizer_config,
                            interlayer_edge_ns_prefix_);
 
   std::set<std::string> seen_edge_labels;
@@ -375,8 +376,9 @@ void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header,
   drawDynamicLayers(header, dynamic_markers);
 
   std::map<LayerId, DynamicLayerConfig> all_dynamic_configs;
-  for (const auto& id_manager_pair : dynamic_configs_) {
-    all_dynamic_configs[id_manager_pair.first] = id_manager_pair.second->get();
+  for (const auto& id_layer_pair : scene_graph_->dynamicLayers()) {
+    const auto layer_id = id_layer_pair.first;
+    all_dynamic_configs[layer_id] = config_manager_->getDynamicLayerConfig(layer_id);
   }
 
   const std::string dynamic_interlayer_edge_prefix = "dynamic_interlayer_edges_";
@@ -385,7 +387,7 @@ void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header,
                                   *scene_graph_,
                                   all_configs,
                                   all_dynamic_configs,
-                                  visualizer_config_->get(),
+                                  visualizer_config,
                                   dynamic_interlayer_edge_prefix);
 
   std::set<std::string> seen_dyn_edge_labels;
@@ -416,45 +418,8 @@ void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header,
     dynamic_layers_viz_pub_.publish(dynamic_markers);
   }
 
-  // TODO(nathan) move to scene graph probably
   for (const auto& plugin : plugins_) {
-    plugin->draw(header, *scene_graph_);
-  }
-}
-
-bool DynamicSceneGraphVisualizer::hasConfigChanged() const {
-  bool has_changed = false;
-
-  has_changed |= visualizer_config_->hasChange();
-  has_changed |= places_colormap_->hasChange();
-  for (const auto& id_manager_pair : layer_configs_) {
-    has_changed |= id_manager_pair.second->hasChange();
-  }
-
-  for (const auto& id_manager_pair : dynamic_configs_) {
-    has_changed |= id_manager_pair.second->hasChange();
-  }
-
-  for (const auto& plugin : plugins_) {
-    has_changed |= plugin->hasChange();
-  }
-
-  return has_changed;
-}
-
-void DynamicSceneGraphVisualizer::clearConfigChangeFlags() {
-  visualizer_config_->clearChangeFlag();
-  places_colormap_->clearChangeFlag();
-  for (auto& id_manager_pair : layer_configs_) {
-    id_manager_pair.second->clearChangeFlag();
-  }
-
-  for (auto& id_manager_pair : dynamic_configs_) {
-    id_manager_pair.second->clearChangeFlag();
-  }
-
-  for (const auto& plugin : plugins_) {
-    plugin->clearChangeFlag();
+    plugin->draw(*config_manager_, header, *scene_graph_);
   }
 }
 
@@ -480,19 +445,6 @@ void DynamicSceneGraphVisualizer::addMultiMarkerIfValid(const Marker& marker,
   }
 
   deleteMultiMarker(marker.header, marker.ns, msg);
-}
-
-void DynamicSceneGraphVisualizer::setupConfigs(
-    const DynamicSceneGraph::LayerIds& layer_ids) {
-  visualizer_config_.reset(new VisualizerConfigManager(config_nh_, "config"));
-
-  const std::string colormap_ns = "config/places_colormap";
-  places_colormap_.reset(new ColormapConfigManager(config_nh_, colormap_ns));
-
-  for (const auto& layer : layer_ids) {
-    const std::string layer_ns = "config/layer" + std::to_string(layer);
-    layer_configs_[layer] = std::make_shared<LayerConfigManager>(config_nh_, layer_ns);
-  }
 }
 
 void DynamicSceneGraphVisualizer::displayLoop(const ros::WallTimerEvent&) {
@@ -540,36 +492,48 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
                                             const SceneGraphLayer& layer,
                                             const LayerConfig& config,
                                             MarkerArray& msg) {
-  const auto& viz_config = visualizer_config_->get();
+  const auto& viz_config = config_manager_->getVisualizerConfig();
   const std::string node_ns = getLayerNodeNamespace(layer.id);
 
-  Marker nodes;
-  const auto curr_mode = static_cast<NodeColorMode>(config.marker_color_mode);
-  switch (curr_mode) {
-    case NodeColorMode::ACTIVE:
-      nodes = makeCentroidMarkers(
-          header, config, layer, viz_config, node_ns, getActiveColor);
-      break;
-    case NodeColorMode::DISTANCE:
-      nodes = makeCentroidMarkers(
-          header, config, layer, viz_config, node_ns, places_colormap_->get());
-      break;
-    case NodeColorMode::PARENT:
-      nodes =
-          makeCentroidMarkers(header,
-                              config,
-                              layer,
-                              viz_config,
-                              node_ns,
-                              std::bind(&DynamicSceneGraphVisualizer::getParentColor,
-                                        this,
-                                        std::placeholders::_1));
-      break;
-    case NodeColorMode::DEFAULT:
-    default:
-      nodes = makeCentroidMarkers(header, config, layer, viz_config, node_ns);
-      break;
+  ColorFunction layer_color_func;
+  auto iter = layer_colors_.find(layer.id);
+  if (iter != layer_colors_.end()) {
+    layer_color_func = iter->second;
+  } else {
+    const auto curr_mode = static_cast<NodeColorMode>(config.marker_color_mode);
+    switch (curr_mode) {
+      case NodeColorMode::ACTIVE:
+        layer_color_func = getActiveColor;
+        break;
+      case NodeColorMode::DISTANCE:
+        layer_color_func = [&](const SceneGraphNode& node) -> NodeColor {
+          try {
+            return getDistanceColor(
+                viz_config,
+                config_manager_->getColormapConfig("places_colormap"),
+                node.attributes<PlaceNodeAttributes>().distance);
+          } catch (const std::bad_cast&) {
+            return NodeColor::Zero();
+          }
+        };
+        break;
+      case NodeColorMode::PARENT:
+        layer_color_func = [this](const auto& node) { return getParentColor(node); };
+        break;
+      case NodeColorMode::DEFAULT:
+      default:
+        layer_color_func = [](const SceneGraphNode& node) -> NodeColor {
+          try {
+            return node.attributes<SemanticNodeAttributes>().color;
+          } catch (const std::bad_cast&) {
+            return NodeColor::Zero();
+          }
+        };
+        break;
+    }
   }
+
+  auto nodes = makeCentroidMarkers(header, config, layer, viz_config, node_ns, layer_color_func);
   addMultiMarkerIfValid(nodes, msg);
 
   const std::string edge_ns = getLayerEdgeNamespace(layer.id);
@@ -604,13 +568,13 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     const std::string bbox_ns = getLayerBboxNamespace(layer.id);
     const std::string bbox_edge_ns = getLayerBboxEdgeNamespace(layer.id);
     try {
-      Marker bbox =
-          makeLayerWireframeBoundingBoxes(header, config, layer, viz_config, bbox_ns);
+      Marker bbox = makeLayerWireframeBoundingBoxes(
+          header, config, layer, viz_config, bbox_ns, layer_color_func);
       addMultiMarkerIfValid(bbox, msg);
 
       if (config.collapse_bounding_box) {
-        Marker bbox_edges =
-            makeEdgesToBoundingBoxes(header, config, layer, viz_config, bbox_edge_ns);
+        Marker bbox_edges = makeEdgesToBoundingBoxes(
+            header, config, layer, viz_config, bbox_edge_ns, layer_color_func);
         addMultiMarkerIfValid(bbox_edges, msg);
       }
     } catch (const std::bad_cast&) {
@@ -631,19 +595,19 @@ void DynamicSceneGraphVisualizer::drawLayerMeshEdges(const std_msgs::Header& hea
     return;
   }
 
-  if (!layer_configs_.count(layer_id)) {
+  const auto layer_config = config_manager_->getLayerConfig(layer_id);
+  if (!layer_config) {
     return;
   }
 
-  LayerConfig config = layer_configs_.at(layer_id)->get();
-  if (!config.visualize) {
+  if (!layer_config->visualize) {
     deleteMultiMarker(header, ns, msg);
     return;
   }
 
   Marker mesh_edges = makeMeshEdgesMarker(header,
-                                          config,
-                                          visualizer_config_->get(),
+                                          *layer_config,
+                                          config_manager_->getVisualizerConfig(),
                                           *scene_graph_,
                                           scene_graph_->getLayer(layer_id),
                                           ns);

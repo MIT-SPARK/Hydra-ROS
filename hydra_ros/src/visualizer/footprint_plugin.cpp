@@ -87,7 +87,8 @@ FootprintPlugin::FootprintPlugin(const ros::NodeHandle& nh, const std::string& n
 
 FootprintPlugin::~FootprintPlugin() {}
 
-void FootprintPlugin::draw(const std_msgs::Header& header,
+void FootprintPlugin::draw(const ConfigManager&,
+                           const std_msgs::Header& header,
                            const DynamicSceneGraph& graph) {
   visualization_msgs::MarkerArray msg;
   msg.markers.resize(config.draw_boundaries ? (config.draw_boundary_vertices ? 3 : 2)

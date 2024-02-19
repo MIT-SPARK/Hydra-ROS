@@ -63,6 +63,8 @@ class HydraRosPipeline : public HydraPipeline {
   bool handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
                           hydra_msgs::QueryFreespace::Response& res);
 
+  void init() override;
+
  protected:
   const HydraRosConfig config_;
   ros::NodeHandle nh_;

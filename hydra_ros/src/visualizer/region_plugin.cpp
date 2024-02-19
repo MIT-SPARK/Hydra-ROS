@@ -72,7 +72,8 @@ RegionPlugin::RegionPlugin(const ros::NodeHandle& nh, const std::string& name)
 
 RegionPlugin::~RegionPlugin() {}
 
-void RegionPlugin::draw(const std_msgs::Header& header,
+void RegionPlugin::draw(const ConfigManager&,
+                        const std_msgs::Header& header,
                         const DynamicSceneGraph& graph) {
   visualization_msgs::MarkerArray msg;
   msg.markers.resize(3);

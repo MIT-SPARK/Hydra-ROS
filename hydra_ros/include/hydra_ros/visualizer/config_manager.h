@@ -33,64 +33,86 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <visualization_msgs/MarkerArray.h>
+#include <dynamic_reconfigure/server.h>
+#include <ros/ros.h>
 
-#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/visualizer_types.h"
 
 namespace hydra {
 
-struct BasisPointPluginConfig {
-  bool show_voxblox_connections = false;
-  bool draw_basis_points = true;
-  bool places_use_sphere = false;
-  bool draw_places_labels = false;
-  double places_label_scale = 0.2;
-  double places_node_scale = 0.2;
-  double places_node_alpha = 0.8;
-  double places_edge_scale = 0.05;
-  double places_edge_alpha = 0.5;
-  double basis_point_scale = 0.1;
-  double basis_point_alpha = 0.8;
-  std::string label_colormap = "";
+template <typename Config>
+class ConfigWrapper {
+ public:
+  using Ptr = std::shared_ptr<ConfigWrapper<Config>>;
+  using Server = dynamic_reconfigure::Server<Config>;
+  using UpdateCallback = std::function<void()>;
+
+  ConfigWrapper(const ros::NodeHandle& nh, const std::string& ns)
+      : nh_(nh, ns), changed_(true), on_update_callback_([]() {}) {
+    server_ = std::make_unique<Server>(nh_);
+    server_->setCallback(boost::bind(&ConfigWrapper<Config>::update, this, _1, _2));
+  }
+
+  bool hasChange() { return changed_; }
+
+  void clearChangeFlag() { changed_ = false; }
+
+  const Config& get() const { return config_; };
+
+  void setUpdateCallback(UpdateCallback callback) {
+    on_update_callback_ = std::move(callback);
+  }
+
+ private:
+  void update(Config& config, uint32_t) {
+    config_ = config;
+    changed_ = true;
+    on_update_callback_();
+  }
+
+ private:
+  ros::NodeHandle nh_;
+
+  bool changed_;
+  Config config_;
+
+  std::unique_ptr<Server> server_;
+
+  UpdateCallback on_update_callback_;
 };
 
-class SemanticColorMap;
-
-class BasisPointPlugin : public DsgVisualizerPlugin {
+class ConfigManager {
  public:
-  BasisPointPlugin(const ros::NodeHandle& nh, const std::string& name);
+  using Ptr = std::shared_ptr<ConfigManager>;
 
-  virtual ~BasisPointPlugin() = default;
+  ConfigManager(const ros::NodeHandle& nh);
 
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  virtual ~ConfigManager();
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  virtual void reset();
 
-  const BasisPointPluginConfig config;
+  virtual void reset(const DynamicSceneGraph& graph);
 
- protected:
-  void drawNodes(const std_msgs::Header& header,
-                 const DynamicSceneGraph& graph,
-                 visualization_msgs::MarkerArray& msg) const;
+  virtual bool hasChange() const;
 
-  void drawEdges(const std_msgs::Header& header,
-                 const DynamicSceneGraph& graph,
-                 visualization_msgs::MarkerArray& msg) const;
+  virtual void clearChangeFlags();
 
-  void drawBasisPoints(const std_msgs::Header& header,
-                       const DynamicSceneGraph& graph,
-                       visualization_msgs::MarkerArray& msg) const;
+  const VisualizerConfig& getVisualizerConfig() const;
 
-  ros::Publisher pub_;
-  mutable std::set<std::string> published_;
-  std::unique_ptr<SemanticColorMap> colormap_;
+  const LayerConfig* getLayerConfig(LayerId layer) const;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, BasisPointPlugin, ros::NodeHandle, std::string>(
-          "BasisPointPlugin");
+  const DynamicLayerConfig& getDynamicLayerConfig(LayerId layer) const;
+
+  const ColormapConfig& getColormapConfig(const std::string& name) const;
+
+ private:
+  ros::NodeHandle nh_;
+
+  ConfigWrapper<VisualizerConfig>::Ptr visualizer_config_;
+  std::map<LayerId, ConfigWrapper<LayerConfig>::Ptr> layer_configs_;
+  mutable std::map<LayerId, ConfigWrapper<DynamicLayerConfig>::Ptr>
+      dynamic_layer_configs_;
+  mutable std::map<std::string, ConfigWrapper<ColormapConfig>::Ptr> colormaps_;
 };
 
 }  // namespace hydra

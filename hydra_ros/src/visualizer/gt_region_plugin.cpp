@@ -224,7 +224,9 @@ void GtRegionPlugin::addLabelMarker(const std_msgs::Header& header,
   marker.pose.position.z += config.label_offset;
 }
 
-void GtRegionPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph&) {
+void GtRegionPlugin::draw(const ConfigManager&,
+                          const std_msgs::Header& header,
+                          const DynamicSceneGraph&) {
   if (!published_labels_.empty()) {
     return;
   }

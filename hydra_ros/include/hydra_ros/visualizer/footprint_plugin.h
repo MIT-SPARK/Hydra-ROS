@@ -60,7 +60,9 @@ class FootprintPlugin : public DsgVisualizerPlugin {
 
   virtual ~FootprintPlugin();
 
-  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void draw(const ConfigManager& configs,
+            const std_msgs::Header& header,
+            const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 

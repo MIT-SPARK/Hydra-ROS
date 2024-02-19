@@ -51,14 +51,21 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
   virtual ~MeshPlugin();
 
-  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void draw(const ConfigManager& configs,
+            const std_msgs::Header& header,
+            const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+
+  bool hasChange() const override;
+
+  void clearChangeFlag() override;
 
  protected:
   bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 
   bool color_by_label_;
+  bool need_redraw_;
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
   std::unique_ptr<SemanticColorMap> colormap_;

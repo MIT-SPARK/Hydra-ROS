@@ -72,7 +72,9 @@ class GtRegionPlugin : public DsgVisualizerPlugin {
 
   virtual ~GtRegionPlugin();
 
-  void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void draw(const ConfigManager& configs,
+            const std_msgs::Header& header,
+            const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 

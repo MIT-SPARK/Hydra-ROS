@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <dynamic_reconfigure/server.h>
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 
@@ -41,53 +40,15 @@
 #include <string>
 #include <vector>
 
+#include "hydra_ros/visualizer/config_manager.h"
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
 #include "hydra_ros/visualizer/visualizer_types.h"
+#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
 
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-
-template <typename Config>
-class ConfigManager {
- public:
-  using Ptr = std::shared_ptr<ConfigManager<Config>>;
-  using Server = dynamic_reconfigure::Server<Config>;
-  using UpdateCallback = std::function<void()>;
-
-  ConfigManager(const ros::NodeHandle& nh, const std::string& ns)
-      : nh_(nh, ns), changed_(true), on_update_callback_([]() {}) {
-    server_ = std::make_unique<Server>(nh_);
-    server_->setCallback(boost::bind(&ConfigManager<Config>::update, this, _1, _2));
-  }
-
-  bool hasChange() { return changed_; }
-
-  void clearChangeFlag() { changed_ = false; }
-
-  const Config& get() const { return config_; };
-  
-  void setUpdateCallback(UpdateCallback callback) {
-    on_update_callback_ = std::move(callback);
-  }
-
- private:
-  void update(Config& config, uint32_t) {
-    config_ = config;
-    changed_ = true;
-    on_update_callback_();
-  }
-
-  ros::NodeHandle nh_;
-
-  bool changed_;
-  Config config_;
-
-  std::unique_ptr<Server> server_;
-
-  UpdateCallback on_update_callback_;
-};
 
 void clearPrevMarkers(const std_msgs::Header& header,
                       const std::set<NodeId>& curr_nodes,
@@ -97,13 +58,7 @@ void clearPrevMarkers(const std_msgs::Header& header,
 
 class DynamicSceneGraphVisualizer {
  public:
-  using DynamicLayerConfigManager = ConfigManager<DynamicLayerConfig>;
-  using VisualizerConfigManager = ConfigManager<VisualizerConfig>;
-  using LayerConfigManager = ConfigManager<LayerConfig>;
-  using ColormapConfigManager = ConfigManager<ColormapConfig>;
-
-  DynamicSceneGraphVisualizer(const ros::NodeHandle& nh,
-                              const DynamicSceneGraph::LayerIds& layer_ids);
+  explicit DynamicSceneGraphVisualizer(const ros::NodeHandle& nh);
 
   virtual ~DynamicSceneGraphVisualizer() = default;
 
@@ -129,14 +84,17 @@ class DynamicSceneGraphVisualizer {
 
   DynamicSceneGraph::Ptr getGraph() const { return scene_graph_; }
 
+  void setLayerColorFunction(LayerId layer, const ColorFunction& func);
+
+  void addUpdateCallback(
+      const std::function<void(const DynamicSceneGraph::Ptr&)>& func) {
+    callbacks_.push_back(func);
+  }
+
  protected:
   virtual void resetImpl(const std_msgs::Header& header, MarkerArray& msg);
 
   virtual void redrawImpl(const std_msgs::Header& header, MarkerArray& msg);
-
-  virtual bool hasConfigChanged() const;
-
-  virtual void clearConfigChangeFlags();
 
   virtual void drawLayer(const std_msgs::Header& header,
                          const SceneGraphLayer& layer,
@@ -154,8 +112,6 @@ class DynamicSceneGraphVisualizer {
                          MarkerArray& msg);
 
   void addMultiMarkerIfValid(const Marker& marker, MarkerArray& msg);
-
-  void setupConfigs(const DynamicSceneGraph::LayerIds& layer_ids);
 
   void displayLoop(const ros::WallTimerEvent&);
 
@@ -196,8 +152,6 @@ class DynamicSceneGraphVisualizer {
   }
 
  private:
-  const DynamicLayerConfig& getConfig(LayerId layer);
-
   void drawDynamicLayer(const std_msgs::Header& header,
                         const DynamicSceneGraphLayer& layer,
                         const DynamicLayerConfig& config,
@@ -216,16 +170,16 @@ class DynamicSceneGraphVisualizer {
   NodeColor getParentColor(const SceneGraphNode& node) const;
 
  protected:
-  DynamicSceneGraph::Ptr scene_graph_;
-
   ros::NodeHandle nh_;
-  ros::NodeHandle config_nh_;
+  ros::WallTimer visualizer_loop_timer_;
+  ConfigManager::Ptr config_manager_;
 
   bool need_redraw_;
   bool periodic_redraw_;
   std::string visualizer_frame_;
-
-  ros::WallTimer visualizer_loop_timer_;
+  DynamicSceneGraph::Ptr scene_graph_;
+  std::map<LayerId, ColorFunction> layer_colors_;
+  std::list<std::function<void(const DynamicSceneGraph::Ptr&)>> callbacks_;
 
   const std::string node_ns_prefix_ = "layer_nodes_";
   const std::string edge_ns_prefix_ = "layer_edges_";
@@ -241,20 +195,11 @@ class DynamicSceneGraphVisualizer {
   std::set<std::string> published_multimarkers_;
   std::map<LayerId, std::set<NodeId>> prev_labels_;
   std::map<LayerId, std::set<NodeId>> curr_labels_;
-
-  std::map<LayerId, LayerConfigManager::Ptr> layer_configs_;
-  VisualizerConfigManager::Ptr visualizer_config_;
-  ColormapConfigManager::Ptr places_colormap_;
-
-  ros::Publisher dsg_pub_;
-
-  std::map<LayerId, DynamicLayerConfigManager::Ptr> dynamic_configs_;
-
-  std::list<std::shared_ptr<DsgVisualizerPlugin>> plugins_;
-
   std::set<std::string> published_dynamic_labels_;
 
+  ros::Publisher dsg_pub_;
   ros::Publisher dynamic_layers_viz_pub_;
+  std::list<std::shared_ptr<DsgVisualizerPlugin>> plugins_;
 };
 
 }  // namespace hydra

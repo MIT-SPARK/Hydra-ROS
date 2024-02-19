@@ -71,7 +71,11 @@ void declare_config(HydraRosConfig& conf) {
 HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
     : HydraPipeline(config::fromRos<PipelineConfig>(nh), robot_id),
       config_(config::checkValid(config::fromRos<HydraRosConfig>(nh))),
-      nh_(nh) {
+      nh_(nh) {}
+
+HydraRosPipeline::~HydraRosPipeline() {}
+
+void HydraRosPipeline::init() {
   const auto& pipeline_config = HydraConfig::instance().getConfig();
   initFrontend();
   initBackend();
@@ -84,8 +88,6 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
     initLCD();
   }
 }
-
-HydraRosPipeline::~HydraRosPipeline() {}
 
 void HydraRosPipeline::initFrontend() {
   // explict type for shared_ptr

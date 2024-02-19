@@ -36,6 +36,8 @@
 #include <hydra/common/dsg_types.h>
 #include <ros/ros.h>
 
+#include "hydra_ros/visualizer/config_manager.h"
+
 namespace hydra {
 
 class DsgVisualizerPlugin {
@@ -47,13 +49,16 @@ class DsgVisualizerPlugin {
 
   virtual ~DsgVisualizerPlugin() = default;
 
-  virtual void draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) = 0;
+  virtual void draw(const ConfigManager& configs,
+                    const std_msgs::Header& header,
+                    const DynamicSceneGraph& graph) = 0;
 
   virtual void reset(const std_msgs::Header& header,
                      const DynamicSceneGraph& graph) = 0;
 
   // Let plugins request changes.
   virtual bool hasChange() const { return false; }
+
   virtual void clearChangeFlag() {}
 
  protected:

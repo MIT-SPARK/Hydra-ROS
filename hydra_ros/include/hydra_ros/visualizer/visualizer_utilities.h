@@ -44,6 +44,10 @@ using ColorFunction = std::function<NodeColor(const SceneGraphNode&)>;
 using EdgeColorFunction =
     std::function<NodeColor(const SceneGraphNode&, const SceneGraphNode&, bool)>;
 
+NodeColor getDistanceColor(const VisualizerConfig& config,
+                           const ColormapConfig& colors,
+                           double distance);
+
 visualization_msgs::Marker makeDeleteMarker(const std_msgs::Header& header,
                                             size_t id,
                                             const std::string& ns);
@@ -53,21 +57,24 @@ visualization_msgs::Marker makeLayerWireframeBoundingBoxes(
     const LayerConfig& config,
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const std::string& ns);
+    const std::string& ns,
+    const ColorFunction& func);
 
 visualization_msgs::Marker makeEdgesToBoundingBoxes(
     const std_msgs::Header& header,
     const LayerConfig& config,
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const std::string& ns);
+    const std::string& ns,
+    const ColorFunction& func);
 
 visualization_msgs::Marker makeBoundingBoxMarker(
     const std_msgs::Header& header,
     const LayerConfig& config,
     const SceneGraphNode& node,
     const VisualizerConfig& visualizer_config,
-    const std::string& ns);
+    const std::string& ns,
+    const ColorFunction& func);
 
 visualization_msgs::Marker makeTextMarker(const std_msgs::Header& header,
                                           const LayerConfig& config,
