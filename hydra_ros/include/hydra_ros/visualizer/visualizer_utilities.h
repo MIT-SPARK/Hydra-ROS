@@ -41,8 +41,8 @@
 namespace hydra {
 
 using ColorFunction = std::function<NodeColor(const SceneGraphNode&)>;
-using EdgeColorFunction =
-    std::function<NodeColor(const SceneGraphNode&, const SceneGraphNode&, bool)>;
+using EdgeColorFunction = std::function<NodeColor(
+    const SceneGraphNode&, const SceneGraphNode&, const SceneGraphEdge&, bool)>;
 
 NodeColor getDistanceColor(const VisualizerConfig& config,
                            const ColormapConfig& colors,
@@ -51,6 +51,27 @@ NodeColor getDistanceColor(const VisualizerConfig& config,
 visualization_msgs::Marker makeDeleteMarker(const std_msgs::Header& header,
                                             size_t id,
                                             const std::string& ns);
+
+visualization_msgs::Marker makeLayerPolygonBoundaries(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const std::string& ns);
+
+visualization_msgs::Marker makeLayerEllipseBoundaries(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const std::string& ns);
+
+visualization_msgs::Marker makeLayerPolygonEdges(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const std::string& ns);
 
 visualization_msgs::Marker makeLayerWireframeBoundingBoxes(
     const std_msgs::Header& header,
@@ -149,6 +170,14 @@ visualization_msgs::Marker makeLayerEdgeMarkers(
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
     const NodeColor& color,
+    const std::string& ns);
+
+visualization_msgs::Marker makeLayerEdgeMarkers(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const ColormapConfig& cmap,
     const std::string& ns);
 
 visualization_msgs::Marker makeLayerEdgeMarkers(

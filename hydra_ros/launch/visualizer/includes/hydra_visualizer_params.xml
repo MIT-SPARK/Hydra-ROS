@@ -11,12 +11,14 @@
   <arg name="color_mesh_by_label" default="false"/>
   <arg name="mesh_namespace" default="dsg_mesh"/>
   <arg name="gt_regions_path" default=""/>
+  <arg name="use_2d_places" default="false"/>
 
   <group ns="$(arg visualizer_ns)">
     <param name="visualizer_frame" value="$(arg visualizer_frame)"/>
     <rosparam file="$(arg viz_config_path)/visualizer.yaml" ns="config"/>
     <rosparam file="$(arg viz_config_path)/objects_layer.yaml" ns="config/layer2"/>
-    <rosparam file="$(arg viz_config_path)/places_layer.yaml" ns="config/layer3"/>
+    <rosparam file="$(arg viz_config_path)/places_layer.yaml" ns="config/layer3" unless="$(arg use_2d_places)"/>
+    <rosparam file="$(arg viz_config_path)/outdoor_places_layer.yaml" ns="config/layer3" if="$(arg use_2d_places)"/>
     <rosparam file="$(arg viz_config_path)/rooms_layer.yaml" ns="config/layer4"/>
     <rosparam file="$(arg viz_config_path)/buildings_layer.yaml" ns="config/layer5"/>
     <rosparam file="$(arg viz_config_path)/agent_layer.yaml" ns="config/dynamic_layer/2"/>

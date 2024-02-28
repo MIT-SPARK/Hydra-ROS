@@ -35,6 +35,7 @@
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
 #include <glog/logging.h>
+#include <spark_dsg/node_attributes.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
@@ -51,6 +52,8 @@ enum class NodeColorMode : int {
   DISTANCE = hydra_ros::LayerVisualizer_DISTANCE,
   PARENT = hydra_ros::LayerVisualizer_PARENT,
   ACTIVE = hydra_ros::LayerVisualizer_ACTIVE,
+  NEED_CLEANUP = hydra_ros::LayerVisualizer_CLEANUP,
+  ACTIVE_MESH = hydra_ros::LayerVisualizer_ACTIVE_MESH,
 };
 
 void clearPrevMarkers(const std_msgs::Header& header,
@@ -461,6 +464,8 @@ void DynamicSceneGraphVisualizer::deleteLayer(const std_msgs::Header& header,
   deleteMultiMarker(header, getLayerEdgeNamespace(layer.id), msg);
   deleteMultiMarker(header, getLayerBboxNamespace(layer.id), msg);
   deleteMultiMarker(header, getLayerBboxEdgeNamespace(layer.id), msg);
+  deleteMultiMarker(header, getLayerBoundaryNamespace(layer.id), msg);
+  deleteMultiMarker(header, getLayerBoundaryEdgeNamespace(layer.id), msg);
 
   const std::string label_ns = getLayerLabelNamespace(layer.id);
   for (const auto& node : prev_labels_.at(layer.id)) {
@@ -472,6 +477,18 @@ void DynamicSceneGraphVisualizer::deleteLayer(const std_msgs::Header& header,
 
 NodeColor getActiveColor(const SceneGraphNode& node) {
   return node.attributes().is_active ? NodeColor(0, 255, 0) : NodeColor::Zero();
+}
+
+NodeColor getCleanupColor(const SceneGraphNode& node) {
+  return node.attributes<Place2dNodeAttributes>().need_cleanup_splitting
+             ? NodeColor(255, 0, 0)
+             : NodeColor(0, 255, 0);
+}
+
+NodeColor getActiveMeshColor(const SceneGraphNode& node) {
+  return node.attributes<Place2dNodeAttributes>().has_active_mesh_indices
+             ? NodeColor(255, 255, 0)
+             : NodeColor(0, 0, 255);
 }
 
 NodeColor DynamicSceneGraphVisualizer::getParentColor(
@@ -505,6 +522,12 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
       case NodeColorMode::ACTIVE:
         layer_color_func = getActiveColor;
         break;
+      case NodeColorMode::ACTIVE_MESH:
+        layer_color_func = getActiveMeshColor;
+        break;
+      case NodeColorMode::NEED_CLEANUP:
+        layer_color_func = getCleanupColor;
+        break;
       case NodeColorMode::DISTANCE:
         layer_color_func = [&](const SceneGraphNode& node) -> NodeColor {
           try {
@@ -533,12 +556,23 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     }
   }
 
-  auto nodes = makeCentroidMarkers(header, config, layer, viz_config, node_ns, layer_color_func);
+  auto nodes =
+      makeCentroidMarkers(header, config, layer, viz_config, node_ns, layer_color_func);
   addMultiMarkerIfValid(nodes, msg);
 
   const std::string edge_ns = getLayerEdgeNamespace(layer.id);
-  Marker edges = makeLayerEdgeMarkers(
-      header, config, layer, viz_config, NodeColor::Zero(), edge_ns);
+  Marker edges;
+  if (config.color_edges_by_weight) {
+    edges = makeLayerEdgeMarkers(header,
+                                 config,
+                                 layer,
+                                 viz_config,
+                                 config_manager_->getColormapConfig("places_colormap"),
+                                 edge_ns);
+  } else {
+    edges = makeLayerEdgeMarkers(
+        header, config, layer, viz_config, NodeColor::Zero(), edge_ns);
+  }
   addMultiMarkerIfValid(edges, msg);
 
   const std::string label_ns = getLayerLabelNamespace(layer.id);
@@ -564,9 +598,9 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     }
   }
 
+  const std::string bbox_ns = getLayerBboxNamespace(layer.id);
+  const std::string bbox_edge_ns = getLayerBboxEdgeNamespace(layer.id);
   if (config.use_bounding_box) {
-    const std::string bbox_ns = getLayerBboxNamespace(layer.id);
-    const std::string bbox_edge_ns = getLayerBboxEdgeNamespace(layer.id);
     try {
       Marker bbox = makeLayerWireframeBoundingBoxes(
           header, config, layer, viz_config, bbox_ns, layer_color_func);
@@ -576,11 +610,51 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
         Marker bbox_edges = makeEdgesToBoundingBoxes(
             header, config, layer, viz_config, bbox_edge_ns, layer_color_func);
         addMultiMarkerIfValid(bbox_edges, msg);
+      } else {
+        deleteMultiMarker(header, bbox_edge_ns, msg);
       }
     } catch (const std::bad_cast&) {
       // TODO(nathan) consider warning
-      return;
     }
+  } else {
+    deleteMultiMarker(header, bbox_ns, msg);
+    deleteMultiMarker(header, bbox_edge_ns, msg);
+  }
+
+  const std::string boundary_ns = getLayerBoundaryNamespace(layer.id);
+  const std::string boundary_edge_ns = getLayerBoundaryEdgeNamespace(layer.id);
+  if (config.draw_boundaries) {
+    try {
+      Marker boundary =
+          makeLayerPolygonBoundaries(header, config, layer, viz_config, boundary_ns);
+      addMultiMarkerIfValid(boundary, msg);
+
+      if (config.collapse_boundary) {
+        Marker boundary_edges =
+            makeLayerPolygonEdges(header, config, layer, viz_config, boundary_edge_ns);
+        addMultiMarkerIfValid(boundary_edges, msg);
+      } else {
+        deleteMultiMarker(header, boundary_edge_ns, msg);
+      }
+    } catch (const std::bad_cast&) {
+      // TODO(nathan) consider warning
+    }
+  } else {
+    deleteMultiMarker(header, boundary_ns, msg);
+    deleteMultiMarker(header, boundary_edge_ns, msg);
+  }
+
+  const std::string boundary_ellipse_ns = getLayerBoundaryEllipseNamespace(layer.id);
+  if (config.draw_boundary_ellipse) {
+    try {
+      Marker boundary_ellipse = makeLayerEllipseBoundaries(
+          header, config, layer, viz_config, boundary_ellipse_ns);
+      addMultiMarkerIfValid(boundary_ellipse, msg);
+    } catch (const std::bad_cast&) {
+      // TODO(nathan) consider warning
+    }
+  } else {
+    deleteMultiMarker(header, boundary_ellipse_ns, msg);
   }
 
   clearPrevMarkers(

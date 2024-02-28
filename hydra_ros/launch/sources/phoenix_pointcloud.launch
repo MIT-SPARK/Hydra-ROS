@@ -11,7 +11,7 @@
     <arg name="robot_frame" default="$(arg robot_name)/base"/>
     <arg name="use_image_interface" default="false"/>
     <arg name="need_gt_publisher" default="false"/>
-    <arg name="load_static_tfs" default="true"/>
+    <arg name="load_static_tfs" default="false"/>
 
     <arg name="rgb_info_topic" default="forward/color/camera_info"/>
     <arg name="rgb_topic" default="forward/color/image_raw"/>

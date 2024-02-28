@@ -38,6 +38,7 @@
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
+#include <hydra/common/dsg_types.h>
 #include <hydra/common/hydra_config.h>
 #include <hydra/frontend/frontend_module.h>
 #include <hydra/loop_closure/loop_closure_module.h>
@@ -177,6 +178,13 @@ void HydraRosPipeline::initBackend() {
   modules_["backend"] = backend;
   if (!modules_.at("backend")) {
     LOG(FATAL) << "Failed to construct backend!";
+  }
+
+  auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
+  if (frontend->config().use_2d_places) {
+    auto places_functor = std::make_shared<dsg_updates::Update2dPlacesFunctor>(
+        backend->config().places2d_config);
+    backend->setUpdateFunctor(DsgLayers::PLACES, places_functor);
   }
 
   auto backend_publisher =

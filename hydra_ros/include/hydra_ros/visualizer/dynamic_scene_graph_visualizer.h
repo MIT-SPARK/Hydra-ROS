@@ -150,6 +150,16 @@ class DynamicSceneGraphVisualizer {
   inline std::string getLayerBboxEdgeNamespace(LayerId layer) const {
     return bbox_ns_prefix_ + "edges_" + std::to_string(layer);
   }
+  inline std::string getLayerBoundaryNamespace(LayerId layer) const {
+    return boundary_ns_prefix_ + std::to_string(layer);
+  }
+  inline std::string getLayerBoundaryEllipseNamespace(LayerId layer) const {
+    return boundary_ellipse_ns_prefix_ + std::to_string(layer);
+  }
+
+  inline std::string getLayerBoundaryEdgeNamespace(LayerId layer) const {
+    return boundary_ns_prefix_ + "edges_" + std::to_string(layer);
+  }
 
  private:
   void drawDynamicLayer(const std_msgs::Header& header,
@@ -185,9 +195,11 @@ class DynamicSceneGraphVisualizer {
   const std::string edge_ns_prefix_ = "layer_edges_";
   const std::string label_ns_prefix_ = "layer_labels_";
   const std::string bbox_ns_prefix_ = "layer_bounding_boxes_";
+  const std::string boundary_ns_prefix_ = "layer_polygon_boundaries_";
+  const std::string boundary_ellipse_ns_prefix_ = "layer_ellipsoid_boundaries_";
   const std::string mesh_edge_ns_ = "mesh_object_connections";
   const std::string interlayer_edge_ns_prefix_ = "interlayer_edges_";
-  const LayerId mesh_edge_source_layer_ = DsgLayers::OBJECTS;
+  const LayerId mesh_edge_source_layer_ = DsgLayers::MESH_PLACES;
   const std::string dynamic_node_ns_prefix_ = "dynamic_nodes_";
   const std::string dynamic_edge_ns_prefix_ = "dynamic_edges_";
   const std::string dynamic_label_ns_prefix_ = "dynamic_label_";

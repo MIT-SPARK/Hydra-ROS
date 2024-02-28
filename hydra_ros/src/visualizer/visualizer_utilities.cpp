@@ -91,6 +91,147 @@ Marker makeDeleteMarker(const std_msgs::Header& header,
   return marker;
 }
 
+Marker makeLayerEllipseBoundaries(const std_msgs::Header& header,
+                                  const LayerConfig& config,
+                                  const SceneGraphLayer& layer,
+                                  const VisualizerConfig& visualizer_config,
+                                  const std::string& ns) {
+  Marker marker;
+  marker.header = header;
+  marker.type = Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+  marker.scale.x = config.boundary_wireframe_scale;
+  fillPoseWithIdentity(marker.pose);
+  marker.pose.position.z +=
+      config.collapse_boundary ? 0.0 : getZOffset(config, visualizer_config);
+
+  geometry_msgs::Point last_point;
+  std_msgs::ColorRGBA color;
+
+  for (const auto& id_node_pair : layer.nodes()) {
+    const auto& attrs = id_node_pair.second->attributes<Place2dNodeAttributes>();
+    if (attrs.boundary.size() <= 1) {
+      continue;
+    }
+
+    color = makeColorMsg(attrs.color, config.boundary_ellipse_alpha);
+    const auto pos = attrs.position;
+    last_point.x = attrs.ellipse_matrix_expand(0, 0) + attrs.ellipse_centroid(0);
+    last_point.y = attrs.ellipse_matrix_expand(1, 0) + attrs.ellipse_centroid(1);
+    last_point.z = pos.z();
+
+    int npts = 20;
+    for (int ix = 1; ix < npts + 1; ++ix) {
+      marker.points.push_back(last_point);
+      marker.colors.push_back(color);
+
+      float t = ix * 2 * M_PI / npts;
+      Eigen::Vector2d p2 =
+          attrs.ellipse_matrix_expand * Eigen::Vector2d(cos(t), sin(t));
+      last_point.x = p2(0) + attrs.ellipse_centroid(0);
+      last_point.y = p2(1) + attrs.ellipse_centroid(1);
+      last_point.z = pos.z();
+
+      marker.points.push_back(last_point);
+      marker.colors.push_back(color);
+    }
+  }
+  return marker;
+}
+
+Marker makeLayerPolygonEdges(const std_msgs::Header& header,
+                             const LayerConfig& config,
+                             const SceneGraphLayer& layer,
+                             const VisualizerConfig& visualizer_config,
+                             const std::string& ns) {
+  Marker marker;
+  marker.header = header;
+  marker.type = Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+  marker.scale.x = config.boundary_wireframe_scale;
+  fillPoseWithIdentity(marker.pose);
+
+  for (const auto& id_node_pair : layer.nodes()) {
+    const auto& attrs = id_node_pair.second->attributes<Place2dNodeAttributes>();
+    if (attrs.boundary.size() <= 1) {
+      continue;
+    }
+
+    const auto pos = attrs.position;
+    geometry_msgs::Point node_point;
+    tf2::convert(pos, node_point);
+    node_point.z += getZOffset(config, visualizer_config);
+    const auto color = makeColorMsg(attrs.color, config.boundary_alpha);
+
+    for (size_t i = 0; i < attrs.boundary.size(); ++i) {
+      geometry_msgs::Point boundary_point;
+      tf2::convert(attrs.boundary[i], boundary_point);
+      boundary_point.z = pos.z();
+
+      marker.points.push_back(boundary_point);
+      marker.colors.push_back(color);
+      marker.points.push_back(node_point);
+      marker.colors.push_back(color);
+    }
+  }
+
+  return marker;
+}
+
+Marker makeLayerPolygonBoundaries(const std_msgs::Header& header,
+                                  const LayerConfig& config,
+                                  const SceneGraphLayer& layer,
+                                  const VisualizerConfig& visualizer_config,
+                                  const std::string& ns) {
+  Marker marker;
+  marker.header = header;
+  marker.type = Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+  marker.scale.x = config.boundary_wireframe_scale;
+
+  fillPoseWithIdentity(marker.pose);
+  marker.pose.position.z +=
+      config.collapse_boundary ? 0.0 : getZOffset(config, visualizer_config);
+
+  for (const auto& id_node_pair : layer.nodes()) {
+    const auto& attrs = id_node_pair.second->attributes<Place2dNodeAttributes>();
+    if (attrs.boundary.size() <= 1) {
+      continue;
+    }
+
+    const auto pos = attrs.position;
+
+    std_msgs::ColorRGBA color;
+    if (config.boundary_use_node_color) {
+      color = makeColorMsg(attrs.color, config.boundary_alpha);
+    } else {
+      color = makeColorMsg(NodeColor::Zero(), config.boundary_alpha);
+    }
+
+    geometry_msgs::Point last_point;
+    tf2::convert(attrs.boundary.back(), last_point);
+    last_point.z = pos.z();
+
+    for (size_t i = 0; i < attrs.boundary.size(); ++i) {
+      marker.points.push_back(last_point);
+      marker.colors.push_back(color);
+
+      tf2::convert(attrs.boundary[i], last_point);
+      last_point.z = pos.z();
+      marker.points.push_back(last_point);
+      marker.colors.push_back(color);
+    }
+  }
+
+  return marker;
+}
+
 geometry_msgs::Point getPointFromMatrix(const Eigen::MatrixXf& matrix, int col) {
   geometry_msgs::Point point;
   point.x = matrix(0, col);
@@ -638,8 +779,8 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
 
   for (const auto& id_node_pair : layer.nodes()) {
     const Node& node = *id_node_pair.second;
-    const auto& attrs = node.attributes<ObjectNodeAttributes>();
-    const auto& mesh_edge_indices = attrs.mesh_connections;
+    const auto& attrs = node.attributes<Place2dNodeAttributes>();
+    const auto& mesh_edge_indices = attrs.pcl_mesh_connections;
     if (mesh_edge_indices.empty()) {
       continue;
     }
@@ -667,17 +808,17 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
     }
 
     size_t i = 0;
-    for (const auto idx : mesh_edge_indices) {
+    for (const auto midx : mesh_edge_indices) {
       ++i;
       if ((i - 1) % (config.interlayer_edge_insertion_skip + 1) != 0) {
         continue;
       }
 
-      if (idx >= mesh->numVertices()) {
+      if (midx.idx >= mesh->numVertices()) {
         continue;
       }
 
-      Eigen::Vector3d vertex_pos = mesh->pos(idx).cast<double>();
+      Eigen::Vector3d vertex_pos = mesh->pos(midx.idx).cast<double>();
       geometry_msgs::Point vertex;
       tf2::convert(vertex_pos, vertex);
       if (!visualizer_config.collapse_layers) {
@@ -809,7 +950,29 @@ Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
       layer,
       visualizer_config,
       ns,
-      [&](const SceneGraphNode&, const SceneGraphNode&, bool) { return color; });
+      [&](const SceneGraphNode&, const SceneGraphNode&, const SceneGraphEdge&, bool) {
+        return color;
+      });
+}
+
+Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
+                            const LayerConfig& config,
+                            const SceneGraphLayer& layer,
+                            const VisualizerConfig& visualizer_config,
+                            const ColormapConfig& cmap,
+                            const std::string& ns) {
+  return makeLayerEdgeMarkers(header,
+                              config,
+                              layer,
+                              visualizer_config,
+                              ns,
+                              [&](const SceneGraphNode&,
+                                  const SceneGraphNode&,
+                                  const SceneGraphEdge& edge,
+                                  bool) {
+                                return getDistanceColor(
+                                    visualizer_config, cmap, edge.attributes().weight);
+                              });
 }
 
 Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
@@ -843,10 +1006,12 @@ Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
     target.z += getZOffset(config, visualizer_config);
     marker.points.push_back(target);
 
-    marker.colors.push_back(makeColorMsg(color_func(source_node, target_node, true),
-                                         config.intralayer_edge_alpha));
-    marker.colors.push_back(makeColorMsg(color_func(source_node, target_node, false),
-                                         config.intralayer_edge_alpha));
+    marker.colors.push_back(
+        makeColorMsg(color_func(source_node, target_node, edge_iter->second, true),
+                     config.intralayer_edge_alpha));
+    marker.colors.push_back(
+        makeColorMsg(color_func(source_node, target_node, edge_iter->second, false),
+                     config.intralayer_edge_alpha));
 
     std::advance(edge_iter, config.intralayer_edge_insertion_skip + 1);
   }
