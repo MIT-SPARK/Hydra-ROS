@@ -23,7 +23,6 @@
   <depend>tf2_eigen</depend>
   <depend>tf2_ros</depend>
 
-  <depend>pose_graph_tools</depend>
   <depend>pose_graph_tools_ros</depend>
   <depend>pose_graph_tools_msgs</depend>
   <depend>visualization_msgs</depend>

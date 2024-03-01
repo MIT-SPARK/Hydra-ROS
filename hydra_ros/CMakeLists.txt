@@ -22,7 +22,6 @@ find_package(
              tf2_eigen
              tf2_ros
              visualization_msgs
-             pose_graph_tools
              pose_graph_tools_ros
              pose_graph_tools_msgs
 )
@@ -50,7 +49,6 @@ catkin_package(
   tf2_eigen
   tf2_ros
   visualization_msgs
-  pose_graph_tools
   pose_graph_tools_ros
   pose_graph_tools_msgs
   DEPENDS hydra PCL OpenCV
