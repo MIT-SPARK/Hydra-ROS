@@ -184,7 +184,7 @@ void HydraRosPipeline::initBackend() {
   if (frontend->config().use_2d_places) {
     auto places_functor = std::make_shared<dsg_updates::Update2dPlacesFunctor>(
         backend->config().places2d_config);
-    backend->setUpdateFunctor(DsgLayers::PLACES, places_functor);
+    backend->setUpdateFunctor(DsgLayers::MESH_PLACES, places_functor);
   }
 
   auto backend_publisher =

@@ -150,8 +150,7 @@
         <param name="reconstruction/use_image_receiver" value="$(arg use_image_interface)"/>
         <param name="reconstruction/image_queue_size" value="$(arg image_queue_size)"/>
         <param name="reconstruction/publish_pointcloud" value="$(arg publish_pointcloud)"/>
-        <param name="reconstruction/copy_dense_representations" value="false" if="$(arg use_2d_places)"/>
-        <param name="reconstruction/copy_dense_representations" value="true" unless="$(arg use_2d_places)"/>
+        <param name="reconstruction/copy_dense_representations" value="true"/>
         <param name="reconstruction/sensor/type" value="$(arg sensor_type)"/>
         <param name="reconstruction/sensor/min_range" value="$(arg sensor_min_range)"/>
         <param name="reconstruction/sensor/max_range" value="$(arg sensor_max_range)"/>

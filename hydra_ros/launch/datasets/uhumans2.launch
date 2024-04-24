@@ -40,7 +40,7 @@
         <arg name="rviz_file" default="uhumans2.rviz"/>
         <arg name="override_default_lcd" default="true"/>
         <arg name="use_oriented_bounding_boxes" default="false"/>
-        <arg name="use_2d_places" default="false"/>
+        <arg name="use_2d_places" default="true"/>
     </include>
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="fake_world_tf" args="0 0 0 0 0 0 1 map world" if="$(arg use_gt_frame)"/>
