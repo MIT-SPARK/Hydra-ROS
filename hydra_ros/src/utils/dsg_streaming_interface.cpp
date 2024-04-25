@@ -39,7 +39,7 @@
 #include <hydra/utils/display_utilities.h>
 #include <hydra/utils/timing_utilities.h>
 #include <kimera_pgmo/utils/CommonFunctions.h>
-#include <spark_dsg/graph_binary_serialization.h>
+#include <spark_dsg/serialization/graph_binary_serialization.h>
 #include <spark_dsg/pgmo_mesh_traits.h>
 
 namespace hydra {
