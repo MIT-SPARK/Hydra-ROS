@@ -51,14 +51,13 @@ struct DsgOptimizer {
         << "missing frontend_state_filepath";
     nh.getParam("log_path", dsg_output_path);
 
-    const LayerId mesh_layer_id = 1;
     const std::map<LayerId, char>& layer_id_map{{DsgLayers::OBJECTS, 'o'},
                                                 {DsgLayers::PLACES, 'p'},
                                                 {DsgLayers::ROOMS, 'r'},
                                                 {DsgLayers::BUILDINGS, 'b'}};
 
-    frontend_dsg = std::make_shared<SharedDsgInfo>(layer_id_map, mesh_layer_id);
-    backend_dsg = std::make_shared<SharedDsgInfo>(layer_id_map, mesh_layer_id);
+    frontend_dsg = std::make_shared<SharedDsgInfo>(layer_id_map);
+    backend_dsg = std::make_shared<SharedDsgInfo>(layer_id_map);
 
     frontend_dsg->graph = frontend_dsg->graph->load(dsg_filepath);
     frontend_dsg->updated = true;
