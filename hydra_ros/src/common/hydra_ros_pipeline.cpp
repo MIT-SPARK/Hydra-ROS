@@ -181,7 +181,7 @@ void HydraRosPipeline::initBackend() {
   }
 
   auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
-  if (frontend->config().use_2d_places) {
+  if (frontend->config().surface_places) {
     auto places_functor = std::make_shared<dsg_updates::Update2dPlacesFunctor>(
         backend->config().places2d_config);
     backend->setUpdateFunctor(DsgLayers::MESH_PLACES, places_functor);
