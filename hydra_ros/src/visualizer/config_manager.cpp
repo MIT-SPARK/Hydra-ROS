@@ -104,15 +104,22 @@ void ConfigManager::clearChangeFlags() {
   }
 }
 
-
 const VisualizerConfig& ConfigManager::getVisualizerConfig() const {
-  return CHECK_NOTNULL(visualizer_config_)->get();
+  if (!visualizer_config_) {
+    visualizer_config_ =
+        std::make_shared<ConfigWrapper<VisualizerConfig>>(nh_, "config");
+  }
+
+  return visualizer_config_->get();
 }
 
 const LayerConfig* ConfigManager::getLayerConfig(LayerId layer) const {
   auto iter = layer_configs_.find(layer);
   if (iter == layer_configs_.end()) {
-    return nullptr;
+    const auto ns = "config/layer" + std::to_string(layer);
+    iter = layer_configs_
+               .emplace(layer, std::make_shared<ConfigWrapper<LayerConfig>>(nh_, ns))
+               .first;
   }
 
   return &(iter->second->get());

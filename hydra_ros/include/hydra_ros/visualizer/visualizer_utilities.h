@@ -40,6 +40,7 @@
 
 namespace hydra {
 
+using FilterFunction = std::function<bool(const SceneGraphNode&)>;
 using ColorFunction = std::function<NodeColor(const SceneGraphNode&)>;
 using EdgeColorFunction = std::function<NodeColor(
     const SceneGraphNode&, const SceneGraphNode&, const SceneGraphEdge&, bool)>;
@@ -51,6 +52,17 @@ NodeColor getDistanceColor(const VisualizerConfig& config,
 visualization_msgs::Marker makeDeleteMarker(const std_msgs::Header& header,
                                             size_t id,
                                             const std::string& ns);
+
+void fillCornersFromBbox(const BoundingBox& bbox, Eigen::MatrixXf& corners);
+
+void addWireframeToMarker(const Eigen::MatrixXf& corners,
+                          const std_msgs::ColorRGBA& color,
+                          visualization_msgs::Marker& marker);
+
+void addEdgesToCorners(const Eigen::MatrixXf& corners,
+                       const geometry_msgs::Point& node_centroid,
+                       const std_msgs::ColorRGBA& color,
+                       visualization_msgs::Marker& marker);
 
 visualization_msgs::Marker makeLayerPolygonBoundaries(
     const std_msgs::Header& header,
@@ -79,7 +91,8 @@ visualization_msgs::Marker makeLayerWireframeBoundingBoxes(
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
     const std::string& ns,
-    const ColorFunction& func);
+    const ColorFunction& func,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeEdgesToBoundingBoxes(
     const std_msgs::Header& header,
@@ -87,7 +100,8 @@ visualization_msgs::Marker makeEdgesToBoundingBoxes(
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
     const std::string& ns,
-    const ColorFunction& func);
+    const ColorFunction& func,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeBoundingBoxMarker(
     const std_msgs::Header& header,
@@ -115,30 +129,17 @@ visualization_msgs::Marker makeCentroidMarkers(
     const LayerConfig& config,
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const std::string& ns);
-
-visualization_msgs::Marker makeCentroidMarkers(
-    const std_msgs::Header& header,
-    const LayerConfig& config,
-    const SceneGraphLayer& layer,
-    const VisualizerConfig& visualizer_config,
     const std::string& ns,
-    const ColormapConfig& colors);
-
-visualization_msgs::Marker makeCentroidMarkers(
-    const std_msgs::Header& header,
-    const LayerConfig& config,
-    const SceneGraphLayer& layer,
-    const VisualizerConfig& visualizer_config,
-    const std::string& ns,
-    const ColorFunction& color_func);
+    const ColorFunction& color_func,
+    const FilterFunction& filter = {});
 
 visualization_msgs::MarkerArray makeGraphEdgeMarkers(
     const std_msgs::Header& header,
     const DynamicSceneGraph& scene_graph,
     const std::map<LayerId, LayerConfig>& configs,
     const VisualizerConfig& visualizer_config,
-    const std::string& ns);
+    const std::string& ns,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeMeshEdgesMarker(
     const std_msgs::Header& header,
@@ -170,15 +171,17 @@ visualization_msgs::Marker makeLayerEdgeMarkers(
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
     const NodeColor& color,
-    const std::string& ns);
+    const std::string& ns,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeLayerEdgeMarkers(
     const std_msgs::Header& header,
     const LayerConfig& config,
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const ColormapConfig& cmap,
-    const std::string& ns);
+    const ColormapConfig& color,
+    const std::string& ns,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeLayerEdgeMarkers(
     const std_msgs::Header& header,
@@ -186,7 +189,8 @@ visualization_msgs::Marker makeLayerEdgeMarkers(
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
     const std::string& ns,
-    const EdgeColorFunction& color_func);
+    const EdgeColorFunction& color_func,
+    const FilterFunction& filter = {});
 
 visualization_msgs::Marker makeDynamicCentroidMarkers(
     const std_msgs::Header& header,

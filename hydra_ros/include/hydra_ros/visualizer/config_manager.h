@@ -108,8 +108,8 @@ class ConfigManager {
  private:
   ros::NodeHandle nh_;
 
-  ConfigWrapper<VisualizerConfig>::Ptr visualizer_config_;
-  std::map<LayerId, ConfigWrapper<LayerConfig>::Ptr> layer_configs_;
+  mutable ConfigWrapper<VisualizerConfig>::Ptr visualizer_config_;
+  mutable std::map<LayerId, ConfigWrapper<LayerConfig>::Ptr> layer_configs_;
   mutable std::map<LayerId, ConfigWrapper<DynamicLayerConfig>::Ptr>
       dynamic_layer_configs_;
   mutable std::map<std::string, ConfigWrapper<ColormapConfig>::Ptr> colormaps_;

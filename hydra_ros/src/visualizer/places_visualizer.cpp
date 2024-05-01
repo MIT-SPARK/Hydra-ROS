@@ -171,7 +171,16 @@ void PlacesVisualizer::visualizeGraph(const std_msgs::Header& header,
   pubs_->publish("graph_viz", [&](MarkerArray& markers) {
     const std::string node_ns = config_.place_marker_ns + "_nodes";
     Marker node_marker = makeCentroidMarkers(
-        header, config_.graph_layer, graph, config_.graph, node_ns, config_.colormap);
+        header,
+        config_.graph_layer,
+        graph,
+        config_.graph,
+        node_ns,
+        [&](const SceneGraphNode& node) {
+          return getDistanceColor(config_.graph,
+                                  config_.colormap,
+                                  node.attributes<PlaceNodeAttributes>().distance);
+        });
     markers.markers.push_back(node_marker);
 
     if (!graph.edges().empty()) {
