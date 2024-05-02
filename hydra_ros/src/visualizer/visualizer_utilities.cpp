@@ -795,11 +795,11 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
         continue;
       }
 
-      if (midx.idx >= mesh->numVertices()) {
+      if (midx >= mesh->numVertices()) {
         continue;
       }
 
-      Eigen::Vector3d vertex_pos = mesh->pos(midx.idx).cast<double>();
+      Eigen::Vector3d vertex_pos = mesh->pos(midx).cast<double>();
       geometry_msgs::Point vertex;
       tf2::convert(vertex_pos, vertex);
       if (!visualizer_config.collapse_layers) {
