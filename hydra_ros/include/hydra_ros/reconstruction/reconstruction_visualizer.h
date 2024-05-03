@@ -33,7 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/module.h>
+#include <hydra/reconstruction/reconstruction_module.h>
 #include <ros/ros.h>
 #include <voxblox/core/layer.h>
 #include <voxblox/core/voxel.h>
@@ -44,40 +44,44 @@ namespace hydra {
 
 class MarkerGroupPub;
 
-struct ReconstructionVisualizerConfig {
-  double min_weight = 0.0;
-  double max_weight = 10.0;
-  double min_distance = 0.0;
-  double max_distance = 2.0;
-  double marker_alpha = 0.5;
-  bool use_relative_height = true;
-  double slice_height = 0.0;
-  double min_observation_weight = 1.0e-5;
-  ColormapConfig colors;
-};
-
-class ReconstructionVisualizer : public Module {
+class ReconstructionVisualizer : public ReconstructionModule::Sink {
  public:
-  explicit ReconstructionVisualizer(const std::string& ns);
+  struct Config {
+    std::string ns = "~reconstruction";
+    double min_weight = 0.0;
+    double max_weight = 10.0;
+    double min_distance = 0.0;
+    double max_distance = 2.0;
+    double marker_alpha = 0.5;
+    bool use_relative_height = true;
+    double slice_height = 0.0;
+    double min_observation_weight = 1.0e-5;
+    ColormapConfig colors;
+  };
+
+  explicit ReconstructionVisualizer(const Config& config);
 
   virtual ~ReconstructionVisualizer();
 
-  void start() override;
-
-  void stop() override;
-
-  void save(const LogSetup&) override;
-
   std::string printInfo() const override;
 
-  void visualize(uint64_t timestamp_ns,
-                 const Eigen::Isometry3d& world_T_sensor,
-                 const voxblox::Layer<voxblox::TsdfVoxel>& tsdf);
+  void call(uint64_t timestamp_ns,
+            const Eigen::Isometry3d& world_T_sensor,
+            const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
+            const ReconstructionOutput& msg) const override;
 
- private:
+ protected:
+  Config config_;
   ros::NodeHandle nh_;
   std::unique_ptr<MarkerGroupPub> pubs_;
-  ReconstructionVisualizerConfig config_;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<ReconstructionModule::Sink,
+                                     ReconstructionVisualizer,
+                                     Config>("ReconstructionVisualizer");
 };
+
+void declare_config(ReconstructionVisualizer::Config& config);
 
 }  // namespace hydra

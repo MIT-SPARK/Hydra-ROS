@@ -32,12 +32,13 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/places_visualizer.h"
+#include "hydra_ros/frontend/places_visualizer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <hydra/common/hydra_config.h>
+#include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/compression_graph_extractor.h>
 #include <hydra/utils/timing_utilities.h>
 
@@ -57,20 +58,22 @@ using voxblox::Layer;
 using voxblox::MeshLayer;
 using voxblox::TsdfVoxel;
 
-void declare_config(PlacesVisualizerConfig& conf) {
+void declare_config(PlacesVisualizer::Config& config) {
   using namespace config;
   name("PlacesVisualizerConfig");
-  field(conf.place_marker_ns, "place_marker_ns");
-  field(conf.show_block_outlines, "show_block_outlines");
-  field(conf.use_gvd_block_outlines, "use_gvd_block_outlines");
-  field(conf.outline_scale, "outline_scale");
+  field(config.ns, "ns");
+  field(config.place_marker_ns, "place_marker_ns");
+  field(config.show_block_outlines, "show_block_outlines");
+  field(config.use_gvd_block_outlines, "use_gvd_block_outlines");
+  field(config.outline_scale, "outline_scale");
 }
 
-PlacesVisualizer::PlacesVisualizer(const std::string& ns)
-    : nh_(ns), previous_spheres_(0), published_gvd_graph_(false) {
+PlacesVisualizer::PlacesVisualizer(const Config& config)
+    : config_(config),
+      nh_(config.ns),
+      previous_spheres_(0),
+      published_gvd_graph_(false) {
   pubs_.reset(new MarkerGroupPub(nh_));
-
-  config_ = config::fromRos<PlacesVisualizerConfig>(nh_);
   config_.graph.layer_z_step = 0;
 
   setupConfigServers();
@@ -78,21 +81,16 @@ PlacesVisualizer::PlacesVisualizer(const std::string& ns)
 
 PlacesVisualizer::~PlacesVisualizer() {}
 
-void PlacesVisualizer::start() {}
-
-void PlacesVisualizer::stop() {}
-
-void PlacesVisualizer::save(const LogSetup&) {}
-
 std::string PlacesVisualizer::printInfo() const {
   std::stringstream ss;
-  ss << config::toString(config_);
+  ss << std::endl << config::toString(config_);
   return ss.str();
 }
 
-void PlacesVisualizer::visualize(uint64_t timestamp_ns,
-                                 const Layer<GvdVoxel>& gvd,
-                                 const GraphExtractorInterface* extractor) {
+void PlacesVisualizer::call(uint64_t timestamp_ns,
+                            const Eigen::Isometry3f&,
+                            const GvdPlaceExtractor::GvdLayer& gvd,
+                            const GraphExtractorInterface* extractor) const {
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
   std_msgs::Header header;
@@ -162,7 +160,7 @@ void PlacesVisualizer::visualizeError(uint64_t timestamp_ns,
 }
 
 void PlacesVisualizer::visualizeGraph(const std_msgs::Header& header,
-                                      const SceneGraphLayer& graph) {
+                                      const SceneGraphLayer& graph) const {
   if (graph.nodes().empty()) {
     LOG(INFO) << "visualizing empty graph!";
     return;
@@ -276,7 +274,7 @@ void PlacesVisualizer::visualizeBlocks(const std_msgs::Header& header,
 }
 
 void PlacesVisualizer::publishFreespace(const std_msgs::Header& header,
-                                        const SceneGraphLayer& graph) {
+                                        const SceneGraphLayer& graph) const {
   const std::string label_ns = config_.place_marker_ns + "_freespace";
 
   MarkerArray spheres = makePlaceSpheres(header, graph, label_ns, 0.15);
@@ -330,7 +328,7 @@ void PlacesVisualizer::publishFreespace(const std_msgs::Header& header,
 }
 
 void PlacesVisualizer::publishGraphLabels(const std_msgs::Header& header,
-                                          const SceneGraphLayer& graph) {
+                                          const SceneGraphLayer& graph) const {
   if (!config_.graph_layer.use_label) {
     return;
   }

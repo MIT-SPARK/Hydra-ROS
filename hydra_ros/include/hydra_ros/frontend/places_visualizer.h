@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <dynamic_reconfigure/server.h>
-#include <hydra/common/module.h>
+#include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/gvd_voxel.h>
 #include <hydra_ros/GvdVisualizerConfig.h>
 #include <voxblox/core/layer.h>
@@ -51,35 +51,30 @@ class MarkerGroupPub;
 
 using hydra_ros::GvdVisualizerConfig;
 
-struct PlacesVisualizerConfig {
-  std::string place_marker_ns = "raw_places_graph";
-  bool show_block_outlines = false;
-  bool use_gvd_block_outlines = false;
-  double outline_scale = 0.01;
-
-  ColormapConfig colormap;
-  GvdVisualizerConfig gvd;
-  VisualizerConfig graph;
-  LayerConfig graph_layer;
-};
-
-class PlacesVisualizer : public Module {
+class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
-  explicit PlacesVisualizer(const std::string& ns);
+  struct Config {
+    std::string ns = "~places";
+    std::string place_marker_ns = "raw_places_graph";
+    bool show_block_outlines = false;
+    bool use_gvd_block_outlines = false;
+    double outline_scale = 0.01;
+    ColormapConfig colormap;
+    GvdVisualizerConfig gvd;
+    VisualizerConfig graph;
+    LayerConfig graph_layer;
+  };
+
+  explicit PlacesVisualizer(const Config& config);
 
   virtual ~PlacesVisualizer();
 
-  void start() override;
-
-  void stop() override;
-
-  void save(const LogSetup&) override;
-
   std::string printInfo() const override;
 
-  void visualize(uint64_t timestamp_ns,
-                 const voxblox::Layer<places::GvdVoxel>& gvd,
-                 const places::GraphExtractorInterface* extractor = nullptr);
+  void call(uint64_t timestamp_ns,
+            const Eigen::Isometry3f& world_T_body,
+            const GvdPlaceExtractor::GvdLayer& gvd,
+            const places::GraphExtractorInterface* extractor) const override;
 
   void visualizeError(uint64_t timestamp_ns,
                       const voxblox::Layer<places::GvdVoxel>& lhs,
@@ -87,7 +82,8 @@ class PlacesVisualizer : public Module {
                       double threshold);
 
  private:
-  void visualizeGraph(const std_msgs::Header& header, const SceneGraphLayer& graph);
+  void visualizeGraph(const std_msgs::Header& header,
+                      const SceneGraphLayer& graph) const;
 
   void visualizeGvd(const std_msgs::Header& header,
                     const voxblox::Layer<places::GvdVoxel>& gvd) const;
@@ -98,9 +94,11 @@ class PlacesVisualizer : public Module {
   void visualizeBlocks(const std_msgs::Header& header,
                        const voxblox::Layer<places::GvdVoxel>& gvd) const;
 
-  void publishGraphLabels(const std_msgs::Header& header, const SceneGraphLayer& graph);
+  void publishGraphLabels(const std_msgs::Header& header,
+                          const SceneGraphLayer& graph) const;
 
-  void publishFreespace(const std_msgs::Header& header, const SceneGraphLayer& graph);
+  void publishFreespace(const std_msgs::Header& header,
+                        const SceneGraphLayer& graph) const;
 
   void gvdConfigCb(GvdVisualizerConfig& config, uint32_t level);
 
@@ -119,20 +117,26 @@ class PlacesVisualizer : public Module {
     server->setCallback(boost::bind(callback, this, _1, _2));
   }
 
- private:
+ protected:
+  Config config_;
   ros::NodeHandle nh_;
   std::unique_ptr<MarkerGroupPub> pubs_;
 
-  PlacesVisualizerConfig config_;
-  std::set<int> previous_labels_;
-  size_t previous_spheres_;
-
+  mutable std::set<int> previous_labels_;
+  mutable size_t previous_spheres_;
   mutable bool published_gvd_graph_;
   mutable bool published_gvd_clusters_;
 
   std::unique_ptr<dynamic_reconfigure::Server<GvdVisualizerConfig>> gvd_config_server_;
   std::unique_ptr<dynamic_reconfigure::Server<LayerConfig>> graph_config_server_;
   std::unique_ptr<dynamic_reconfigure::Server<ColormapConfig>> colormap_server_;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<GvdPlaceExtractor::Sink, PlacesVisualizer, Config>(
+          "PlacesVisualizer");
 };
+
+void declare_config(PlacesVisualizer::Config& config);
 
 }  // namespace hydra

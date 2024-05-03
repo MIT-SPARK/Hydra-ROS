@@ -33,27 +33,20 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/module.h>
-#include <hydra/common/shared_module_state.h>
+#include <hydra/frontend/frontend_module.h>
 #include <ros/ros.h>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
 namespace hydra {
 
-class RosFrontendPublisher : public Module {
+class RosFrontendPublisher : public FrontendModule::Sink {
  public:
   RosFrontendPublisher(const ros::NodeHandle& nh);
 
-  void start() override;
-
-  void stop() override;
-
-  void save(const LogSetup& logs) override;
-
-  void publish(const DynamicSceneGraph& graph,
-               const BackendInput& backend_input,
-               uint64_t timestamp_ns);
+  void call(uint64_t timestamp_ns,
+            const DynamicSceneGraph& graph,
+            const BackendInput& backend_input) const override;
 
  protected:
   ros::NodeHandle nh_;

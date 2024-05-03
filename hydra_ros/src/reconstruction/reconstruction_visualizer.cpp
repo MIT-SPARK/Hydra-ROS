@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/reconstruction_visualizer.h"
+#include "hydra_ros/reconstruction/reconstruction_visualizer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
@@ -51,7 +51,7 @@ using voxblox::BlockIndexList;
 using voxblox::Layer;
 using voxblox::TsdfVoxel;
 using voxblox::VoxelIndex;
-using VizConfig = ReconstructionVisualizerConfig;
+using VizConfig = ReconstructionVisualizer::Config;
 
 using ColorFunction =
     std::function<std_msgs::ColorRGBA(const VizConfig&, const TsdfVoxel&)>;
@@ -134,37 +134,32 @@ Marker makeTsdfMarker(const VizConfig& config,
   return msg;
 }
 
-void declare_config(ReconstructionVisualizerConfig& conf) {
+void declare_config(ReconstructionVisualizer::Config& config) {
   using namespace config;
   name("ReconstructionVisualizerConfig");
-  field(conf.min_weight, "min_weight");
-  field(conf.max_weight, "max_weight");
-  field(conf.min_distance, "min_distance", "m");
-  field(conf.max_distance, "max_distance", "m");
-  field(conf.marker_alpha, "marker_alpha");
-  field(conf.use_relative_height, "use_relative_height");
-  field(conf.slice_height, "slice_height", "m");
-  field(conf.min_observation_weight, "min_observation_weight");
-  field(conf.colors.min_hue, "min_hue");
-  field(conf.colors.max_hue, "max_hue");
-  field(conf.colors.min_luminance, "min_luminance");
-  field(conf.colors.max_luminance, "max_luminance");
-  field(conf.colors.min_saturation, "min_saturation");
-  field(conf.colors.max_saturation, "max_saturation");
+  field(config.ns, "ns");
+  field(config.min_weight, "min_weight");
+  field(config.max_weight, "max_weight");
+  field(config.min_distance, "min_distance", "m");
+  field(config.max_distance, "max_distance", "m");
+  field(config.marker_alpha, "marker_alpha");
+  field(config.use_relative_height, "use_relative_height");
+  field(config.slice_height, "slice_height", "m");
+  field(config.min_observation_weight, "min_observation_weight");
+  field(config.colors.min_hue, "min_hue");
+  field(config.colors.max_hue, "max_hue");
+  field(config.colors.min_luminance, "min_luminance");
+  field(config.colors.max_luminance, "max_luminance");
+  field(config.colors.min_saturation, "min_saturation");
+  field(config.colors.max_saturation, "max_saturation");
 }
 
-ReconstructionVisualizer::ReconstructionVisualizer(const std::string& ns) : nh_(ns) {
+ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
+    : config_(config), nh_(config.ns) {
   pubs_.reset(new MarkerGroupPub(nh_));
-  config_ = config::fromRos<ReconstructionVisualizerConfig>(nh_);
 }
 
 ReconstructionVisualizer::~ReconstructionVisualizer() {}
-
-void ReconstructionVisualizer::start() {}
-
-void ReconstructionVisualizer::stop() {}
-
-void ReconstructionVisualizer::save(const LogSetup&) {}
 
 std::string ReconstructionVisualizer::printInfo() const {
   std::stringstream ss;
@@ -172,9 +167,10 @@ std::string ReconstructionVisualizer::printInfo() const {
   return ss.str();
 }
 
-void ReconstructionVisualizer::visualize(uint64_t timestamp_ns,
-                                         const Eigen::Isometry3d& world_T_sensor,
-                                         const Layer<TsdfVoxel>& tsdf) {
+void ReconstructionVisualizer::call(uint64_t timestamp_ns,
+                                    const Eigen::Isometry3d& world_T_sensor,
+                                    const Layer<TsdfVoxel>& tsdf,
+                                    const ReconstructionOutput&) const {
   std_msgs::Header header;
   header.frame_id = HydraConfig::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);

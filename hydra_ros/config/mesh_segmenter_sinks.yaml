@@ -1,0 +1,2 @@
+sinks:
+  - type: ObjectVisualizer

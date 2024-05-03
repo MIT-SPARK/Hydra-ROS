@@ -33,11 +33,11 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/reconstruction/reconstruction_config.h>
+#include <hydra/reconstruction/reconstruction_module.h>
 
 namespace hydra {
 
-struct RosReconstructionConfig : public ReconstructionConfig {
+struct RosReconstructionConfig : public ReconstructionModule::Config {
   bool use_image_receiver = false;
   bool publish_pointcloud = false;
   bool enable_output_queue = false;

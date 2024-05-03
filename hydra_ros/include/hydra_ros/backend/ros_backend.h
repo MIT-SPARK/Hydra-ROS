@@ -52,7 +52,7 @@ class RosBackend : public BackendModule {
   using PoseGraphSub = message_filters::Subscriber<pose_graph_tools_msgs::PoseGraph>;
   using MeshSub = message_filters::Subscriber<kimera_pgmo::KimeraPgmoMesh>;
 
-  RosBackend(const BackendConfig& config,
+  RosBackend(const Config& config,
              const SharedDsgInfo::Ptr& dsg,
              const SharedDsgInfo::Ptr& backend_dsg,
              const SharedModuleState::Ptr& state,
@@ -90,7 +90,7 @@ class RosBackend : public BackendModule {
   inline static const auto registration_ =
       config::RegistrationWithConfig<BackendModule,
                                      RosBackend,
-                                     BackendConfig,
+                                     Config,
                                      SharedDsgInfo::Ptr,
                                      SharedDsgInfo::Ptr,
                                      SharedModuleState::Ptr,

@@ -33,33 +33,21 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/backend/backend_config.h>
-#include <hydra/common/module.h>
-#include <hydra/common/robot_prefix_config.h>
+#include <hydra/backend/backend_module.h>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
-namespace spark_dsg {
-class ZmqSender;
-}  // namespace spark_dsg
-
 namespace hydra {
 
-class RosBackendPublisher : public Module {
+class RosBackendPublisher : public BackendModule::Sink {
  public:
-  RosBackendPublisher(const ros::NodeHandle& nh, const BackendConfig& config);
+  explicit RosBackendPublisher(const ros::NodeHandle& nh);
 
-  virtual ~RosBackendPublisher();
+  virtual ~RosBackendPublisher() = default;
 
-  void start() override{};
-
-  void stop() override{};
-
-  void save(const LogSetup&) override{};
-
-  void publish(const DynamicSceneGraph& graph,
-               const kimera_pgmo::DeformationGraph& dgraph,
-               size_t timestamp_ns);
+  void call(uint64_t timestamp_ns,
+            const DynamicSceneGraph& graph,
+            const kimera_pgmo::DeformationGraph& dgraph) const override;
 
  protected:
   virtual void publishPoseGraph(const DynamicSceneGraph& graph,
@@ -70,18 +58,9 @@ class RosBackendPublisher : public Module {
 
  protected:
   ros::NodeHandle nh_;
-  BackendConfig config_;
-
   ros::Publisher mesh_mesh_edges_pub_;
   ros::Publisher pose_mesh_edges_pub_;
   ros::Publisher pose_graph_pub_;
-
-  bool zmq_publish_mesh_;
-
-  // Hack for temporary removal of label flickering
-  size_t last_zmq_pub_time_;
-
-  std::unique_ptr<spark_dsg::ZmqSender> zmq_sender_;
   std::unique_ptr<DsgSender> dsg_sender_;
 };
 

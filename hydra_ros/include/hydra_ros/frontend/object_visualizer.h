@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/module.h>
 #include <hydra/frontend/mesh_segmenter.h>
 #include <kimera_pgmo/MeshDelta.h>
 #include <ros/ros.h>
@@ -43,57 +42,54 @@
 
 namespace hydra {
 
-struct ObjectVisualizerConfig {
-  std::string module_ns = "~";
-  bool enable_active_mesh_pub = false;
-  bool enable_segmented_mesh_pub = false;
-  double point_scale = 0.1;
-  double point_alpha = 0.7;
-  bool use_spheres = false;
-};
-
-void declare_config(ObjectVisualizerConfig& conf);
-
-class ObjectVisualizer : public Module {
+class ObjectVisualizer : public MeshSegmenter::Sink {
  public:
   using ObjectCloudPub = SemanticRosPublishers<uint32_t, visualization_msgs::Marker>;
 
-  explicit ObjectVisualizer(const ObjectVisualizerConfig& config);
+  struct Config {
+    std::string module_ns = "~objects";
+    bool enable_active_mesh_pub = true;
+    bool enable_segmented_mesh_pub = true;
+    double point_scale = 0.1;
+    double point_alpha = 0.7;
+    bool use_spheres = false;
+  } const config;
+
+  explicit ObjectVisualizer(const Config& config);
 
   ~ObjectVisualizer();
 
-  void start() override;
-
-  void stop() override;
-
-  void save(const LogSetup& logs) override;
-
   std::string printInfo() const override;
 
-  void visualize(const kimera_pgmo::MeshDelta& delta,
-                 const std::vector<size_t>& active,
-                 const LabelIndices& label_indices) const;
-
-  const ObjectVisualizerConfig config;
+  void call(uint64_t timestamp_ns,
+            const kimera_pgmo::MeshDelta& delta,
+            const std::vector<size_t>& active,
+            const LabelIndices& label_indices) const override;
 
  protected:
-  void publishActiveVertices(const kimera_pgmo::MeshDelta& delta,
-                             const std::vector<size_t>& active,
-                             const LabelIndices& label_indices) const;
+  void publishActiveVertices(uint64_t timestamp_ns,
+                             const kimera_pgmo::MeshDelta& delta,
+                             const std::vector<size_t>& active) const;
 
-  void publishObjectClouds(const kimera_pgmo::MeshDelta& delta,
-                           const std::vector<size_t>& active,
+  void publishObjectClouds(uint64_t timestamp_ns,
+                           const kimera_pgmo::MeshDelta& delta,
                            const LabelIndices& label_indices) const;
 
- protected:
   void fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
                            const std::vector<size_t>& indices,
                            visualization_msgs::Marker& marker) const;
 
+ protected:
   ros::NodeHandle nh_;
-
   ros::Publisher active_vertices_pub_;
   std::unique_ptr<ObjectCloudPub> segmented_vertices_pub_;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<MeshSegmenter::Sink, ObjectVisualizer, Config>(
+          "ObjectVisualizer");
 };
+
+void declare_config(ObjectVisualizer::Config& conf);
 
 }  // namespace hydra

@@ -44,7 +44,7 @@ namespace hydra {
 void declare_config(RosReconstructionConfig& conf) {
   using namespace config;
   name("RosReconstructionConfig");
-  base<ReconstructionConfig>(conf);
+  base<ReconstructionModule::Config>(conf);
   field(conf.use_image_receiver, "use_image_receiver");
   field(conf.publish_pointcloud, "publish_pointcloud");
   field(conf.enable_output_queue, "enable_reconstruction_output_queue");

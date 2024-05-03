@@ -56,6 +56,7 @@ class SemanticRosPublishers {
   SemanticRosPublishers(const std::string& topic_name,
                         const ros::NodeHandle& nh_private)
       : topic_name_(topic_name), nh_private_(nh_private), pubs_() {}
+
   virtual ~SemanticRosPublishers() = default;
 
   /** publish Publishes a given ROS msg for a given semantic_label under the

@@ -9,7 +9,7 @@
        doc="full zmq url to listen on, including protocol"/>
 
   <arg name="show_frontend" default="false" doc="show frontend scene graph"/>
-  <arg name="dsg_topic" default="hydra_ros_node/dsg" unless="$(arg show_frontend)"/>
+  <arg name="dsg_topic" default="hydra_ros_node/backend/dsg" unless="$(arg show_frontend)"/>
   <arg name="dsg_mesh_topic" default="hydra_ros_node/dsg_mesh" unless="$(arg show_frontend)"/>
   <arg name="dsg_topic" default="hydra_ros_node/frontend/dsg" if="$(arg show_frontend)"/>
   <arg name="dsg_mesh_topic" default="hydra_ros_node/frontend/dsg_mesh" if="$(arg show_frontend)"/>

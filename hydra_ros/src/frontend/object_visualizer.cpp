@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/object_visualizer.h"
+#include "hydra_ros/frontend/object_visualizer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/printing.h>
@@ -43,18 +43,18 @@ namespace hydra {
 
 using visualization_msgs::Marker;
 
-void declare_config(ObjectVisualizerConfig& conf) {
+void declare_config(ObjectVisualizer::Config& config) {
   using namespace config;
   name("ObjectVisualizerConfig");
-  field(conf.module_ns, "module_ns");
-  field(conf.enable_active_mesh_pub, "enable_active_mesh_pub");
-  field(conf.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
-  field(conf.point_scale, "point_scale");
-  field(conf.point_alpha, "point_alpha");
-  field(conf.use_spheres, "use_spheres");
+  field(config.module_ns, "module_ns");
+  field(config.enable_active_mesh_pub, "enable_active_mesh_pub");
+  field(config.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
+  field(config.point_scale, "point_scale");
+  field(config.point_alpha, "point_alpha");
+  field(config.use_spheres, "use_spheres");
 }
 
-ObjectVisualizer::ObjectVisualizer(const ObjectVisualizerConfig& config)
+ObjectVisualizer::ObjectVisualizer(const Config& config)
     : config(config::checkValid(config)), nh_(config.module_ns) {
   if (config.enable_active_mesh_pub) {
     active_vertices_pub_ = nh_.advertise<Marker>("active_vertices", 1, true);
@@ -67,30 +67,29 @@ ObjectVisualizer::ObjectVisualizer(const ObjectVisualizerConfig& config)
 
 ObjectVisualizer::~ObjectVisualizer() { segmented_vertices_pub_.reset(); }
 
-void ObjectVisualizer::start() {}
-
-void ObjectVisualizer::stop() {}
-
-void ObjectVisualizer::save(const LogSetup&) {}
-
 std::string ObjectVisualizer::printInfo() const {
   std::stringstream ss;
   ss << config::toString(config);
   return ss.str();
 }
 
-void ObjectVisualizer::visualize(const kimera_pgmo::MeshDelta& delta,
-                                 const std::vector<size_t>& active,
-                                 const LabelIndices& label_indices) const {
-  publishActiveVertices(delta, active, label_indices);
-  publishObjectClouds(delta, active, label_indices);
+void ObjectVisualizer::call(uint64_t timestamp_ns,
+                            const kimera_pgmo::MeshDelta& delta,
+                            const std::vector<size_t>& active,
+                            const LabelIndices& label_indices) const {
+  publishActiveVertices(timestamp_ns, delta, active);
+  publishObjectClouds(timestamp_ns, delta, label_indices);
 }
 
-void ObjectVisualizer::publishActiveVertices(const kimera_pgmo::MeshDelta& delta,
-                                             const std::vector<size_t>& active,
-                                             const LabelIndices&) const {
+void ObjectVisualizer::publishActiveVertices(uint64_t timestamp_ns,
+                                             const kimera_pgmo::MeshDelta& delta,
+                                             const std::vector<size_t>& active) const {
+  if (active_vertices_pub_.getNumSubscribers() < 1) {
+    return;
+  }
+
   visualization_msgs::Marker msg;
-  msg.header.stamp = ros::Time::now();
+  msg.header.stamp.fromNSec(timestamp_ns);
   msg.header.frame_id = HydraConfig::instance().getFrames().odom;
   msg.ns = "active_vertices";
   msg.id = 0;
@@ -98,12 +97,16 @@ void ObjectVisualizer::publishActiveVertices(const kimera_pgmo::MeshDelta& delta
   active_vertices_pub_.publish(msg);
 }
 
-void ObjectVisualizer::publishObjectClouds(const kimera_pgmo::MeshDelta& delta,
-                                           const std::vector<size_t>&,
+void ObjectVisualizer::publishObjectClouds(uint64_t timestamp_ns,
+                                           const kimera_pgmo::MeshDelta& delta,
                                            const LabelIndices& label_indices) const {
+  if (!segmented_vertices_pub_) {
+    return;
+  }
+
   for (auto&& [label, indices] : label_indices) {
     visualization_msgs::Marker msg;
-    msg.header.stamp = ros::Time::now();
+    msg.header.stamp.fromNSec(timestamp_ns);
     msg.header.frame_id = HydraConfig::instance().getFrames().odom;
     msg.ns = "label_vertices_" + std::to_string(label);
     msg.id = 0;

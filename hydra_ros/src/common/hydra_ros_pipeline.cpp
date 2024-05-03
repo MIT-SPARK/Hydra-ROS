@@ -50,23 +50,13 @@
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
 #include "hydra_ros/reconstruction/ros_reconstruction.h"
-#include "hydra_ros/visualizer/object_visualizer.h"
-#include "hydra_ros/visualizer/places_visualizer.h"
-#include "hydra_ros/visualizer/reconstruction_visualizer.h"
 
 namespace hydra {
 
 void declare_config(HydraRosConfig& conf) {
   using namespace config;
   name("HydraRosConfig");
-  field(conf.use_ros_backend, "use_ros_backend");
   field(conf.enable_frontend_output, "enable_frontend_output");
-  field(conf.visualize_objects, "visualize_objects");
-  field(conf.visualize_places, "visualize_places");
-  field(conf.places_visualizer_namespace, "places_visualizer_namespace");
-  field(conf.visualize_reconstruction, "visualize_reconstruction");
-  field(conf.reconstruction_visualizer_namespace,
-        "reconstruction_visualizer_namespace");
 }
 
 HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
@@ -91,137 +81,54 @@ void HydraRosPipeline::init() {
 }
 
 void HydraRosPipeline::initFrontend() {
-  // explict type for shared_ptr
+  ros::NodeHandle fnh(nh_, "frontend");
+  const auto logs = HydraConfig::instance().getLogs();
   FrontendModule::Ptr frontend =
-      config::createFromROS<FrontendModule>(ros::NodeHandle(nh_, "frontend"),
-                                            frontend_dsg_,
-                                            shared_state_,
-                                            HydraConfig::instance().getLogs());
+      config::createFromROS<FrontendModule>(fnh, frontend_dsg_, shared_state_, logs);
+  if (config_.enable_frontend_output) {
+    CHECK(frontend) << "Frontend module required!";
+    frontend->addSink(std::make_shared<RosFrontendPublisher>(fnh));
+  }
+
   modules_["frontend"] = frontend;
-
-  if (!config_.enable_frontend_output) {
-    return;
-  }
-
-  if (!frontend) {
-    LOG(FATAL) << "Frontend module required!";
-    return;
-  }
-
-  auto frontend_publisher = std::make_shared<RosFrontendPublisher>(nh_);
-  modules_["frontend_publisher"] = frontend_publisher;
-  frontend->addOutputCallback(std::bind(&RosFrontendPublisher::publish,
-                                        frontend_publisher.get(),
-                                        std::placeholders::_1,
-                                        std::placeholders::_2,
-                                        std::placeholders::_3));
-
-  if (config_.visualize_objects) {
-    auto obj_conf = config::fromRos<ObjectVisualizerConfig>(nh_);
-    const auto viz = std::make_shared<ObjectVisualizer>(obj_conf);
-    frontend->addObjectVisualizationCallback(
-        [&viz](const auto& cloud, const auto& indices, const auto& labels) {
-          viz->visualize(cloud, indices, labels);
-        });
-    modules_["object_visualizer"] = viz;
-  }
-
-  if (config_.visualize_places) {
-    const auto viz =
-        std::make_shared<PlacesVisualizer>(config_.places_visualizer_namespace);
-    frontend->addPlaceVisualizationCallback(std::bind(&PlacesVisualizer::visualize,
-                                                      viz.get(),
-                                                      std::placeholders::_1,
-                                                      std::placeholders::_2,
-                                                      std::placeholders::_3));
-    modules_["places_visualizer"] = viz;
-  }
-
-  freespace_server_ = nh_.advertiseService(
-      "query_freespace", &HydraRosPipeline::handleFreespaceSrv, this);
-}
-
-bool HydraRosPipeline::handleFreespaceSrv(hydra_msgs::QueryFreespace::Request& req,
-                                          hydra_msgs::QueryFreespace::Response& res) {
-  if (req.x.size() != req.y.size() || req.x.size() != req.z.size()) {
-    return false;
-  }
-
-  if (req.x.empty()) {
-    return true;
-  }
-
-  FrontendModule::PositionMatrix points(3, req.x.size());
-  for (size_t i = 0; i < req.x.size(); ++i) {
-    points(0, i) = req.x[i];
-    points(1, i) = req.y[i];
-    points(2, i) = req.z[i];
-  }
-
-  auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
-  const auto result = frontend->inFreespace(points, req.freespace_distance_m);
-  for (const auto flag : result) {
-    res.in_freespace.push_back(flag ? 1 : 0);
-  }
-  return true;
 }
 
 void HydraRosPipeline::initBackend() {
-  // explict type for shared_ptr
+  ros::NodeHandle bnh(nh_, "backend");
+  const auto logs = HydraConfig::instance().getLogs();
   BackendModule::Ptr backend =
-      config::createFromROS<BackendModule>(ros::NodeHandle(nh_, "backend"),
+      config::createFromROS<BackendModule>(bnh,
                                            frontend_dsg_,
                                            backend_dsg_,
                                            shared_state_,
                                            HydraConfig::instance().getLogs());
-
+  CHECK(backend) << "Failed to construct backend!";
+  backend->addSink(std::make_shared<RosBackendPublisher>(bnh));
   modules_["backend"] = backend;
-  if (!modules_.at("backend")) {
-    LOG(FATAL) << "Failed to construct backend!";
+
+  const auto frontend = getModule<FrontendModule>("frontend");
+  if (!frontend) {
+    LOG(ERROR) << "Invalid frontend module! Not setting 2D places update";
+    return;
   }
 
-  auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
-  if (frontend->config().surface_places) {
+  if (frontend->config.surface_places) {
     auto places_functor = std::make_shared<dsg_updates::Update2dPlacesFunctor>(
-        backend->config().places2d_config);
+        backend->config.places2d_config);
     backend->setUpdateFunctor(DsgLayers::MESH_PLACES, places_functor);
   }
-
-  auto backend_publisher =
-      std::make_shared<RosBackendPublisher>(nh_, backend->config());
-  modules_["backend_publisher"] = backend_publisher;
-  backend->addOutputCallback(std::bind(&RosBackendPublisher::publish,
-                                       backend_publisher.get(),
-                                       std::placeholders::_1,
-                                       std::placeholders::_2,
-                                       std::placeholders::_3));
 }
 
 void HydraRosPipeline::initReconstruction() {
-  InputQueue<ReconstructionOutput::Ptr>::Ptr frontend_queue;
-  if (modules_.count("frontend")) {
-    auto frontend = std::dynamic_pointer_cast<FrontendModule>(modules_.at("frontend"));
-    if (frontend) {
-      frontend_queue = frontend->getQueue();
-    } else {
-      LOG(ERROR) << "Invalid frontend module: disabling reconstruction output queue";
-    }
+  const auto frontend = getModule<FrontendModule>("frontend");
+  if (!frontend) {
+    LOG(ERROR) << "Invalid frontend module: disabling reconstruction";
+    return;
   }
 
-  ReconstructionModule::Ptr mod = config::createFromROS<ReconstructionModule>(
-      ros::NodeHandle(nh_, "reconstruction"), frontend_queue);
-  modules_["reconstruction"] = mod;
-
-  if (config_.visualize_reconstruction) {
-    const auto viz = std::make_shared<ReconstructionVisualizer>(
-        config_.reconstruction_visualizer_namespace);
-    mod->addVisualizationCallback(std::bind(&ReconstructionVisualizer::visualize,
-                                            viz.get(),
-                                            std::placeholders::_1,
-                                            std::placeholders::_2,
-                                            std::placeholders::_3));
-    modules_["reconstruction_visualizer"] = viz;
-  }
+  ros::NodeHandle rnh(nh_, "reconstruction");
+  modules_["reconstruction"] =
+      config::createFromROS<ReconstructionModule>(rnh, frontend->getQueue());
 }
 
 void HydraRosPipeline::initLCD() {

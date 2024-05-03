@@ -61,6 +61,8 @@ add_library(
   src/backend/ros_backend.cpp
   src/backend/ros_backend_publisher.cpp
   src/common/hydra_ros_pipeline.cpp
+  src/frontend/object_visualizer.cpp
+  src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
   src/loop_closure/ros_lcd_registration.cpp
   src/reconstruction/data_receiver.cpp
@@ -69,11 +71,12 @@ add_library(
   src/reconstruction/pointcloud_receiver.cpp
   src/reconstruction/ros_reconstruction.cpp
   src/reconstruction/ros_reconstruction_config.cpp
+  src/reconstruction/reconstruction_visualizer.cpp
   src/reconstruction/ros_sensors.cpp
   src/utils/dsg_streaming_interface.cpp
+  src/utils/ear_clipping.cpp
   src/utils/lookup_tf.cpp
   src/utils/node_utilities.cpp
-  src/utils/ear_clipping.cpp
   src/visualizer/basis_point_plugin.cpp
   src/visualizer/colormap_utilities.cpp
   src/visualizer/config_manager.cpp
@@ -82,12 +85,9 @@ add_library(
   src/visualizer/gvd_visualization_utilities.cpp
   src/visualizer/footprint_plugin.cpp
   src/visualizer/mesh_plugin.cpp
-  src/visualizer/object_visualizer.cpp
-  src/visualizer/places_visualizer.cpp
   src/visualizer/hydra_visualizer.cpp
   src/visualizer/polygon_utilities.cpp
   src/visualizer/region_plugin.cpp
-  src/visualizer/reconstruction_visualizer.cpp
   src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp
 )

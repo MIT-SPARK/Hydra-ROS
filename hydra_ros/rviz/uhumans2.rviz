@@ -85,15 +85,18 @@ Visualization Manager:
             interlayer_edges_5_4: true
             layer_bounding_boxes_2: true
             layer_bounding_boxes_edges_2: true
+            layer_edges_20: true
             layer_edges_3: true
             layer_edges_4: true
             layer_labels_2: true
             layer_labels_4: true
             layer_labels_5: true
             layer_nodes_2: true
+            layer_nodes_20: true
             layer_nodes_3: true
             layer_nodes_4: true
             layer_nodes_5: true
+            layer_polygon_boundaries_20: true
           Queue Size: 100
           Value: true
         - Class: rviz/MarkerArray
@@ -220,7 +223,7 @@ Visualization Manager:
       Displays:
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /places_visualizer/gvd_graph_viz
+          Marker Topic: /hydra_ros_node/places/gvd_graph_viz
           Name: GVD Graph
           Namespaces:
             {}
@@ -228,7 +231,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /places_visualizer/graph_viz
+          Marker Topic: /hydra_ros_node/places/graph_viz
           Name: Sparse GVD Graph
           Namespaces:
             {}
@@ -236,27 +239,27 @@ Visualization Manager:
           Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /places_visualizer/gvd_cluster_viz
+          Marker Topic: /hydra_ros_node/places/gvd_cluster_viz
           Name: GVD Clusters
           Namespaces:
             {}
           Queue Size: 100
           Value: false
         - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /places_visualizer/esdf_viz
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/esdf_viz
           Name: EsdfSlice
           Namespaces:
             {}
           Queue Size: 100
-          Value: true
+          Value: false
       Enabled: true
-      Name: Topology
+      Name: Places
     - Class: rviz/Group
       Displays:
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /reconstruction_visualizer/tsdf_viz
+          Marker Topic: /hydra_ros_node/reconstruction/tsdf_viz
           Name: TSDF Distances
           Namespaces:
             {}
@@ -264,7 +267,7 @@ Visualization Manager:
           Value: false
         - Class: rviz/MarkerArray
           Enabled: false
-          Marker Topic: /reconstruction_visualizer/tsdf_weight_viz
+          Marker Topic: /hydra_ros_node/reconstruction/tsdf_weight_viz
           Name: TSDF Weights
           Namespaces:
             {}
@@ -272,14 +275,6 @@ Visualization Manager:
           Value: false
       Enabled: true
       Name: Reconstruction
-    - Class: rviz/MarkerArray
-      Enabled: true
-      Marker Topic: /hydra_dsg_visualizer/places_basis_points
-      Name: Basis Points
-      Namespaces:
-        {}
-      Queue Size: 100
-      Value: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -308,7 +303,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 55.590049743652344
+      Distance: 41.394264221191406
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -316,17 +311,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -8.39536190032959
-        Y: 23.26816749572754
-        Z: 12.132055282592773
+        X: -8.356990814208984
+        Y: 25.215782165527344
+        Z: 12.203278541564941
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5797980427742004
+      Pitch: 0.5897971987724304
       Target Frame: <Fixed Frame>
-      Yaw: 2.441714286804199
+      Yaw: 2.831709623336792
     Saved: ~
 Window Geometry:
   Depth:

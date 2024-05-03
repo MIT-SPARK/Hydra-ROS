@@ -71,10 +71,12 @@
     <!-- misc visualization -->
     <arg name="start_visualizer" default="true"/>
     <arg name="start_pose_graph_viewer" default="false"/>
+    <arg name="visualize_objects" default="false"/>
     <arg name="visualize_places" default="false"/>
-    <arg name="places_viz_config_path" default="$(find hydra_ros)/config/places_visualization_config.yaml"/>
     <arg name="visualize_reconstruction" default="false"/>
-    <arg name="reconstruction_viz_config_path" default="$(find hydra_ros)/config/reconstruction_visualization_config.yaml"/>
+    <arg name="mesh_segmenter_sinks" default="$(find hydra_ros)/config/mesh_segmenter_sinks.yaml"/>
+    <arg name="gvd_places_sinks" default="$(find hydra_ros)/config/gvd_places_sinks.yaml"/>
+    <arg name="reconstruction_sinks" default="$(find hydra_ros)/config/reconstruction_sinks.yaml"/>
 
     <!-- logging output for hydra -->
     <arg name="dsg_output_dir" default="$(find hydra)/output/"/>
@@ -138,7 +140,6 @@
         <param name="map_frame" value="$(arg map_frame)"/>
         <!-- pipeline configuration -->
         <param name="exit_after_clock" value="$(eval arg('exit_mode') == 'CLOCK')"/>
-        <param name="do_reconstruction" value="$(arg do_reconstruction)"/>
         <param name="enable_frontend_output" value="$(arg enable_frontend_output)"/>
         <param name="semantic_colormap_file" value="$(arg semantic_map_path)"/>
         <param name="enable_lcd" value="$(arg enable_dsg_lcd)"/>
@@ -164,7 +165,7 @@
         <param name="frontend/validate_vertices" value="$(arg validate_vertices)"/>
         <param name="frontend/use_2d_places" value="$(arg use_2d_places)"/>
         <param name="frontend/enable_places" value="$(arg enable_places)"/>
-        <!-- distributed -->
+        <!-- distributed params -->
         <param name="backend/pgmo/add_initial_prior" value="false" if="$(arg external_optimizer)"/>
         <!-- backend params-->
         <param name="backend/dsg/optimize_on_lc" value="$(arg optimize_on_lc)"/>
@@ -183,14 +184,11 @@
         <param name="lcd/gnn_lcd/label_embeddings_file" value="$(arg lcd_gnn_label_embeddings)"
                if="$(arg use_gnn_descriptors)"/>
         <!-- visualization -->
-        <param name="visualize_places" value="$(arg visualize_places)"/>
-        <param name="places_visualizer_namespace" value="places_visualizer"/>
-        <param name="visualize_reconstruction" value="$(arg visualize_reconstruction)"/>
-        <param name="reconstruction_visualizer_namespace" value="reconstruction_visualizer"/>
+        <rosparam file="$(arg mesh_segmenter_sinks)" ns="frontend/objects"/>
+        <rosparam file="$(arg gvd_places_sinks)" ns="frontend/freespace_places"/>
+        <rosparam file="$(arg reconstruction_sinks)" ns="reconstruction"/>
     </node>
 
-    <rosparam file="$(arg places_viz_config_path)" ns="/places_visualizer"/>
-    <rosparam file="$(arg reconstruction_viz_config_path)" ns="/reconstruction_visualizer"/>
     <!-- goes outside to make sure params actually override -->
     <rosparam file="$(arg sensor_config_path)" ns="hydra_ros_node/reconstruction/sensor"
               if="$(eval len(arg('sensor_config_path')) > 0)"/>
@@ -205,7 +203,7 @@
     <include file="$(find pose_graph_tools_ros)/launch/posegraph_view.launch" if="$(arg start_pose_graph_viewer)">
         <arg name="frame_id" value="$(arg world_frame)" />
         <arg name="graph_topic" value="pose_graph" />
-        <arg name="ns" value="hydra_ros_node/pgmo"/>
+        <arg name="ns" value="hydra_ros_node/backend"/>
     </include>
 
     <include if="$(arg start_logger)" file="$(find hydra_ros)/launch/utils/scene_graph_logger.launch" pass_all_args="true">

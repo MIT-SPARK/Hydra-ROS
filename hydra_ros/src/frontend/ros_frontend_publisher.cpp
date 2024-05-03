@@ -42,23 +42,16 @@ using kimera_pgmo::KimeraPgmoMeshDelta;
 using pose_graph_tools_msgs::PoseGraph;
 
 RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
-    : nh_(node_handle, "frontend") {
-  dsg_sender_.reset(
-      new DsgSender(nh_, HydraConfig::instance().getFrames().odom, "frontend", false));
+    : nh_(node_handle) {
+  const auto odom_frame = HydraConfig::instance().getFrames().odom;
+  dsg_sender_.reset(new DsgSender(nh_, odom_frame, "frontend", false));
   mesh_graph_pub_ = nh_.advertise<PoseGraph>("mesh_graph_incremental", 100, true);
   mesh_update_pub_ = nh_.advertise<KimeraPgmoMeshDelta>("full_mesh_update", 100, true);
 }
 
-void RosFrontendPublisher::start() {}
-
-void RosFrontendPublisher::stop() {}
-
-// TODO(nathan) think about saving timing information?
-void RosFrontendPublisher::save(const LogSetup&) {}
-
-void RosFrontendPublisher::publish(const DynamicSceneGraph& graph,
-                                   const BackendInput& backend_input,
-                                   uint64_t timestamp_ns) {
+void RosFrontendPublisher::call(uint64_t timestamp_ns,
+                                const DynamicSceneGraph& graph,
+                                const BackendInput& backend_input) const {
   if (backend_input.deformation_graph) {
     mesh_graph_pub_.publish(*backend_input.deformation_graph);
   }

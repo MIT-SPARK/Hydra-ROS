@@ -35,7 +35,6 @@
 #include "hydra_ros/backend/ros_backend_publisher.h"
 
 #include <hydra/common/hydra_config.h>
-#include <spark_dsg/zmq_interface.h>
 
 namespace hydra {
 
@@ -46,47 +45,25 @@ using mesh_msgs::TriangleMeshStamped;
 using pose_graph_tools_msgs::PoseGraph;
 using visualization_msgs::Marker;
 
-RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh,
-                                         const BackendConfig& config)
-    : nh_(nh), config_(config), zmq_publish_mesh_(true), last_zmq_pub_time_(0) {
+RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh) : nh_(nh) {
   mesh_mesh_edges_pub_ =
-      nh_.advertise<Marker>("pgmo/deformation_graph_mesh_mesh", 10, false);
+      nh_.advertise<Marker>("deformation_graph_mesh_mesh", 10, false);
   pose_mesh_edges_pub_ =
-      nh_.advertise<Marker>("pgmo/deformation_graph_pose_mesh", 10, false);
-  pose_graph_pub_ = nh_.advertise<PoseGraph>("pgmo/pose_graph", 10, false);
+      nh_.advertise<Marker>("deformation_graph_pose_mesh", 10, false);
+  pose_graph_pub_ = nh_.advertise<PoseGraph>("pose_graph", 10, false);
 
-  double min_mesh_separation_s = 0.0;
-  nh_.getParam("min_mesh_separation_s", min_mesh_separation_s);
-  nh_.getParam("zmq_publish_mesh", zmq_publish_mesh_);
-
-  dsg_sender_.reset(new hydra::DsgSender(nh_,
-                                         "backend",
-                                         HydraConfig::instance().getFrames().map,
-                                         false,
-                                         min_mesh_separation_s));
-  if (config_.use_zmq_interface) {
-    zmq_sender_.reset(
-        new spark_dsg::ZmqSender(config_.zmq_send_url, config_.zmq_num_threads));
-  }
+  double separation = 0.0;
+  nh_.getParam("min_mesh_separation_s", separation);
+  const auto map_frame = HydraConfig::instance().getFrames().map;
+  dsg_sender_.reset(new hydra::DsgSender(nh_, map_frame, "backend", false, separation));
 }
 
-RosBackendPublisher::~RosBackendPublisher() {}
-
-void RosBackendPublisher::publish(const DynamicSceneGraph& graph,
-                                  const DeformationGraph& dgraph,
-                                  size_t timestamp_ns) {
+void RosBackendPublisher::call(uint64_t timestamp_ns,
+                               const DynamicSceneGraph& graph,
+                               const DeformationGraph& dgraph) const {
   ros::Time stamp;
   stamp.fromNSec(timestamp_ns);
-
-  // TODO(nathan) consider serializing to bytes before sending
   dsg_sender_->sendGraph(graph, stamp);
-
-  if (config_.use_zmq_interface) {
-    // TODO(nathan) handle this better
-    //&& timestamp_ns - last_zmq_pub_time_ > 9000000000
-    zmq_sender_->send(graph, zmq_publish_mesh_);
-    last_zmq_pub_time_ = timestamp_ns;
-  }
 
   if (pose_graph_pub_.getNumSubscribers() > 0) {
     publishPoseGraph(graph, dgraph);
