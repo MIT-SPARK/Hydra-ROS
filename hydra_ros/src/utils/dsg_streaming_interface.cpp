@@ -70,7 +70,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   if (pub_.getNumSubscribers()) {
     hydra_msgs::DsgUpdate msg;
     msg.header.stamp = stamp;
-    spark_dsg::writeGraph(graph, msg.layer_contents, serialize_dsg_mesh_);
+    spark_dsg::io::binary::writeGraph(graph, msg.layer_contents, serialize_dsg_mesh_);
     msg.full_update = true;
     pub_.publish(msg);
   }
@@ -128,9 +128,9 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
   VLOG(5) << "Received dsg update message of " << size_bytes;
   try {
     if (!graph_) {
-      graph_ = spark_dsg::readGraph(msg->layer_contents);
+      graph_ = spark_dsg::io::binary::readGraph(msg->layer_contents);
     } else {
-      spark_dsg::updateGraph(*graph_, msg->layer_contents, true);
+      spark_dsg::io::binary::updateGraph(*graph_, msg->layer_contents);
     }
     has_update_ = true;
   } catch (const std::exception& e) {
