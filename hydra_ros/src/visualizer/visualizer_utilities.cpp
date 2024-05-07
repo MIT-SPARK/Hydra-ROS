@@ -43,10 +43,9 @@
 
 namespace hydra {
 
+using dsg_utils::makeColorMsg;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-using Node = SceneGraphLayer::Node;
-using dsg_utils::makeColorMsg;
 
 namespace {
 
@@ -401,7 +400,7 @@ Marker makeLayerWireframeBoundingBoxes(const std_msgs::Header& header,
 
 Marker makeBoundingBoxMarker(const std_msgs::Header& header,
                              const LayerConfig& config,
-                             const Node& node,
+                             const SceneGraphNode& node,
                              const VisualizerConfig& visualizer_config,
                              const std::string& ns,
                              const ColorFunction& func) {
@@ -448,7 +447,7 @@ Marker makeBoundingBoxMarker(const std_msgs::Header& header,
 
 Marker makeTextMarker(const std_msgs::Header& header,
                       const LayerConfig& config,
-                      const Node& node,
+                      const SceneGraphNode& node,
                       const VisualizerConfig& visualizer_config,
                       const std::string& ns) {
   Marker marker;
@@ -484,7 +483,7 @@ Marker makeTextMarker(const std_msgs::Header& header,
 
 Marker makeTextMarkerNoHeight(const std_msgs::Header& header,
                               const LayerConfig& config,
-                              const Node& node,
+                              const SceneGraphNode& node,
                               const VisualizerConfig&,
                               const std::string& ns) {
   Marker marker;
@@ -674,8 +673,8 @@ MarkerArray makeDynamicGraphEdgeMarkers(
   std::map<LayerId, size_t> num_since_last_insertion;
 
   for (const auto& edge : graph.dynamic_interlayer_edges()) {
-    const Node& source = graph.getNode(edge.second.source).value();
-    const Node& target = graph.getNode(edge.second.target).value();
+    const auto& source = graph.getNode(edge.second.source);
+    const auto& target = graph.getNode(edge.second.target);
 
     if (!shouldVisualize(graph, source, configs, dynamic_configs)) {
       continue;
@@ -736,8 +735,9 @@ MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& header,
   std::map<LayerId, size_t> num_since_last_insertion;
 
   for (const auto& edge : graph.interlayer_edges()) {
-    const Node& source = *(graph.getNode(edge.second.source));
-    const Node& target = *(graph.getNode(edge.second.target));
+    const auto& source = graph.getNode(edge.second.source);
+    const auto& target = graph.getNode(edge.second.target);
+
     if (filter && !filter(source)) {
       continue;
     }
@@ -835,7 +835,7 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
   }
 
   for (const auto& id_node_pair : layer.nodes()) {
-    const Node& node = *id_node_pair.second;
+    const auto& node = *id_node_pair.second;
     const auto& attrs = node.attributes<Place2dNodeAttributes>();
     const auto& mesh_edge_indices = attrs.pcl_mesh_connections;
     if (mesh_edge_indices.empty()) {
@@ -977,8 +977,8 @@ MarkerArray makeGvdWireframe(const std_msgs::Header& header,
   for (const auto& id_edge_pair : layer.edges()) {
     // TODO(nathan) filter by node symbol category
     const auto& edge = id_edge_pair.second;
-    const SceneGraphNode& source_node = layer.getNode(edge.source).value();
-    const SceneGraphNode& target_node = layer.getNode(edge.target).value();
+    const auto& source_node = layer.getNode(edge.source);
+    const auto& target_node = layer.getNode(edge.target);
 
     geometry_msgs::Point source;
     tf2::convert(source_node.attributes().position, source);
@@ -1055,8 +1055,8 @@ Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
 
   auto edge_iter = layer.edges().begin();
   while (edge_iter != layer.edges().end()) {
-    const SceneGraphNode& source_node = layer.getNode(edge_iter->second.source).value();
-    const SceneGraphNode& target_node = layer.getNode(edge_iter->second.target).value();
+    const auto& source_node = layer.getNode(edge_iter->second.source);
+    const auto& target_node = layer.getNode(edge_iter->second.target);
     if (filter && (!filter(source_node) || !filter(target_node))) {
       continue;
     }

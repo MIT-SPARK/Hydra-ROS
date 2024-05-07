@@ -182,23 +182,20 @@ void BasisPointPlugin::drawNodes(const std_msgs::Header& header,
   layer_config.use_label = config.draw_places_labels;
   layer_config.label_scale = config.places_label_scale;
   layer_config.use_bounding_box = false;
-  auto nodes = makeCentroidMarkers(header,
-                                   layer_config,
-                                   layer,
-                                   viz_config,
-                                   "places_parent_graph_nodes",
-                                   [&](const SceneGraphNode& node) -> NodeColor {
-                                     const auto parent = node.getParent();
-                                     if (!parent) {
-                                       return NodeColor::Zero();
-                                     } else {
-                                       return graph.getNode(*parent)
-                                           .value()
-                                           .get()
-                                           .attributes<SemanticNodeAttributes>()
-                                           .color;
-                                     }
-                                   });
+  auto nodes = makeCentroidMarkers(
+      header,
+      layer_config,
+      layer,
+      viz_config,
+      "places_parent_graph_nodes",
+      [&](const SceneGraphNode& node) -> NodeColor {
+        const auto parent = node.getParent();
+        if (!parent) {
+          return NodeColor::Zero();
+        } else {
+          return graph.getNode(*parent).attributes<SemanticNodeAttributes>().color;
+        }
+      });
 
   published_.insert(nodes.ns);
   msg.markers.push_back(nodes);

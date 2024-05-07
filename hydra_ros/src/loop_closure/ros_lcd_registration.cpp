@@ -47,15 +47,13 @@ namespace hydra::lcd {
 using hydra::timing::ScopedTimer;
 
 inline size_t getRobotIdFromNode(const DynamicSceneGraph& graph, NodeId node_id) {
-  const auto& attrs =
-      graph.getNode(node_id).value().get().attributes<AgentNodeAttributes>();
+  const auto& attrs = graph.getNode(node_id).attributes<AgentNodeAttributes>();
   // TODO(yun) cleaner way to track robot prefix to id?
   return kimera_pgmo::robot_prefix_to_id.at(NodeSymbol(attrs.external_key).category());
 }
 
 inline size_t getFrameIdFromNode(const DynamicSceneGraph& graph, NodeId node_id) {
-  const auto& attrs =
-      graph.getNode(node_id).value().get().attributes<AgentNodeAttributes>();
+  const auto& attrs = graph.getNode(node_id).attributes<AgentNodeAttributes>();
   return NodeSymbol(attrs.external_key).categoryId();
 }
 
@@ -89,13 +87,12 @@ RegistrationSolution DsgAgentSolver::solve(const DynamicSceneGraph& dsg,
     return {};
   }
 
-  uint64_t timestamp;
   pose_graph_tools_msgs::LcdFrameRegistration msg;
   msg.request.query_robot = getRobotIdFromNode(dsg, query_id);
   msg.request.match_robot = getRobotIdFromNode(dsg, match_id);
   msg.request.query = getFrameIdFromNode(dsg, query_id);
   msg.request.match = getFrameIdFromNode(dsg, match_id);
-  timestamp = dsg.getDynamicNode(query_id).value().get().timestamp.count();
+  uint64_t timestamp = dsg.getNode(query_id).timestamp.value().count();
 
   ScopedTimer timer("lcd/register_agent", timestamp, true, 2, false);
 

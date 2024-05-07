@@ -84,7 +84,7 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
   id_timestamps[prefix.id] = std::vector<size_t>();
   auto& times = id_timestamps[prefix.id];
   for (const auto& node : agent.nodes()) {
-    times.push_back(node->timestamp.count());
+    times.push_back(node->timestamp.value().count());
   }
 
   const auto& pose_graph =

@@ -515,11 +515,7 @@ NodeColor DynamicSceneGraphVisualizer::getParentColor(
     return NodeColor::Zero();
   }
 
-  return scene_graph_->getNode(*parent)
-      .value()
-      .get()
-      .attributes<SemanticNodeAttributes>()
-      .color;
+  return scene_graph_->getNode(*parent).attributes<SemanticNodeAttributes>().color;
 }
 
 void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
