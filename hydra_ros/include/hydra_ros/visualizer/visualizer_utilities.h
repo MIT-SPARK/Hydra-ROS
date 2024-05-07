@@ -124,6 +124,15 @@ visualization_msgs::Marker makeTextMarkerNoHeight(
     const VisualizerConfig& visualizer_config,
     const std::string& ns);
 
+std::vector<visualization_msgs::Marker> makeEllipsoidMarkers(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const std::string& ns,
+    const ColorFunction& color_func);
+
+
 visualization_msgs::Marker makeCentroidMarkers(
     const std_msgs::Header& header,
     const LayerConfig& config,
@@ -132,6 +141,14 @@ visualization_msgs::Marker makeCentroidMarkers(
     const std::string& ns,
     const ColorFunction& color_func,
     const FilterFunction& filter = {});
+
+visualization_msgs::Marker makePlaceCentroidMarkers(
+    const std_msgs::Header& header,
+    const LayerConfig& config,
+    const SceneGraphLayer& layer,
+    const VisualizerConfig& visualizer_config,
+    const std::string& ns,
+    const ColorFunction& color_func);
 
 visualization_msgs::MarkerArray makeGraphEdgeMarkers(
     const std_msgs::Header& header,

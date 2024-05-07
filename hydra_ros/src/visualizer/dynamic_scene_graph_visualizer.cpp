@@ -54,6 +54,7 @@ enum class NodeColorMode : int {
   ACTIVE = hydra_ros::LayerVisualizer_ACTIVE,
   NEED_CLEANUP = hydra_ros::LayerVisualizer_CLEANUP,
   ACTIVE_MESH = hydra_ros::LayerVisualizer_ACTIVE_MESH,
+  FRONTIER = hydra_ros::LayerVisualizer_FRONTIER
 };
 
 void clearPrevMarkers(const std_msgs::Header& header,
@@ -491,6 +492,22 @@ NodeColor getActiveMeshColor(const SceneGraphNode& node) {
              : NodeColor(0, 0, 255);
 }
 
+NodeColor getFrontierColor(const SceneGraphNode& node) {
+  auto attrs = node.attributes<FrontierNodeAttributes>();
+  if (attrs.real_place) {
+    return NodeColor::Zero();
+  } else {
+    if (attrs.predicted_place) {
+      return NodeColor(0, 0, 255);
+    }
+    if (attrs.active_frontier) {
+      return NodeColor(0, 255, 0);
+    } else {
+      return NodeColor(255, 0, 0);
+    }
+  }
+}
+
 NodeColor DynamicSceneGraphVisualizer::getParentColor(
     const SceneGraphNode& node) const {
   auto parent = node.getParent();
@@ -528,6 +545,9 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
       case NodeColorMode::NEED_CLEANUP:
         layer_color_func = getCleanupColor;
         break;
+      case NodeColorMode::FRONTIER:
+        layer_color_func = getFrontierColor;
+        break;
       case NodeColorMode::DISTANCE:
         layer_color_func = [&](const SceneGraphNode& node) -> NodeColor {
           try {
@@ -556,9 +576,21 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     }
   }
 
-  auto nodes =
-      makeCentroidMarkers(header, config, layer, viz_config, node_ns, layer_color_func);
-  addMultiMarkerIfValid(nodes, msg);
+  if (config.draw_frontier_ellipse) {
+    std::vector<Marker> ellipsoids = makeEllipsoidMarkers(
+        header, config, layer, viz_config, "frontier_ns", layer_color_func);
+    for (auto e : ellipsoids) {
+      msg.markers.push_back(e);
+    }
+
+    auto nodes = makePlaceCentroidMarkers(
+        header, config, layer, viz_config, node_ns, layer_color_func);
+    addMultiMarkerIfValid(nodes, msg);
+  } else {
+    auto nodes = makeCentroidMarkers(
+        header, config, layer, viz_config, node_ns, layer_color_func);
+    addMultiMarkerIfValid(nodes, msg);
+  }
 
   const std::string edge_ns = getLayerEdgeNamespace(layer.id);
   Marker edges;

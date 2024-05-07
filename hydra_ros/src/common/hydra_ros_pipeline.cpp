@@ -117,6 +117,11 @@ void HydraRosPipeline::initBackend() {
         backend->config.places2d_config);
     backend->setUpdateFunctor(DsgLayers::MESH_PLACES, places_functor);
   }
+
+  if (frontend->config.use_frontiers && frontend->config.frontier_places) {
+    auto frontiers_functor = std::make_shared<dsg_updates::UpdateFrontiersFunctor>();
+    backend->setUpdateFunctor(DsgLayers::BUILDINGS + 1, frontiers_functor);
+  }
 }
 
 void HydraRosPipeline::initReconstruction() {

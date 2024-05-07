@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/visualizer_utilities.h"
 
+#include <spark_dsg/node_attributes.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include <random>
@@ -504,6 +505,43 @@ Marker makeTextMarkerNoHeight(const std_msgs::Header& header,
   return marker;
 }
 
+std::vector<Marker> makeEllipsoidMarkers(const std_msgs::Header& header,
+                                         const LayerConfig& config,
+                                         const SceneGraphLayer& layer,
+                                         const VisualizerConfig& visualizer_config,
+                                         const std::string& ns,
+                                         const ColorFunction& color_func) {
+  size_t id = 0;
+  std::vector<Marker> markers;
+  for (const auto& id_node_pair : layer.nodes()) {
+    const auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
+    if (attrs.real_place) {
+      continue;
+    }
+    Marker marker;
+    marker.header = header;
+    marker.type = Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.id = id++;
+    marker.ns = ns;
+
+    marker.scale.x = attrs.frontier_scale.x();
+    marker.scale.y = attrs.frontier_scale.y();
+    marker.scale.z = attrs.frontier_scale.z();
+
+    tf2::convert(attrs.position, marker.pose.position);
+    tf2::convert(attrs.orientation, marker.pose.orientation);
+
+    marker.pose.position.z += getZOffset(config, visualizer_config);
+    marker.color = makeColorMsg(color_func(*id_node_pair.second), config.marker_alpha);
+
+    NodeColor desired_color = color_func(*id_node_pair.second);
+    marker.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
+    markers.push_back(marker);
+  }
+  return markers;
+}
+
 Marker makeCentroidMarkers(const std_msgs::Header& header,
                            const LayerConfig& config,
                            const SceneGraphLayer& layer,
@@ -533,6 +571,44 @@ Marker makeCentroidMarkers(const std_msgs::Header& header,
 
     geometry_msgs::Point node_centroid;
     tf2::convert(id_node_pair.second->attributes().position, node_centroid);
+    node_centroid.z += getZOffset(config, visualizer_config);
+    marker.points.push_back(node_centroid);
+
+    NodeColor desired_color = color_func(*id_node_pair.second);
+    marker.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
+  }
+
+  return marker;
+}
+
+Marker makePlaceCentroidMarkers(const std_msgs::Header& header,
+                                const LayerConfig& config,
+                                const SceneGraphLayer& layer,
+                                const VisualizerConfig& visualizer_config,
+                                const std::string& ns,
+                                const ColorFunction& color_func) {
+  Marker marker;
+  marker.header = header;
+  marker.type = config.use_sphere_marker ? Marker::SPHERE_LIST : Marker::CUBE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+
+  marker.scale.x = config.marker_scale;
+  marker.scale.y = config.marker_scale;
+  marker.scale.z = config.marker_scale;
+
+  fillPoseWithIdentity(marker.pose);
+
+  marker.points.reserve(layer.numNodes());
+  marker.colors.reserve(layer.numNodes());
+  for (const auto& id_node_pair : layer.nodes()) {
+    const auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
+    if (!attrs.real_place) {
+      continue;
+    }
+    geometry_msgs::Point node_centroid;
+    tf2::convert(attrs.position, node_centroid);
     node_centroid.z += getZOffset(config, visualizer_config);
     marker.points.push_back(node_centroid);
 
