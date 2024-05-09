@@ -108,9 +108,6 @@ add_dependencies(
 add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
 target_link_libraries(dsg_optimizer_node ${PROJECT_NAME})
 
-add_executable(hydra_reconstruction_node src/nodes/hydra_reconstruction_node.cpp)
-target_link_libraries(hydra_reconstruction_node ${PROJECT_NAME})
-
 add_executable(hydra_ros_node src/nodes/hydra_node.cpp)
 target_link_libraries(hydra_ros_node ${PROJECT_NAME})
 

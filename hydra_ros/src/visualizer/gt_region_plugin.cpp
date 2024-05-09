@@ -78,8 +78,8 @@ GtRegionPlugin::GtRegionPlugin(const ros::NodeHandle& nh, const std::string& nam
 
   std::filesystem::path region_path(config.gt_regions_filepath);
   if (!std::filesystem::exists(region_path)) {
-    LOG(INFO) << "Provided region path: '" << region_path.string()
-              << "' does not exist";
+    LOG_IF(INFO, !config.gt_regions_filepath.empty())
+        << "Provided region path: '" << region_path.string() << "' does not exist";
     return;
   }
 
