@@ -131,7 +131,6 @@ endif()
 install(
   TARGETS ${PROJECT_NAME}
           dsg_optimizer_node
-          hydra_reconstruction_node
           hydra_ros_node
           hydra_visualizer_node
           mesh_publisher_node
