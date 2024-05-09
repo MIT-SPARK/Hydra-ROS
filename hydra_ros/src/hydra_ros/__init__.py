@@ -1,4 +1,5 @@
 """ROS Python Package for Hydra-ROS."""
+
 from typing import Optional
 import rospy
 import spark_dsg as dsg
@@ -19,6 +20,7 @@ class DsgPublisher:
         header = std_msgs.msg.Header()
         header.stamp = stamp if stamp is not None else rospy.Time.now()
         header.frame_id = frame_id
+        self.publish_with_header(G, header)
 
     def publish_with_header(self, G, header):
         """Send a graph."""
