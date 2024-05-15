@@ -73,7 +73,7 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3f& world_T_body,
-            const GvdPlaceExtractor::GvdLayer& gvd,
+            const voxblox::Layer<places::GvdVoxel>& gvd,
             const places::GraphExtractorInterface* extractor) const override;
 
   void visualizeError(uint64_t timestamp_ns,

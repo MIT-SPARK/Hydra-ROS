@@ -89,7 +89,7 @@ std::string PlacesVisualizer::printInfo() const {
 
 void PlacesVisualizer::call(uint64_t timestamp_ns,
                             const Eigen::Isometry3f&,
-                            const GvdPlaceExtractor::GvdLayer& gvd,
+                            const voxblox::Layer<places::GvdVoxel>& gvd,
                             const GraphExtractorInterface* extractor) const {
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
