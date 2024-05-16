@@ -5,7 +5,7 @@ sinks:
     show_block_outlines: true
     use_gvd_block_outlines: false
     gvd_visualizer:
-      visualization_type: 2    # 0 -> NONE, 1 -> ESDF_SLICE, 2 -> GVD
+      visualization_type: 2  # 0 -> NONE, 1 -> ESDF_SLICE, 2 -> GVD
       color_nearest_vertices: false
       gvd_alpha: 0.6
       gvd_min_distance: 0.2
@@ -13,7 +13,7 @@ sinks:
       basis_threshold: 2
       min_num_basis: 1
       max_num_basis: 10
-      gvd_mode: 0    # 0 -> DEFAULT, 1 -> DISTANCE, 2 -> BASIS_POINTs
+      gvd_mode: 0  # 0 -> DEFAULT, 1 -> DISTANCE, 2 -> BASIS_POINTs
       esdf_alpha: 0.6
       slice_height: 2.0
       esdf_min_distance: 0.0
@@ -45,3 +45,4 @@ sinks:
       max_saturation: 0.9
       min_luminance: 0.2
       max_luminance: 0.85
+  - type: GvdOccupancyPublisher

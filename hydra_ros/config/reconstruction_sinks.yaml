@@ -14,3 +14,6 @@ sinks:
     max_saturation: 0.9
     min_luminance: 0.0
     max_luminance: 0.85
+  - type: TsdfOccupancyPublisher
+    extraction:
+      min_distance: 0.25

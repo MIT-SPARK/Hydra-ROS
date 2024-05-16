@@ -77,6 +77,7 @@ add_library(
   src/utils/ear_clipping.cpp
   src/utils/lookup_tf.cpp
   src/utils/node_utilities.cpp
+  src/utils/occupancy_publisher.cpp
   src/visualizer/basis_point_plugin.cpp
   src/visualizer/colormap_utilities.cpp
   src/visualizer/config_manager.cpp
