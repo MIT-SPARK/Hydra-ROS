@@ -32,85 +32,49 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/utils/node_utilities.h"
+#pragma once
+#include <tf2/buffer_core.h>
 
-#include <glog/logging.h>
-#include <hydra/common/hydra_config.h>
-#include <hydra/utils/timing_utilities.h>
-#include <ros/topic_manager.h>
-#include <rosgraph_msgs/Clock.h>
+#include <Eigen/Geometry>
+#include <filesystem>
+
+namespace rosbag {
+class Bag;
+}
 
 namespace hydra {
 
-using timing::ElapsedTimeRecorder;
+class PoseCache {
+ public:
+  struct Config {
+    std::filesystem::path bag_path;
+    bool static_only = false;
+  };
 
-bool haveClock() {
-  size_t num_pubs = ros::TopicManager::instance()->getNumPublishers("/clock");
-  return num_pubs > 0;
-}
+  struct PoseResult {
+    bool valid = false;
+    Eigen::Vector3d to_p_from;
+    Eigen::Quaterniond to_R_from;
 
-void clockCallback(const rosgraph_msgs::Clock&) {}
+    operator bool() const { return valid; }
 
-void spinWhileClockPresent() {
-  ros::NodeHandle nh;
-  bool use_sim_time = false;
-  nh.getParam("use_sim_time", use_sim_time);
+    inline Eigen::Isometry3d to_T_from() const {
+      return Eigen::Translation3d(to_p_from) * to_R_from;
+    }
+  };
 
-  ServiceFunctor functor;
+  explicit PoseCache(const Config& config);
 
-  ros::NodeHandle pnh("~");
-  ros::ServiceServer service =
-      nh.advertiseService("shutdown", &ServiceFunctor::callback, &functor);
+  explicit PoseCache(const rosbag::Bag& bag, bool static_only = false);
 
-  ros::Subscriber clock_sub;
-  if (!use_sim_time) {
-    // required for topic manager to register publisher
-    clock_sub = nh.subscribe("/clock", 10, clockCallback);
-  }
+  PoseResult lookupPose(uint64_t timestamp_ns,
+                        const std::string& to_frame,
+                        const std::string& from_frame) const;
 
-  ros::WallRate r(50);
-  ROS_INFO("Waiting for bag to start");
-  while (ros::ok() && !haveClock()) {
-    ros::spinOnce();
-    r.sleep();
-  }
+ private:
+  std::shared_ptr<tf2::BufferCore> buffer_;
+};
 
-  ROS_INFO("Running...");
-  while (ros::ok() && haveClock() && !functor.should_exit) {
-    ros::spinOnce();
-    r.sleep();
-  }
-
-  ros::spinOnce();  // make sure all the callbacks are processed
-  ROS_WARN("Exiting!");
-}
-
-void spinUntilExitRequested() {
-  ServiceFunctor functor;
-
-  ros::NodeHandle nh("~");
-  ros::ServiceServer service =
-      nh.advertiseService("shutdown", &ServiceFunctor::callback, &functor);
-
-  ros::WallRate r(50);
-  ROS_INFO("Running...");
-  while (ros::ok() && !functor.should_exit) {
-    ros::spinOnce();
-    r.sleep();
-  }
-
-  ros::spinOnce();  // make sure all the callbacks are processed
-  ROS_WARN("Exiting!");
-}
-
-void spinAndWait(const ros::NodeHandle& nh) {
-  bool exit_after_clock = false;
-  nh.getParam("exit_after_clock", exit_after_clock);
-  if (exit_after_clock) {
-    spinWhileClockPresent();
-  } else {
-    spinUntilExitRequested();
-  }
-}
+void declare_config(PoseCache::Config& config);
 
 }  // namespace hydra

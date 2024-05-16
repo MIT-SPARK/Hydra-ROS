@@ -37,18 +37,38 @@
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
 #include <config_utilities/printing.h>
+#include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/hydra_config.h>
+#include <rosbag/bag.h>
+#include <rosbag/view.h>
 #include <sensor_msgs/CameraInfo.h>
 
 #include "hydra_ros/utils/lookup_tf.h"
+#include "hydra_ros/utils/pose_cache.h"
 
 namespace hydra {
 
 using config::internal::ConfigFactory;
 using config::internal::ModuleMapBase;
 using config::internal::typeInfo;
+
+struct CameraInfoFunctor {
+  void callback(const sensor_msgs::CameraInfo::ConstPtr& info) { msg = info; }
+
+  sensor_msgs::CameraInfo::ConstPtr msg;
+};
+
+void fillConfigFromInfo(const sensor_msgs::CameraInfo& msg,
+                        Camera::Config& cam_config) {
+  cam_config.width = msg.width;
+  cam_config.height = msg.height;
+  cam_config.fx = msg.K[0];
+  cam_config.fy = msg.K[4];
+  cam_config.cx = msg.K[2];
+  cam_config.cy = msg.K[5];
+}
 
 RosSensorExtrinsics::RosSensorExtrinsics(const RosSensorExtrinsics::Config& config)
     : SensorExtrinsics() {
@@ -64,23 +84,44 @@ RosSensorExtrinsics::RosSensorExtrinsics(const RosSensorExtrinsics::Config& conf
           << ", " << body_p_sensor.z() << "]";
 }
 
+RosbagExtrinsics::RosbagExtrinsics(const RosbagExtrinsics::Config& config)
+    : SensorExtrinsics() {
+  config::checkValid(config);
+  PoseCache::Config cache_config;
+  cache_config.bag_path = config.bag_path;
+  cache_config.static_only = true;
+  PoseCache cache(cache_config);
+
+  const auto pose_status = cache.lookupPose(
+      0, HydraConfig::instance().getFrames().robot, config.sensor_frame);
+  CHECK(pose_status) << "Could not look up extrinsics from bag!";
+  body_R_sensor = pose_status.to_R_from;
+  body_p_sensor = pose_status.to_p_from;
+  VLOG(5) << "body_R_sensor: {w: " << body_R_sensor.w() << ", x: " << body_R_sensor.x()
+          << ", y: " << body_R_sensor.y() << ", z: " << body_R_sensor.z() << "}";
+  VLOG(5) << "body_p_sensor: [" << body_p_sensor.x() << ", " << body_p_sensor.y()
+          << ", " << body_p_sensor.z() << "]";
+}
+
 RosIntrinsicsRegistration::RosIntrinsicsRegistration(const std::string& name) {
   ConfigFactory<Sensor>::addEntry<RosCameraIntrinsics::Config>(name);
   ModuleMapBase<std::function<Sensor*(const YAML::Node&)>>::addEntry(
       name,
-      [](const YAML::Node& data) {
-        RosCameraIntrinsics::Config config;
-        config::internal::Visitor::setValues(config, data);
-        return new Camera(RosCameraIntrinsics::makeCameraConfig(data, config));
+      [name](const YAML::Node& data) -> Camera* {
+        if (name == "camera_info") {
+          RosCameraIntrinsics::Config config;
+          config::internal::Visitor::setValues(config, data);
+          return new Camera(RosCameraIntrinsics::makeCameraConfig(data, config));
+        } else if (name == "rosbag_camera_info") {
+          RosbagCameraIntrinsics::Config config;
+          config::internal::Visitor::setValues(config, data);
+          return new Camera(RosbagCameraIntrinsics::makeCameraConfig(data, config));
+        } else {
+          return nullptr;
+        }
       },
       typeInfo<RosCameraIntrinsics>());
 }
-
-struct CameraInfoFunctor {
-  void callback(const sensor_msgs::CameraInfo::ConstPtr& info) { msg = info; }
-
-  sensor_msgs::CameraInfo::ConstPtr msg;
-};
 
 Camera::Config RosCameraIntrinsics::makeCameraConfig(const YAML::Node& data,
                                                      const Config& config) {
@@ -111,14 +152,43 @@ Camera::Config RosCameraIntrinsics::makeCameraConfig(const YAML::Node& data,
 
   Camera::Config cam_config;
   config::internal::Visitor::setValues(static_cast<Sensor::Config&>(cam_config), data);
-  cam_config.width = functor.msg->width;
-  cam_config.height = functor.msg->height;
-  cam_config.fx = functor.msg->K[0];
-  cam_config.fy = functor.msg->K[4];
-  cam_config.cx = functor.msg->K[2];
-  cam_config.cy = functor.msg->K[5];
-  LOG(INFO) << "Initialized Camera Info as " << std::endl
-            << config::toString(cam_config);
+  fillConfigFromInfo(*functor.msg, cam_config);
+  LOG(INFO) << "Initialized camera as " << std::endl << config::toString(cam_config);
+  return cam_config;
+}
+
+Camera::Config RosbagCameraIntrinsics::makeCameraConfig(const YAML::Node& data,
+                                                        const Config& config) {
+  LOG(INFO) << "Loading camera intrinsics from " << config.bag_path;
+
+  rosbag::Bag bag;
+  bag.open(config.bag_path, rosbag::bagmode::Read);
+  rosbag::View view(bag, rosbag::TopicQuery(std::vector<std::string>{config.topic}));
+
+  Camera::Config cam_config;
+  for (const auto& m : view) {
+    const auto msg = m.instantiate<sensor_msgs::CameraInfo>();
+    if (!msg) {
+      LOG(ERROR) << "Topic '" << config.topic << "' is invalid!";
+      break;
+    }
+
+    config::internal::Visitor::setValues(static_cast<Sensor::Config&>(cam_config),
+                                         data);
+    cam_config.width = msg->width;
+    cam_config.height = msg->height;
+    cam_config.cx = msg->K[2];
+    cam_config.cy = msg->K[5];
+    cam_config.fx = msg->K[0];
+    cam_config.fy = msg->K[4];
+    LOG(INFO) << "Initialized Camera Info as " << std::endl
+              << config::toString(cam_config);
+    return cam_config;
+  }
+
+  bag.close();
+
+  LOG(ERROR) << "Failed to find topic '" << config.topic << "' in bag!'";
   return cam_config;
 }
 
@@ -129,12 +199,31 @@ void declare_config(RosSensorExtrinsics::Config& conf) {
   checkCondition(!conf.sensor_frame.empty(), "sensor frame required");
 }
 
+void declare_config(RosbagExtrinsics::Config& config) {
+  using namespace config;
+  name("RosbagExtrinsics::Config");
+  field(config.sensor_frame, "sensor_frame");
+  field<Path>(config.bag_path, "bag_path");
+  checkCondition(!config.sensor_frame.empty(), "sensor frame required");
+  check<Path::Exists>(config.bag_path, "bag_path");
+}
+
 void declare_config(RosCameraIntrinsics::Config& conf) {
   using namespace config;
   name("RosCameraIntrinsics::Config");
   base<Sensor::Config>(conf);
   field(conf.topic, "camera_info_topic");
   checkCondition(!conf.topic.empty(), "camera info topic required");
+}
+
+void declare_config(RosbagCameraIntrinsics::Config& config) {
+  using namespace config;
+  name("RosbagCameraIntrinsics::Config");
+  base<Sensor::Config>(config);
+  field(config.topic, "camera_info_topic");
+  field<Path>(config.bag_path, "bag_path");
+  checkCondition(!config.topic.empty(), "camera info topic required");
+  check<Path::Exists>(config.bag_path, "bag_path");
 }
 
 }  // namespace hydra

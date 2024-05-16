@@ -36,6 +36,8 @@
 #include <hydra/reconstruction/camera.h>
 #include <hydra/reconstruction/sensor.h>
 
+#include <filesystem>
+
 namespace hydra {
 
 struct RosSensorExtrinsics : public SensorExtrinsics {
@@ -49,6 +51,20 @@ struct RosSensorExtrinsics : public SensorExtrinsics {
   inline static const auto registration_ =
       config::RegistrationWithConfig<SensorExtrinsics, RosSensorExtrinsics, Config>(
           "ros");
+};
+
+struct RosbagExtrinsics : public SensorExtrinsics {
+  struct Config {
+    std::string sensor_frame = "";
+    std::filesystem::path bag_path;
+  };
+
+  explicit RosbagExtrinsics(const Config& config);
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<SensorExtrinsics, RosbagExtrinsics, Config>(
+          "rosbag");
 };
 
 struct RosIntrinsicsRegistration {
@@ -65,7 +81,24 @@ struct RosCameraIntrinsics {
   inline static const auto registration_ = RosIntrinsicsRegistration("camera_info");
 };
 
+struct RosbagCameraIntrinsics {
+  struct Config : Sensor::Config {
+    std::string topic = "";
+    std::filesystem::path bag_path;
+  };
+
+  static Camera::Config makeCameraConfig(const YAML::Node& data, const Config& config);
+
+  inline static const auto registration_ =
+      RosIntrinsicsRegistration("rosbag_camera_info");
+};
+
 void declare_config(RosSensorExtrinsics::Config& config);
+
+void declare_config(RosbagExtrinsics::Config& config);
+
 void declare_config(RosCameraIntrinsics::Config& config);
+
+void declare_config(RosbagCameraIntrinsics::Config& config);
 
 }  // namespace hydra

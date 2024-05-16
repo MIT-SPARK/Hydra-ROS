@@ -18,6 +18,7 @@
   <depend>hydra_msgs</depend>
   <depend>image_transport</depend>
   <depend>kimera_pgmo</depend>
+  <depend>rosbag</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
   <depend>tf2_eigen</depend>

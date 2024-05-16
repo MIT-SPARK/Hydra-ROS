@@ -32,85 +32,58 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/utils/node_utilities.h"
+#include <hydra/common/output_sink.h>
+#include <hydra/reconstruction/frame_data.h>
+#include <sensor_msgs/Image.h>
 
-#include <glog/logging.h>
-#include <hydra/common/hydra_config.h>
-#include <hydra/utils/timing_utilities.h>
-#include <ros/topic_manager.h>
-#include <rosgraph_msgs/Clock.h>
+#include <filesystem>
 
 namespace hydra {
 
-using timing::ElapsedTimeRecorder;
+struct BagConfig {
+  std::filesystem::path bag_path;
+  std::string color_topic;
+  std::string depth_topic;
+  double start = -1.0;
+  double duration = -1.0;
+  bool color_compressed = false;
+  config::VirtualConfig<Sensor> sensor;
+  std::string sensor_frame;
+  std::string world_frame;
+};
 
-bool haveClock() {
-  size_t num_pubs = ros::TopicManager::instance()->getNumPublishers("/clock");
-  return num_pubs > 0;
-}
+void declare_config(BagConfig& config);
 
-void clockCallback(const rosgraph_msgs::Clock&) {}
+class PoseCache;
 
-void spinWhileClockPresent() {
-  ros::NodeHandle nh;
-  bool use_sim_time = false;
-  nh.getParam("use_sim_time", use_sim_time);
+class BagReader {
+ public:
+  using Sink = OutputSink<const Sensor&, const FrameData&>;
+  struct Config {
+    std::vector<BagConfig> bags;
+    std::vector<Sink::Factory> sinks;
+  } const config;
 
-  ServiceFunctor functor;
+  explicit BagReader(const Config& config);
 
-  ros::NodeHandle pnh("~");
-  ros::ServiceServer service =
-      nh.advertiseService("shutdown", &ServiceFunctor::callback, &functor);
+  ~BagReader() = default;
 
-  ros::Subscriber clock_sub;
-  if (!use_sim_time) {
-    // required for topic manager to register publisher
-    clock_sub = nh.subscribe("/clock", 10, clockCallback);
-  }
+  void read();
 
-  ros::WallRate r(50);
-  ROS_INFO("Waiting for bag to start");
-  while (ros::ok() && !haveClock()) {
-    ros::spinOnce();
-    r.sleep();
-  }
+  void addSink(const Sink::Ptr& sink);
 
-  ROS_INFO("Running...");
-  while (ros::ok() && haveClock() && !functor.should_exit) {
-    ros::spinOnce();
-    r.sleep();
-  }
+  void handleImages(const BagConfig& bag_config,
+                    const Sensor* sensor,
+                    const PoseCache& cache,
+                    const sensor_msgs::Image::ConstPtr& color_msg,
+                    const sensor_msgs::Image::ConstPtr& depth_msg);
 
-  ros::spinOnce();  // make sure all the callbacks are processed
-  ROS_WARN("Exiting!");
-}
+ protected:
+  void readBag(const BagConfig& config);
 
-void spinUntilExitRequested() {
-  ServiceFunctor functor;
+  Sink::List sinks_;
+};
 
-  ros::NodeHandle nh("~");
-  ros::ServiceServer service =
-      nh.advertiseService("shutdown", &ServiceFunctor::callback, &functor);
-
-  ros::WallRate r(50);
-  ROS_INFO("Running...");
-  while (ros::ok() && !functor.should_exit) {
-    ros::spinOnce();
-    r.sleep();
-  }
-
-  ros::spinOnce();  // make sure all the callbacks are processed
-  ROS_WARN("Exiting!");
-}
-
-void spinAndWait(const ros::NodeHandle& nh) {
-  bool exit_after_clock = false;
-  nh.getParam("exit_after_clock", exit_after_clock);
-  if (exit_after_clock) {
-    spinWhileClockPresent();
-  } else {
-    spinUntilExitRequested();
-  }
-}
+void declare_config(BagReader::Config& config);
 
 }  // namespace hydra

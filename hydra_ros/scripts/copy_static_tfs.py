@@ -50,6 +50,8 @@ def main():
     parser.add_argument("output", type=str, help="file to output to")
     args = parser.parse_args()
 
+    seen = {}
+
     tf_idx = 0
     with open(args.output, "w") as fout:
         fout.write("<launch>\n\n")
@@ -57,9 +59,19 @@ def main():
         with rosbag.Bag(args.bag_file, "r") as bag:
             for topic, tf_msg, t in bag.read_messages(topics=["/tf_static"]):
                 for msg in tf_msg.transforms:
-                    fout.write(NODE_PREFIX)
+
+                    parent = msg.header.frame_id
+                    child = msg.child_frame_id
+                    if parent not in seen:
+                        seen[parent] = set([])
+
+                    if child in seen[parent]:
+                        continue
+
+                    seen[parent].add(child)
+
                     name = "bag_static_tf_{}".format(tf_idx)
-                    tf_idx += 1
+                    fout.write(NODE_PREFIX)
                     fout.write(' name="{}"'.format(name))
                     fout.write(
                         TF_STR.format(
@@ -70,10 +82,11 @@ def main():
                             qy=msg.transform.rotation.y,
                             qz=msg.transform.rotation.z,
                             qw=msg.transform.rotation.w,
-                            parent=msg.header.frame_id,
-                            child=msg.child_frame_id,
+                            parent=parent,
+                            child=child,
                         )
                     )
+                    tf_idx += 1
 
         fout.write("</launch>\n")
 
