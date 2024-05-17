@@ -54,7 +54,6 @@ class RosBackend : public BackendModule {
 
   RosBackend(const Config& config,
              const SharedDsgInfo::Ptr& dsg,
-             const SharedDsgInfo::Ptr& backend_dsg,
              const SharedModuleState::Ptr& state,
              const LogSetup::Ptr& log_setup);
 
@@ -91,7 +90,6 @@ class RosBackend : public BackendModule {
       config::RegistrationWithConfig<BackendModule,
                                      RosBackend,
                                      Config,
-                                     SharedDsgInfo::Ptr,
                                      SharedDsgInfo::Ptr,
                                      SharedModuleState::Ptr,
                                      LogSetup::Ptr>("RosBackend");

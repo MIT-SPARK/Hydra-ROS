@@ -38,6 +38,7 @@
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
+#include <hydra/backend/backend_module.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/common/hydra_config.h>
 #include <hydra/frontend/frontend_module.h>
@@ -45,7 +46,6 @@
 
 #include <memory>
 
-#include "hydra_ros/backend/ros_backend.h"
 #include "hydra_ros/backend/ros_backend_publisher.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
@@ -96,12 +96,8 @@ void HydraRosPipeline::initFrontend() {
 void HydraRosPipeline::initBackend() {
   ros::NodeHandle bnh(nh_, "backend");
   const auto logs = HydraConfig::instance().getLogs();
-  BackendModule::Ptr backend =
-      config::createFromROS<BackendModule>(bnh,
-                                           frontend_dsg_,
-                                           backend_dsg_,
-                                           shared_state_,
-                                           HydraConfig::instance().getLogs());
+  BackendModule::Ptr backend = config::createFromROS<BackendModule>(
+      bnh, backend_dsg_, shared_state_, HydraConfig::instance().getLogs());
   CHECK(backend) << "Failed to construct backend!";
   backend->addSink(std::make_shared<RosBackendPublisher>(bnh));
   modules_["backend"] = backend;
@@ -143,8 +139,7 @@ void HydraRosPipeline::initLCD() {
   config::checkValid(lcd_config);
 
   shared_state_->lcd_queue.reset(new InputQueue<LcdInput::Ptr>());
-  auto lcd =
-      std::make_shared<LoopClosureModule>(lcd_config, frontend_dsg_, shared_state_);
+  auto lcd = std::make_shared<LoopClosureModule>(lcd_config, shared_state_);
   modules_["lcd"] = lcd;
 
   bow_sub_ = nh_.subscribe("bow_vectors", 100, &HydraRosPipeline::bowCallback, this);

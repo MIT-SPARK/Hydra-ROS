@@ -31,7 +31,7 @@
 
   <node pkg="hydra_ros" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
         launch-prefix="$(arg viz_launch_prefix)"
-        output="log"
+        output="$(eval 'screen' if arg('viz_debug') else 'log')"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
     <param name="scene_graph_filepath" value=""/>
