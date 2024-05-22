@@ -114,12 +114,12 @@ class GvdOccupancyPublisher : public GvdPlaceExtractor::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3f& world_T_sensor,
-            const GvdPlaceExtractor::GvdLayer& gvd,
+            const voxblox::Layer<places::GvdVoxel>& gvd,
             const places::GraphExtractorInterface* extractor) const override;
 
  private:
   OccupancyPublisher pub_;
-  mutable GvdPlaceExtractor::GvdLayer::Ptr gvd_;
+  mutable voxblox::Layer<places::GvdVoxel>::Ptr gvd_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<GvdPlaceExtractor::Sink,

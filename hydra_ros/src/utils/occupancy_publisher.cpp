@@ -318,7 +318,7 @@ void TsdfOccupancyPublisher::call(uint64_t timestamp_ns,
 
 void GvdOccupancyPublisher::call(uint64_t timestamp_ns,
                                  const Eigen::Isometry3f& world_T_body,
-                                 const GvdPlaceExtractor::GvdLayer& gvd,
+                                 const voxblox::Layer<places::GvdVoxel>& gvd,
                                  const places::GraphExtractorInterface*) const {
   if (!config.collate) {
     pub_.publishGvd(timestamp_ns, world_T_body.cast<double>(), gvd);
