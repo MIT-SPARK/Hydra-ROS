@@ -34,10 +34,14 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/reconstruction/image_receiver.h"
 
+#include <config_utilities/config.h>
 #include <cv_bridge/cv_bridge.h>
 #include <glog/logging.h>
 
 namespace hydra {
+
+using image_transport::ImageTransport;
+using image_transport::SubscriberFilter;
 
 image_transport::TransportHints getHintsWithNamespace(const ros::NodeHandle& nh,
                                                       const std::string& ns) {
@@ -45,25 +49,39 @@ image_transport::TransportHints getHintsWithNamespace(const ros::NodeHandle& nh,
       "raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
 }
 
+void declare_config(ImageReceiver::Config& config) {
+  using namespace config;
+  name("ImageReceiver::Config");
+  base<DataReceiver::Config>(config);
+  field(config.ns, "ns");
+  field(config.queue_size, "queue_size");
+}
+
+ImageSubscriber::ImageSubscriber() {}
+
 ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
                                  const std::string& camera_name,
                                  const std::string& image_name,
                                  uint32_t queue_size)
-    : transport(ros::NodeHandle(nh, camera_name)),
-      sub(transport, image_name, queue_size, getHintsWithNamespace(nh, camera_name)) {}
+    : transport(std::make_shared<ImageTransport>(ros::NodeHandle(nh, camera_name))),
+      sub(std::make_shared<SubscriberFilter>(
+          *transport, image_name, queue_size, getHintsWithNamespace(nh, camera_name))) {
+}
 
-ImageReceiver::ImageReceiver(const ros::NodeHandle& nh,
-                             const DataQueue::Ptr& data_queue,
-                             double input_separation_s,
-                             size_t queue_size)
-    : DataReceiver(nh, data_queue, input_separation_s),
-      color_sub_(nh_, "rgb"),
-      depth_sub_(nh_, "depth_registered", "image_rect"),
-      label_sub_(nh_, "semantic") {
+ImageReceiver::ImageReceiver(const Config& config)
+    : DataReceiver(config), config(config), nh_(config.ns) {}
+
+bool ImageReceiver::initImpl() {
   // TODO(nathan) subscribe to image subsets
-  synchronizer_.reset(new Synchronizer(
-      SyncPolicy(queue_size), color_sub_.sub, depth_sub_.sub, label_sub_.sub));
+  color_sub_ = ImageSubscriber(nh_, "rgb");
+  depth_sub_ = ImageSubscriber(nh_, "depth_registered", "image_rect");
+  label_sub_ = ImageSubscriber(nh_, "semantic");
+  synchronizer_.reset(new Synchronizer(SyncPolicy(config.queue_size),
+                                       *color_sub_.sub,
+                                       *depth_sub_.sub,
+                                       *label_sub_.sub));
   synchronizer_->registerCallback(&ImageReceiver::callback, this);
+  return true;
 }
 
 ImageReceiver::~ImageReceiver() {}
@@ -89,7 +107,7 @@ void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
     return;
   }
 
-  if (!checkInputTimestamp(depth->header.stamp)) {
+  if (!checkInputTimestamp(depth->header.stamp.toNSec())) {
     return;
   }
 
@@ -113,15 +131,7 @@ void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
     LOG(ERROR) << "unable to read images from ros: " << e.what();
   }
 
-  data_queue_->push(packet);
+  queue.push(packet);
 }
-
-// TODO(nathan) publish input as pointcloud
-// if (config_.publish_pointcloud && config_.use_image_receiver) {
-// pcl_pub_.publish(cloud);
-//}
-/*    if (config_.publish_pointcloud) {*/
-/*pcl_pub_ = nh_.advertise<PointCloud2>("pointcloud", 3);*/
-/*}*/
 
 }  // namespace hydra

@@ -1,0 +1,4 @@
+---
+type: RosInput
+receiver:
+  type: ImageReceiver

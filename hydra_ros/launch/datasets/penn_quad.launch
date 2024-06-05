@@ -15,6 +15,8 @@
     <arg name="run_data_source" default="true"/>
     <arg name="start_rviz" default="true"/>
     <arg name="rviz_file" default="penn_quad.rviz"/>
+    <arg name="use_image_interface" default="false"/>
+    <arg name="load_static_tfs" default="false"/>
 
     <!--arg name="labelspace_name" default="ade20k_mit"/-->
     <arg name="labelspace_name" default="ade20k_indoor"/>
@@ -26,17 +28,27 @@
     <arg name="pointcloud_topic" default="semantic_pointcloud"/>
     <arg name="rgb_info_topic" default="/camera/aligned_depth_to_color/camera_info"/>
     <arg name="rgb_topic" default="/camera/color/image_raw"/>
+    <arg name="depth_info_topic" default="/camera/depth/camera_info"/>
     <arg name="depth_topic" default="/camera/depth/image_rect_raw"/>
     <arg name="label_topic" default="semantic/image_raw"/>
 
     <arg name="reconstruction_config_path" default="$(find hydra)/config/phoenix/pennquad_reconstruction_config.yaml"/>
-
     <arg name="frontend_config_path" default="$(find hydra)/config/phoenix/pennquad_frontend_config.yaml"/>
     <arg name="backend_config_path" default="$(find hydra)/config/phoenix/pennquad_backend_config.yaml"/>
 
-    <include file="$(find hydra_ros)/launch/sources/penn_pointcloud.launch" pass_all_args="true"/>
+    <include file="$(find hydra_ros)/launch/static_tfs/pennquad_static_tfs.xml" />
+
+    <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true">
+        <arg name="enable_rectification" default="true"/>
+         <arg name="verbose" value="false"/>
+         <arg name="rgb_image_transport" value="raw"/>
+         <arg name="enable_pointcloud" value="$(eval not arg('use_image_interface'))"/>
+         <arg name="pointcloud_queue_size" value="40"/>
+         <arg name="model_name" value="mobilenetv2_360_640"/>
+    </include>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+        <arg name="dataset_name" value="penn_quad"/>
         <arg name="zmq_ip" value="$(arg zmq_ip)"/>
         <arg name="config_dir" default="$(find hydra)/config/phoenix"/>
         <arg name="extrinsics_type" value="kimera"/>

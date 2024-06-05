@@ -43,13 +43,13 @@
 #include <hydra/common/hydra_config.h>
 #include <hydra/frontend/frontend_module.h>
 #include <hydra/loop_closure/loop_closure_module.h>
+#include <hydra/reconstruction/reconstruction_module.h>
 
 #include <memory>
 
 #include "hydra_ros/backend/ros_backend_publisher.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
-#include "hydra_ros/reconstruction/ros_reconstruction.h"
 
 namespace hydra {
 
@@ -57,6 +57,7 @@ void declare_config(HydraRosConfig& conf) {
   using namespace config;
   name("HydraRosConfig");
   field(conf.enable_frontend_output, "enable_frontend_output");
+  field(conf.input, "input");
 }
 
 HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
@@ -70,14 +71,14 @@ void HydraRosPipeline::init() {
   const auto& pipeline_config = HydraConfig::instance().getConfig();
   initFrontend();
   initBackend();
-
-  if (pipeline_config.enable_reconstruction) {
-    initReconstruction();
-  }
-
+  initReconstruction();
   if (pipeline_config.enable_lcd) {
     initLCD();
   }
+
+  const auto reconstruction = getModule<ReconstructionModule>("reconstruction");
+  CHECK(reconstruction);
+  input_module_.reset(new RosInputModule(config_.input, reconstruction->queue()));
 }
 
 void HydraRosPipeline::initFrontend() {

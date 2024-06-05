@@ -32,25 +32,42 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/data_receiver.h"
-
-#include <glog/logging.h>
+#pragma once
+#include <hydra/common/input_module.h>
+#include <ros/ros.h>
+#include <tf2_ros/transform_listener.h>
 
 namespace hydra {
 
-bool DataReceiver::checkInputTimestamp(const ros::Time& curr_time) {
-  if (last_time_received_) {
-    const auto separation_s = (curr_time - *last_time_received_).toSec();
-    if (separation_s < input_separation_s_) {
-      VLOG(15) << "[Data Receiver] Dropping input @ " << curr_time.toNSec()
-               << " [ns] with separation of " << separation_s << " [s]";
-      return false;
-    }
-  }
+class RosInputModule : public InputModule {
+ public:
+  using OutputQueue = InputQueue<ReconstructionInput::Ptr>;
+  struct Config : InputModule::Config {
+    std::string ns = "~";
+    bool publish_pointcloud = false;
+    double tf_wait_duration_s = 0.1;
+    double tf_buffer_size_s = 30.0;
+  } const config;
 
-  last_time_received_ = curr_time;
-  VLOG(5) << "[Data Receiver] Got ROS input @ " << curr_time.toNSec() << " [ns]";
-  return true;
-}
+  RosInputModule(const Config& config, const OutputQueue::Ptr& output_queue);
+
+  virtual ~RosInputModule();
+
+  std::string printInfo() const override;
+
+ protected:
+  PoseStatus getBodyPose(uint64_t timestamp_ns) override;
+
+ protected:
+  ros::NodeHandle nh_;
+  std::unique_ptr<tf2_ros::Buffer> buffer_;
+  std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
+
+  inline static const auto registration_ = config::
+      RegistrationWithConfig<InputModule, RosInputModule, Config, OutputQueue::Ptr>(
+          "RosInput");
+};
+
+void declare_config(RosInputModule::Config& config);
 
 }  // namespace hydra

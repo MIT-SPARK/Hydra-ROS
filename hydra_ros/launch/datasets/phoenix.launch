@@ -14,6 +14,9 @@
     <arg name="sensor_frame" default="$(arg robot_name)/ouster_center_link" if="$(arg use_lidar_pointcloud)"/>
     <arg name="use_compressed_transport" default="true"/>
     <arg name="run_data_source" default="true"/>
+    <arg name="enable_rectification" default="true"/>
+    <arg name="load_static_tfs" default="false"/>
+    <arg name="use_prerecorded_semantics" default="false"/>
     <arg name="start_rviz" default="false"/>
 
     <arg name="labelspace_name" default="phoenix"/>
@@ -34,13 +37,29 @@
     <arg name="frontend_config_path" default="$(find hydra)/config/phoenix/$(arg robot_name)_frontend_config.yaml"/>
     <arg name="backend_config_path" default="$(find hydra)/config/phoenix/$(arg robot_name)_backend_config.yaml"/>
 
-    <include if="$(arg run_data_source)" file="$(find hydra_ros)/launch/sources/phoenix_pointcloud.launch" pass_all_args="true"/>
+    <group ns="$(arg robot_name)" if="$(arg run_data_source)">
+        <arg name="need_compressed"
+             value="$(eval arg('use_compressed_transport') and not arg('use_prerecorded_semantics'))"/>
+
+        <include file="$(find hydra_ros)/launch/static_tfs/$(arg robot_name)_static_tfs.xml" if="$(arg load_static_tfs)"/>
+
+        <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true">
+             <arg name="verbose" value="false"/>
+             <arg name="rgb_image_transport" value="compressed" if="$(arg need_compressed)"/>
+             <arg name="rgb_image_transport" value="raw" unless="$(arg need_compressed)"/>
+             <arg name="enable_pointcloud" value="true"/>
+             <arg name="pointcloud_queue_size" value="40"/>
+             <arg name="model_name" value="mobilenetv2_360_640"/>
+             <arg name="labelspace_name" value="ade20k_indoor"/>
+        </include>
+    </group>
 
     <!-- Phoenix-related params -->
     <arg name="phoenix_clock_remap" default="/clock2"/>
     <remap from="/clock" to="$(arg phoenix_clock_remap)"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" ns="$(arg robot_name)" pass_all_args="true">
+        <arg name="dataset_name" value="phoenix"/>
         <arg name="zmq_ip" value="$(arg zmq_ip)"/>
         <arg name="config_dir" default="$(find hydra)/config/phoenix"/>
         <arg name="extrinsics_type" value="kimera" unless="$(arg use_lidar_pointcloud)"/>

@@ -32,27 +32,52 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/ros_reconstruction_config.h"
+#include "hydra_ros/common/ros_input_module.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/types/enum.h>
-#include <geometry_msgs/TransformStamped.h>
-#include <hydra/reconstruction/reconstruction_module.h>
+#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
+#include <hydra/common/hydra_config.h>
+
+#include "hydra_ros/utils/lookup_tf.h"
 
 namespace hydra {
 
-void declare_config(RosReconstructionConfig& conf) {
+void declare_config(RosInputModule::Config& conf) {
   using namespace config;
-  name("RosReconstructionConfig");
-  base<ReconstructionModule::Config>(conf);
-  field(conf.use_image_receiver, "use_image_receiver");
-  field(conf.publish_pointcloud, "publish_pointcloud");
-  field(conf.enable_output_queue, "enable_reconstruction_output_queue");
-  field(conf.input_separation_s, "input_separation_s");
+  name("RosInputModule::Config");
+  base<InputModule::Config>(conf);
+  field(conf.ns, "ns");
   field(conf.tf_wait_duration_s, "tf_wait_duration_s");
   field(conf.tf_buffer_size_s, "tf_buffer_size_s");
-  field(conf.image_queue_size, "image_queue_size");
-  field(conf.reconstruction_ns, "reconstruction_ns");
+}
+
+RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& queue)
+    : InputModule(config, queue), nh_(ros::NodeHandle(config.ns)) {
+  buffer_.reset(new tf2_ros::Buffer(ros::Duration(config.tf_buffer_size_s)));
+  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
+
+  receiver_ = config.receiver.create();
+}
+
+RosInputModule::~RosInputModule() = default;
+
+std::string RosInputModule::printInfo() const {
+  std::stringstream ss;
+  ss << config::toString(config);
+  return ss.str();
+}
+
+PoseStatus RosInputModule::getBodyPose(uint64_t timestamp_ns) {
+  ros::Time curr_ros_time;
+  curr_ros_time.fromNSec(timestamp_ns);
+  const auto pose_status = lookupTransform(*buffer_,
+                                           curr_ros_time,
+                                           HydraConfig::instance().getFrames().odom,
+                                           HydraConfig::instance().getFrames().robot,
+                                           5,  // max tries
+                                           config.tf_wait_duration_s);
+  return pose_status;
 }
 
 }  // namespace hydra

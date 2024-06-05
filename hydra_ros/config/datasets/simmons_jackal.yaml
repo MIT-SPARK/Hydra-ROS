@@ -1,0 +1,5 @@
+---
+type: RosInput
+receiver:
+  type: ImageReceiver
+  queue_size: 30

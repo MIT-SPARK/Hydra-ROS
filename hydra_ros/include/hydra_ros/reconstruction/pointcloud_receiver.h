@@ -33,26 +33,40 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/factory.h>
+#include <hydra/common/data_receiver.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
-
-#include "hydra_ros/reconstruction/data_receiver.h"
 
 namespace hydra {
 
 class PointcloudReceiver : public DataReceiver {
  public:
-  PointcloudReceiver(const ros::NodeHandle& nh,
-                     const DataQueue::Ptr& data_queue,
-                     double input_separation_s,
-                     size_t queue_size = 10);
+  struct Config : DataReceiver::Config {
+    std::string ns = "~";
+    size_t queue_size = 10;
+  };
+
+  explicit PointcloudReceiver(const Config& config);
 
   virtual ~PointcloudReceiver();
+
+ public:
+  const Config config;
+
+ protected:
+  bool initImpl() override;
 
  private:
   void callback(const sensor_msgs::PointCloud2& cloud);
 
+  ros::NodeHandle nh_;
   ros::Subscriber cloud_sub_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DataReceiver,
+                                     PointcloudReceiver,
+                                     PointcloudReceiver::Config>("PointcloudReceiver");
 };
 
 }  // namespace hydra

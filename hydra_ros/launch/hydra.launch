@@ -1,34 +1,31 @@
 <launch>
-    <!-- data arguments -->
+    <!-- frame arguments -->
     <arg name="robot_id" default="0" doc="unique robot identifier"/>
     <arg name="robot_frame" doc="robot base frame (i.e., robot pose)"/>
     <arg name="odom_frame" default="odom" doc="robot map frame"/>
     <arg name="map_frame" default="map" doc="backend scene graph frame"/>
-    <arg name="do_reconstruction" default="true"/>
-    <arg name="use_image_interface" default="false"/>
-    <arg name="publish_pointcloud" default="false"/>
-    <arg name="rgb_image_transport" default="raw"/>
-    <arg name="image_queue_size" default="10"/>
-    <arg name="use_lidar" default="false"/>
-
+    <!-- topic arguments -->
     <arg name="pointcloud_topic" default="pointcloud"/>
     <arg name="rgb_info_topic" default="rgb/camera_info"/>
     <arg name="rgb_topic" default="rgb/image_raw"/>
     <arg name="depth_topic" default="depth_registered/image_rect"/>
     <arg name="label_topic" default="semantic/image_raw"/>
     <arg name="enable_places" default="true"/>
+    <arg name="rgb_image_transport" default="raw"/>
 
     <!-- parameter files -->
     <arg name="config_dir"/>
+    <arg name="dataset_name"/>
     <arg name="semantic_map_path"/>
     <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
+    <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
     <arg name="sensor_config_path" default=""/>
     <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
     <arg name="frontend_config_path" default="$(arg config_dir)/frontend_config.yaml"/>
     <arg name="backend_config_path" default="$(arg config_dir)/backend_config.yaml"/>
     <arg name="param_overrides_file" default="$(find hydra_ros)/config/overrides.yaml"/>
     <arg name="ros_params_file" default="$(find hydra_ros)/config/ros_params.yaml"/>
-
+    <!-- labelspace configuration -->
     <arg name="labelspace_dir" default="$(find hydra)/config/label_spaces"/>
     <arg name="labelspace_name"/>
     <arg name="labelspace_path" default="$(arg labelspace_dir)/$(arg labelspace_name)_label_space.yaml"/>
@@ -80,8 +77,7 @@
 
     <!-- logging output for hydra -->
     <arg name="dsg_output_dir" default="$(find hydra)/output/"/>
-    <arg name="dsg_output_prefix" default="hydra"/>
-    <arg name="log_registration" default="false"/>
+    <arg name="dsg_output_prefix" default="$(arg dataset_name)"/>
     <arg name="log_timing_incrementally" default="false"/>
     <arg name="dsg_path" default="$(arg dsg_output_dir)/$(arg dsg_output_prefix)"/>
     <arg name="start_logger" default="false"/>
@@ -127,7 +123,8 @@
         <!-- parameter files -->
         <rosparam file="$(arg pipeline_path)"/>
         <rosparam file="$(arg labelspace_path)"/>
-        <rosparam file="$(arg reconstruction_config_path)" ns="reconstruction" if="$(arg do_reconstruction)"/>
+        <rosparam file="$(arg input_config_path)" ns="input" subst_value="true"/>
+        <rosparam file="$(arg reconstruction_config_path)" ns="reconstruction"/>
         <rosparam file="$(arg frontend_config_path)" ns="frontend"/>
         <rosparam file="$(arg backend_config_path)" ns="backend"/>
         <rosparam file="$(arg lcd_config_path)"/>
@@ -148,10 +145,6 @@
         <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>
         <!-- reconstruction params -->
         <param name="reconstruction/pose_graphs/make_pose_graph" value="$(arg use_gt_frame)"/>
-        <param name="reconstruction/use_image_receiver" value="$(arg use_image_interface)"/>
-        <param name="reconstruction/image_queue_size" value="$(arg image_queue_size)"/>
-        <param name="reconstruction/publish_pointcloud" value="$(arg publish_pointcloud)"/>
-        <param name="reconstruction/copy_dense_representations" value="true"/>
         <param name="reconstruction/sensor/type" value="$(arg sensor_type)"/>
         <param name="reconstruction/sensor/min_range" value="$(arg sensor_min_range)"/>
         <param name="reconstruction/sensor/max_range" value="$(arg sensor_max_range)"/>
@@ -177,7 +170,6 @@
 
         <!-- LCD params -->
         <param name="lcd_use_bow_vectors" value="$(arg lcd_use_bow_vectors)"/>
-        <param name="lcd/log_registration_problem" value="$(arg log_registration)"/>
         <param name="lcd/use_gnn_descriptors" value="$(arg use_gnn_descriptors)"/>
         <param name="lcd/gnn_lcd/object_model_path" value="$(arg lcd_gnn_object_model)"/>
         <param name="lcd/gnn_lcd/places_model_path" value="$(arg lcd_gnn_places_model)"/>

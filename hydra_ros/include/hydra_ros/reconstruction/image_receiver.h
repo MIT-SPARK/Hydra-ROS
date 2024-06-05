@@ -33,6 +33,8 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/factory.h>
+#include <hydra/common/data_receiver.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/subscriber.h>
@@ -40,18 +42,18 @@
 #include <ros/ros.h>
 #include <sensor_msgs/Image.h>
 
-#include "hydra_ros/reconstruction/data_receiver.h"
-
 namespace hydra {
 
 struct ImageSubscriber {
+  ImageSubscriber();
+
   ImageSubscriber(const ros::NodeHandle& nh,
                   const std::string& camera_name,
                   const std::string& image_name = "image_raw",
                   uint32_t queue_size = 1);
 
-  image_transport::ImageTransport transport;
-  image_transport::SubscriberFilter sub;
+  std::shared_ptr<image_transport::ImageTransport> transport;
+  std::shared_ptr<image_transport::SubscriberFilter> sub;
 };
 
 class ImageReceiver : public DataReceiver {
@@ -60,22 +62,38 @@ class ImageReceiver : public DataReceiver {
       ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image>;
   using Synchronizer = message_filters::Synchronizer<SyncPolicy>;
 
-  ImageReceiver(const ros::NodeHandle& nh,
-                const DataQueue::Ptr& data_queue,
-                double input_separation_s,
-                size_t queue_size = 10);
+  struct Config : DataReceiver::Config {
+    std::string ns = "~";
+    size_t queue_size = 10;
+  };
+
+  explicit ImageReceiver(const Config& config);
 
   virtual ~ImageReceiver();
+
+ public:
+  const Config config;
+
+ protected:
+  bool initImpl() override;
 
  private:
   void callback(const sensor_msgs::Image::ConstPtr& color,
                 const sensor_msgs::Image::ConstPtr& depth,
                 const sensor_msgs::Image::ConstPtr& labels);
 
+  ros::NodeHandle nh_;
   ImageSubscriber color_sub_;
   ImageSubscriber depth_sub_;
   ImageSubscriber label_sub_;
   std::unique_ptr<Synchronizer> synchronizer_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DataReceiver,
+                                     ImageReceiver,
+                                     ImageReceiver::Config>("ImageReceiver");
 };
+
+void declare_config(ImageReceiver::Config& config);
 
 }  // namespace hydra

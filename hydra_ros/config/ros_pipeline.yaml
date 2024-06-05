@@ -4,4 +4,4 @@ frontend:
 backend:
   type: BackendModule
 reconstruction:
-  type: RosReconstruction
+  type: ReconstructionModule

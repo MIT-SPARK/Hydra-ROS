@@ -37,10 +37,13 @@
 #include <pose_graph_tools_msgs/BowQueries.h>
 #include <ros/ros.h>
 
+#include "hydra_ros/common/ros_input_module.h"
+
 namespace hydra {
 
 struct HydraRosConfig {
   bool enable_frontend_output = true;
+  RosInputModule::Config input;
 };
 
 void declare_config(HydraRosConfig& conf);
@@ -51,21 +54,21 @@ class HydraRosPipeline : public HydraPipeline {
 
   virtual ~HydraRosPipeline();
 
+  void init() override;
+
+ protected:
   void bowCallback(const pose_graph_tools_msgs::BowQueries::ConstPtr& msg);
 
-  void init() override;
+  virtual void initFrontend();
+  virtual void initBackend();
+  virtual void initReconstruction();
+  virtual void initLCD();
 
  protected:
   const HydraRosConfig config_;
   ros::NodeHandle nh_;
 
   ros::Subscriber bow_sub_;
-
- private:
-  void initFrontend();
-  void initBackend();
-  void initReconstruction();
-  void initLCD();
 };
 
 }  // namespace hydra

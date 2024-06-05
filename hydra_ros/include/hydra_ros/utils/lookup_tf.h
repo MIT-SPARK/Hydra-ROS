@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra/common/input_module.h>
 #include <tf2_ros/buffer.h>
 
 #include <Eigen/Geometry>
@@ -40,12 +41,6 @@
 #include <string>
 
 namespace hydra {
-
-struct PoseStatus {
-  bool is_valid;
-  Eigen::Quaterniond target_R_source;
-  Eigen::Vector3d target_p_source;
-};
 
 PoseStatus lookupTransform(const std::string& target,
                            const std::string& source,
