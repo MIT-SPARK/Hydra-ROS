@@ -43,7 +43,7 @@
 
         <include file="$(find hydra_ros)/launch/static_tfs/$(arg robot_name)_static_tfs.xml" if="$(arg load_static_tfs)"/>
 
-        <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true">
+        <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch" pass_all_args="true">
              <arg name="verbose" value="false"/>
              <arg name="rgb_image_transport" value="compressed" if="$(arg need_compressed)"/>
              <arg name="rgb_image_transport" value="raw" unless="$(arg need_compressed)"/>

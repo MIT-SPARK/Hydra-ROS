@@ -20,7 +20,7 @@
 
     <!--arg name="labelspace_name" default="ade20k_mit"/-->
     <arg name="labelspace_name" default="ade20k_indoor"/>
-    <arg name="semantic_map_dir" default="$(find semantic_recolor)/config/colors/"/>
+    <arg name="semantic_map_dir" default="$(find semantic_inference)/config/colors/"/>
     <!--arg name="semantic_map_file" default="ade20k_mit.csv"/-->
     <arg name="semantic_map_file" default="ade20k_indoor.csv"/>
     <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"/>
@@ -38,7 +38,7 @@
 
     <include file="$(find hydra_ros)/launch/static_tfs/pennquad_static_tfs.xml" />
 
-    <include file="$(find semantic_recolor)/launch/semantic_recolor.launch" pass_all_args="true">
+    <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch" pass_all_args="true">
         <arg name="enable_rectification" default="true"/>
          <arg name="verbose" value="false"/>
          <arg name="rgb_image_transport" value="raw"/>

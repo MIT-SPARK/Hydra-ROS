@@ -22,13 +22,13 @@ INFO_LAUNCH_TEMPLATE = """<launch>
 
   <arg name="color_map_name" default="ade20k_full"/>
   <arg name="color_map_file"
-       default="$(find semantic_recolor)/config/colors/$(arg color_map_name).yaml"/>
+       default="$(find semantic_inference)/config/colors/$(arg color_map_name).yaml"/>
 
   <node pkg="nodelet" type="nodelet" name="info_nodelet_manager" args="manager">
   </node>
 
   <node pkg="nodelet" type="nodelet" name="recolor_nodelet"
-        args="load semantic_recolor/recolor info_nodelet_manager --no-bond">
+        args="load semantic_inference/recolor info_nodelet_manager --no-bond">
     <rosparam file="$(arg color_map_file)" command="load" ns="colors"/>
     <remap from="labels/image_raw" to="$(arg label_topic)"/>
   </node>

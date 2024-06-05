@@ -17,7 +17,7 @@
     <!-- semantics -->
     <arg name="labelspace_name" default="$(eval 'uhumans2_office' if arg('use_gt_semantics') else 'ade20k_mp3d')" doc="semantic label space"/>
     <arg name="semantic_map_dir" default="$(find hydra_ros)/config/color" if="$(arg use_gt_semantics)"/>
-    <arg name="semantic_map_dir" default="$(find semantic_recolor)/config/colors" unless="$(arg use_gt_semantics)"/>
+    <arg name="semantic_map_dir" default="$(find semantic_inference)/config/colors" unless="$(arg use_gt_semantics)"/>
     <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg labelspace_name).csv"/>
 
     <arg name="rgb_topic" default="/tesse/left_cam/rgb/image_raw"/>
@@ -31,7 +31,7 @@
 
     <node pkg="tf2_ros" type="static_transform_publisher" name="fake_world_tf" args="0 0 0 0 0 0 1 map world" if="$(arg use_gt_frame)"/>
 
-    <include file="$(find semantic_recolor)/launch/semantic_recolor.launch"
+    <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch"
              pass_all_args="true"
              unless="$(arg use_gt_semantics)">
         <arg name="enable_pointcloud" value="false"/>

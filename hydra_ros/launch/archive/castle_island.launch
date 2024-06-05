@@ -12,7 +12,7 @@
 
     <!-- semantics -->
     <arg name="labelspace_name" default="ade20k_full"/>
-    <arg name="semantic_map_dir" default="$(find semantic_recolor)/config/colors"/>
+    <arg name="semantic_map_dir" default="$(find semantic_inference)/config/colors"/>
     <arg name="semantic_map_file" default="$(arg labelspace_name).csv"/>
     <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg semantic_map_file)"/>
 
