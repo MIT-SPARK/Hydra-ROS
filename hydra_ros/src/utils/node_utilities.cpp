@@ -35,7 +35,7 @@
 #include "hydra_ros/utils/node_utilities.h"
 
 #include <glog/logging.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <hydra/utils/timing_utilities.h>
 #include <ros/topic_manager.h>
 #include <rosgraph_msgs/Clock.h>

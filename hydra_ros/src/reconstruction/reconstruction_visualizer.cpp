@@ -37,7 +37,7 @@
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
@@ -172,7 +172,7 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
                                     const Layer<TsdfVoxel>& tsdf,
                                     const ReconstructionOutput&) const {
   std_msgs::Header header;
-  header.frame_id = HydraConfig::instance().getFrames().map;
+  header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
   pubs_->publish("tsdf_viz", [&](Marker& msg) {

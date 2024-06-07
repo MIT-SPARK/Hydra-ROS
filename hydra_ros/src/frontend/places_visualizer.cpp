@@ -37,7 +37,7 @@
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/compression_graph_extractor.h>
 #include <hydra/utils/timing_utilities.h>
@@ -94,7 +94,7 @@ void PlacesVisualizer::call(uint64_t timestamp_ns,
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
   std_msgs::Header header;
-  header.frame_id = HydraConfig::instance().getFrames().map;
+  header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
   visualizeGvd(header, gvd);
@@ -147,7 +147,7 @@ void PlacesVisualizer::visualizeError(uint64_t timestamp_ns,
                                       double threshold) {
   pubs_->publish("error_viz", [&](Marker& msg) {
     msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
-    msg.header.frame_id = HydraConfig::instance().getFrames().map;
+    msg.header.frame_id = GlobalInfo::instance().getFrames().map;
     msg.header.stamp.fromNSec(timestamp_ns);
 
     if (msg.points.size()) {

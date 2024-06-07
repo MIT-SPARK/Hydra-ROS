@@ -37,7 +37,7 @@
 #include <config_utilities/config.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 #include "hydra_ros/utils/lookup_tf.h"
 
@@ -71,8 +71,8 @@ PoseStatus RosInputModule::getBodyPose(uint64_t timestamp_ns) {
   curr_ros_time.fromNSec(timestamp_ns);
   const auto pose_status = lookupTransform(*buffer_,
                                            curr_ros_time,
-                                           HydraConfig::instance().getFrames().odom,
-                                           HydraConfig::instance().getFrames().robot,
+                                           GlobalInfo::instance().getFrames().odom,
+                                           GlobalInfo::instance().getFrames().robot,
                                            5,  // max tries
                                            config.tf_wait_duration_s);
   return pose_status;

@@ -37,7 +37,7 @@
 #include <config_utilities/config.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 namespace hydra {
 
@@ -90,7 +90,7 @@ void ObjectVisualizer::publishActiveVertices(uint64_t timestamp_ns,
 
   visualization_msgs::Marker msg;
   msg.header.stamp.fromNSec(timestamp_ns);
-  msg.header.frame_id = HydraConfig::instance().getFrames().odom;
+  msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
   msg.ns = "active_vertices";
   msg.id = 0;
   fillMarkerFromCloud(delta, active, msg);
@@ -107,7 +107,7 @@ void ObjectVisualizer::publishObjectClouds(uint64_t timestamp_ns,
   for (auto&& [label, indices] : label_indices) {
     visualization_msgs::Marker msg;
     msg.header.stamp.fromNSec(timestamp_ns);
-    msg.header.frame_id = HydraConfig::instance().getFrames().odom;
+    msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
     msg.ns = "label_vertices_" + std::to_string(label);
     msg.id = 0;
     fillMarkerFromCloud(delta, indices, msg);

@@ -40,7 +40,7 @@
 #include <config_utilities/validation.h>
 #include <hydra/backend/backend_module.h>
 #include <hydra/common/dsg_types.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <hydra/frontend/frontend_module.h>
 #include <hydra/loop_closure/loop_closure_module.h>
 #include <hydra/reconstruction/reconstruction_module.h>
@@ -68,7 +68,7 @@ HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
 HydraRosPipeline::~HydraRosPipeline() {}
 
 void HydraRosPipeline::init() {
-  const auto& pipeline_config = HydraConfig::instance().getConfig();
+  const auto& pipeline_config = GlobalInfo::instance().getConfig();
   initFrontend();
   initBackend();
   initReconstruction();
@@ -83,7 +83,7 @@ void HydraRosPipeline::init() {
 
 void HydraRosPipeline::initFrontend() {
   ros::NodeHandle fnh(nh_, "frontend");
-  const auto logs = HydraConfig::instance().getLogs();
+  const auto logs = GlobalInfo::instance().getLogs();
   FrontendModule::Ptr frontend =
       config::createFromROS<FrontendModule>(fnh, frontend_dsg_, shared_state_, logs);
   if (config_.enable_frontend_output) {
@@ -96,9 +96,9 @@ void HydraRosPipeline::initFrontend() {
 
 void HydraRosPipeline::initBackend() {
   ros::NodeHandle bnh(nh_, "backend");
-  const auto logs = HydraConfig::instance().getLogs();
+  const auto logs = GlobalInfo::instance().getLogs();
   BackendModule::Ptr backend = config::createFromROS<BackendModule>(
-      bnh, backend_dsg_, shared_state_, HydraConfig::instance().getLogs());
+      bnh, backend_dsg_, shared_state_, GlobalInfo::instance().getLogs());
   CHECK(backend) << "Failed to construct backend!";
   backend->addSink(std::make_shared<RosBackendPublisher>(bnh));
   modules_["backend"] = backend;
@@ -135,7 +135,7 @@ void HydraRosPipeline::initReconstruction() {
 
 void HydraRosPipeline::initLCD() {
   auto lcd_config = config::fromRos<LoopClosureConfig>(nh_);
-  lcd_config.detector.num_semantic_classes = HydraConfig::instance().getTotalLabels();
+  lcd_config.detector.num_semantic_classes = GlobalInfo::instance().getTotalLabels();
   VLOG(1) << "Number of classes for LCD: " << lcd_config.detector.num_semantic_classes;
   config::checkValid(lcd_config);
 

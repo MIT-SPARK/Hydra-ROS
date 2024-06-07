@@ -36,7 +36,7 @@
 #include <config_utilities/formatting/asl.h>
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/ros.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 #include "hydra_ros/common/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
   hydra::spinAndWait(nh);
   hydra.stop();
   hydra.save();
-  hydra::HydraConfig::exit();
+  hydra::GlobalInfo::exit();
 
   return 0;
 }

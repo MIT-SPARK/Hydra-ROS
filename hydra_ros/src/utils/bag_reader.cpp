@@ -41,7 +41,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/TransformStamped.h>
 #include <glog/logging.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <hydra/input/camera.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <rosbag/bag.h>
@@ -197,7 +197,7 @@ void BagReader::handleImages(const BagConfig& bag_config,
                                 : color_msg->header.frame_id;
   const auto world_frame = !bag_config.world_frame.empty()
                                ? bag_config.world_frame
-                               : HydraConfig::instance().getFrames().odom;
+                               : GlobalInfo::instance().getFrames().odom;
   const auto pose = cache.lookupPose(timestamp_ns, world_frame, sensor_frame);
   if (!pose) {
     LOG(ERROR) << "Could not find pose for data @ " << timestamp_ns << " [ns]";

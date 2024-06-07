@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/backend/ros_backend_publisher.h"
 
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 namespace hydra {
 
@@ -54,7 +54,7 @@ RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh) : nh_(nh) {
 
   double separation = 0.0;
   nh_.getParam("min_mesh_separation_s", separation);
-  const auto map_frame = HydraConfig::instance().getFrames().map;
+  const auto map_frame = GlobalInfo::instance().getFrames().map;
   dsg_sender_.reset(new hydra::DsgSender(nh_, map_frame, "backend", false, separation));
 }
 
@@ -77,7 +77,7 @@ void RosBackendPublisher::call(uint64_t timestamp_ns,
 
 void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
                                            const DeformationGraph& dgraph) const {
-  const auto& prefix = HydraConfig::instance().getRobotPrefix();
+  const auto& prefix = GlobalInfo::instance().getRobotPrefix();
   const auto& agent = graph.getLayer(DsgLayers::AGENTS, prefix.key);
 
   std::map<size_t, std::vector<size_t>> id_timestamps;
@@ -88,7 +88,7 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
   }
 
   const auto& pose_graph =
-      dgraph.getPoseGraph(id_timestamps, HydraConfig::instance().getFrames().map);
+      dgraph.getPoseGraph(id_timestamps, GlobalInfo::instance().getFrames().map);
   pose_graph_pub_.publish(*pose_graph);
 }
 
@@ -103,7 +103,7 @@ void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgr
                                            stamp,
                                            mm_edges_msg,
                                            pm_edges_msg,
-                                           HydraConfig::instance().getFrames().map);
+                                           GlobalInfo::instance().getFrames().map);
 
   if (!mm_edges_msg.points.empty()) {
     mesh_mesh_edges_pub_.publish(mm_edges_msg);

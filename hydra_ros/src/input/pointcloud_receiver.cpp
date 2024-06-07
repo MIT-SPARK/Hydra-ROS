@@ -2,7 +2,7 @@
 
 #include <glog/logging.h>
 #include <hydra/common/common.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 #include "hydra_ros/input/pointcloud_adaptor.h"
 
@@ -32,7 +32,7 @@ void PointcloudReceiver::callback(const sensor_msgs::PointCloud2& msg) {
   fillPointcloudPacket(msg, *packet, false);
   // TODO(nathan) this is brittle, but at least handles kitti
   packet->in_world_frame =
-      msg.header.frame_id == HydraConfig::instance().getFrames().odom;
+      msg.header.frame_id == GlobalInfo::instance().getFrames().odom;
   queue.push(packet);
 }
 

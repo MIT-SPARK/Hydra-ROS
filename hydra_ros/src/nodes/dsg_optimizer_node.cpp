@@ -33,7 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/parsing/ros.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <hydra/frontend/frontend_module.h>
 #include <kimera_pgmo/DeformationGraph.h>
 
@@ -75,7 +75,7 @@ struct DsgOptimizer {
 
   void do_optimize() {
     // TODO(nathan) maybe pull robot id from somewhere
-    HydraConfig::init(PipelineConfig{}, 0);
+    GlobalInfo::init(PipelineConfig{}, 0);
     SharedModuleState::Ptr state(new SharedModuleState());
     backend =
         config::createFromROS<BackendModule>(nh, frontend_dsg, backend_dsg, state);

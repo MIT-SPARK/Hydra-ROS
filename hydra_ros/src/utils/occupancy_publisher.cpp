@@ -39,7 +39,7 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/types/eigen_matrix.h>
 #include <config_utilities/validation.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <nav_msgs/OccupancyGrid.h>
 
 namespace hydra {
@@ -265,7 +265,7 @@ void OccupancyPublisher::publishTsdf(uint64_t timestamp_ns,
   }
 
   nav_msgs::OccupancyGrid msg;
-  msg.header.frame_id = HydraConfig::instance().getFrames().map;
+  msg.header.frame_id = GlobalInfo::instance().getFrames().map;
   msg.header.stamp.fromNSec(timestamp_ns);
 
   msg.info.map_load_time = msg.header.stamp;
@@ -282,7 +282,7 @@ void OccupancyPublisher::publishGvd(uint64_t timestamp_ns,
   }
 
   nav_msgs::OccupancyGrid msg;
-  msg.header.frame_id = HydraConfig::instance().getFrames().map;
+  msg.header.frame_id = GlobalInfo::instance().getFrames().map;
   msg.header.stamp.fromNSec(timestamp_ns);
 
   msg.info.map_load_time = msg.header.stamp;

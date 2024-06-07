@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 
 namespace hydra {
 
@@ -43,7 +43,7 @@ using pose_graph_tools_msgs::PoseGraph;
 
 RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
     : nh_(node_handle) {
-  const auto odom_frame = HydraConfig::instance().getFrames().odom;
+  const auto odom_frame = GlobalInfo::instance().getFrames().odom;
   dsg_sender_.reset(new DsgSender(nh_, odom_frame, "frontend", false));
   mesh_graph_pub_ = nh_.advertise<PoseGraph>("mesh_graph_incremental", 100, true);
   mesh_update_pub_ = nh_.advertise<KimeraPgmoMeshDelta>("full_mesh_update", 100, true);

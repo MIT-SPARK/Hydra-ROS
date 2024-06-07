@@ -40,7 +40,7 @@
 #include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
-#include <hydra/common/hydra_config.h>
+#include <hydra/common/global_info.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
 #include <sensor_msgs/CameraInfo.h>
@@ -74,7 +74,7 @@ RosSensorExtrinsics::RosSensorExtrinsics(const RosSensorExtrinsics::Config& conf
     : SensorExtrinsics() {
   config::checkValid(config);
   const auto pose_status =
-      lookupTransform(HydraConfig::instance().getFrames().robot, config.sensor_frame);
+      lookupTransform(GlobalInfo::instance().getFrames().robot, config.sensor_frame);
   CHECK(pose_status.is_valid) << "Could not look up extrinsics from ros!";
   body_R_sensor = pose_status.target_R_source;
   body_p_sensor = pose_status.target_p_source;
@@ -93,7 +93,7 @@ RosbagExtrinsics::RosbagExtrinsics(const RosbagExtrinsics::Config& config)
   PoseCache cache(cache_config);
 
   const auto pose_status = cache.lookupPose(
-      0, HydraConfig::instance().getFrames().robot, config.sensor_frame);
+      0, GlobalInfo::instance().getFrames().robot, config.sensor_frame);
   CHECK(pose_status) << "Could not look up extrinsics from bag!";
   body_R_sensor = pose_status.to_R_from;
   body_p_sensor = pose_status.to_p_from;
