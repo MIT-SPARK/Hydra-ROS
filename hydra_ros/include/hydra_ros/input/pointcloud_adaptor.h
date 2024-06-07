@@ -33,40 +33,37 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <hydra/common/data_receiver.h>
-#include <ros/ros.h>
+#include <hydra/input/sensor_input_packet.h>
 #include <sensor_msgs/PointCloud2.h>
+
+#include <functional>
 
 namespace hydra {
 
-class PointcloudReceiver : public DataReceiver {
+class PointcloudAdaptor {
  public:
-  struct Config : DataReceiver::Config {
-    std::string ns = "~";
-    size_t queue_size = 10;
-  };
+  PointcloudAdaptor(const sensor_msgs::PointCloud2& cloud);
 
-  explicit PointcloudReceiver(const Config& config);
+  bool valid() const;
 
-  virtual ~PointcloudReceiver();
+  bool hasLabels() const;
 
- public:
-  const Config config;
+  cv::Vec3f position(const uint8_t* point_ptr) const;
+
+  cv::Vec3b color(const uint8_t* point_ptr) const;
+
+  uint32_t label(const uint8_t* point_ptr) const;
 
  protected:
-  bool initImpl() override;
-
- private:
-  void callback(const sensor_msgs::PointCloud2& cloud);
-
-  ros::NodeHandle nh_;
-  ros::Subscriber cloud_sub_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<DataReceiver,
-                                     PointcloudReceiver,
-                                     PointcloudReceiver::Config>("PointcloudReceiver");
+  std::function<double(const uint8_t*)> x_parser_;
+  std::function<double(const uint8_t*)> y_parser_;
+  std::function<double(const uint8_t*)> z_parser_;
+  std::function<uint32_t(const uint8_t*)> label_parser_;
+  std::function<cv::Vec3b(const uint8_t*)> color_parser_;
 };
+
+bool fillPointcloudPacket(const sensor_msgs::PointCloud2& msg,
+                          CloudInputPacket& packet,
+                          bool labels_required);
 
 }  // namespace hydra

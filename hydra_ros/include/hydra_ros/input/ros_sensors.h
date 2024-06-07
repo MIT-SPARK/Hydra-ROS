@@ -33,37 +33,72 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/reconstruction/sensor_input_packet.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <hydra/input/camera.h>
+#include <hydra/input/sensor.h>
 
-#include <functional>
+#include <filesystem>
 
 namespace hydra {
 
-class PointcloudAdaptor {
- public:
-  PointcloudAdaptor(const sensor_msgs::PointCloud2& cloud);
+struct RosSensorExtrinsics : public SensorExtrinsics {
+  struct Config {
+    std::string sensor_frame = "";
+  };
 
-  bool valid() const;
+  explicit RosSensorExtrinsics(const Config& config);
 
-  bool hasLabels() const;
-
-  cv::Vec3f position(const uint8_t* point_ptr) const;
-
-  cv::Vec3b color(const uint8_t* point_ptr) const;
-
-  uint32_t label(const uint8_t* point_ptr) const;
-
- protected:
-  std::function<double(const uint8_t*)> x_parser_;
-  std::function<double(const uint8_t*)> y_parser_;
-  std::function<double(const uint8_t*)> z_parser_;
-  std::function<uint32_t(const uint8_t*)> label_parser_;
-  std::function<cv::Vec3b(const uint8_t*)> color_parser_;
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<SensorExtrinsics, RosSensorExtrinsics, Config>(
+          "ros");
 };
 
-bool fillPointcloudPacket(const sensor_msgs::PointCloud2& msg,
-                          CloudInputPacket& packet,
-                          bool labels_required);
+struct RosbagExtrinsics : public SensorExtrinsics {
+  struct Config {
+    std::string sensor_frame = "";
+    std::filesystem::path bag_path;
+  };
+
+  explicit RosbagExtrinsics(const Config& config);
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<SensorExtrinsics, RosbagExtrinsics, Config>(
+          "rosbag");
+};
+
+struct RosIntrinsicsRegistration {
+  explicit RosIntrinsicsRegistration(const std::string& name);
+};
+
+struct RosCameraIntrinsics {
+  struct Config : Sensor::Config {
+    std::string topic = "";
+  };
+
+  static Camera::Config makeCameraConfig(const YAML::Node& data, const Config& config);
+
+  inline static const auto registration_ = RosIntrinsicsRegistration("camera_info");
+};
+
+struct RosbagCameraIntrinsics {
+  struct Config : Sensor::Config {
+    std::string topic = "";
+    std::filesystem::path bag_path;
+  };
+
+  static Camera::Config makeCameraConfig(const YAML::Node& data, const Config& config);
+
+  inline static const auto registration_ =
+      RosIntrinsicsRegistration("rosbag_camera_info");
+};
+
+void declare_config(RosSensorExtrinsics::Config& config);
+
+void declare_config(RosbagExtrinsics::Config& config);
+
+void declare_config(RosCameraIntrinsics::Config& config);
+
+void declare_config(RosbagCameraIntrinsics::Config& config);
 
 }  // namespace hydra

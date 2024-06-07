@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/ros_sensors.h"
+#include "hydra_ros/input/ros_sensors.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>

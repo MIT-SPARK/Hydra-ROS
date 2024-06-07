@@ -33,7 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/input_module.h>
+#include <hydra/input/input_module.h>
 #include <tf2_ros/buffer.h>
 
 #include <Eigen/Geometry>

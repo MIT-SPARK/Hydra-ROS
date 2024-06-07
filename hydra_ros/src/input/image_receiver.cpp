@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/image_receiver.h"
+#include "hydra_ros/input/image_receiver.h"
 
 #include <config_utilities/config.h>
 #include <cv_bridge/cv_bridge.h>
@@ -68,8 +68,8 @@ ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
           *transport, image_name, queue_size, getHintsWithNamespace(nh, camera_name))) {
 }
 
-ImageReceiver::ImageReceiver(const Config& config)
-    : DataReceiver(config), config(config), nh_(config.ns) {}
+ImageReceiver::ImageReceiver(const Config& config, size_t sensor_id)
+    : DataReceiver(config, sensor_id), config(config), nh_(config.ns) {}
 
 bool ImageReceiver::initImpl() {
   // TODO(nathan) subscribe to image subsets
@@ -111,7 +111,7 @@ void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
     return;
   }
 
-  auto packet = std::make_shared<ImageInputPacket>(color->header.stamp.toNSec());
+  auto packet = std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_id_);
   try {
     const auto cv_depth = cv_bridge::toCvShare(depth);
     packet->depth = cv_depth->image.clone();

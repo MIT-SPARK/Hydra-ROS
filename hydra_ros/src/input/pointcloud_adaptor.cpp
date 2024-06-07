@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/pointcloud_adaptor.h"
+#include "hydra_ros/input/pointcloud_adaptor.h"
 
 #include <glog/logging.h>
 

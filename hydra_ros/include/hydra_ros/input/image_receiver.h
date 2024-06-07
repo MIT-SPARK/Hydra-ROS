@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <config_utilities/factory.h>
-#include <hydra/common/data_receiver.h>
+#include <hydra/input/data_receiver.h>
 #include <image_transport/image_transport.h>
 #include <image_transport/subscriber_filter.h>
 #include <message_filters/subscriber.h>
@@ -67,7 +67,7 @@ class ImageReceiver : public DataReceiver {
     size_t queue_size = 10;
   };
 
-  explicit ImageReceiver(const Config& config);
+  ImageReceiver(const Config& config, size_t sensor_id);
 
   virtual ~ImageReceiver();
 
@@ -91,7 +91,8 @@ class ImageReceiver : public DataReceiver {
   inline static const auto registration_ =
       config::RegistrationWithConfig<DataReceiver,
                                      ImageReceiver,
-                                     ImageReceiver::Config>("ImageReceiver");
+                                     ImageReceiver::Config,
+                                     size_t>("ImageReceiver");
 };
 
 void declare_config(ImageReceiver::Config& config);

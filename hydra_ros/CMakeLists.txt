@@ -60,19 +60,19 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
-  src/backend/ros_backend.cpp
   src/backend/ros_backend_publisher.cpp
+  src/backend/ros_backend.cpp
   src/common/hydra_ros_pipeline.cpp
   src/common/ros_input_module.cpp
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
+  src/input/image_receiver.cpp
+  src/input/pointcloud_adaptor.cpp
+  src/input/pointcloud_receiver.cpp
+  src/input/ros_sensors.cpp
   src/loop_closure/ros_lcd_registration.cpp
-  src/reconstruction/image_receiver.cpp
-  src/reconstruction/pointcloud_adaptor.cpp
-  src/reconstruction/pointcloud_receiver.cpp
   src/reconstruction/reconstruction_visualizer.cpp
-  src/reconstruction/ros_sensors.cpp
   src/utils/bag_reader.cpp
   src/utils/dsg_streaming_interface.cpp
   src/utils/ear_clipping.cpp
@@ -84,11 +84,11 @@ add_library(
   src/visualizer/colormap_utilities.cpp
   src/visualizer/config_manager.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
+  src/visualizer/footprint_plugin.cpp
   src/visualizer/gt_region_plugin.cpp
   src/visualizer/gvd_visualization_utilities.cpp
-  src/visualizer/footprint_plugin.cpp
-  src/visualizer/mesh_plugin.cpp
   src/visualizer/hydra_visualizer.cpp
+  src/visualizer/mesh_plugin.cpp
   src/visualizer/polygon_utilities.cpp
   src/visualizer/region_plugin.cpp
   src/visualizer/visualizer_plugins.cpp

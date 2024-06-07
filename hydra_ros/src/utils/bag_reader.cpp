@@ -42,7 +42,7 @@
 #include <geometry_msgs/TransformStamped.h>
 #include <glog/logging.h>
 #include <hydra/common/hydra_config.h>
-#include <hydra/reconstruction/camera.h>
+#include <hydra/input/camera.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>

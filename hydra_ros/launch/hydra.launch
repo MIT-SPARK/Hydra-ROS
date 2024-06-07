@@ -145,13 +145,6 @@
         <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>
         <!-- reconstruction params -->
         <param name="reconstruction/pose_graphs/make_pose_graph" value="$(arg use_gt_frame)"/>
-        <param name="reconstruction/sensor/type" value="$(arg sensor_type)"/>
-        <param name="reconstruction/sensor/min_range" value="$(arg sensor_min_range)"/>
-        <param name="reconstruction/sensor/max_range" value="$(arg sensor_max_range)"/>
-        <param name="reconstruction/sensor/extrinsics/type" value="$(arg extrinsics_type)"/>
-        <param name="reconstruction/sensor/extrinsics/sensor_frame" value="$(arg sensor_frame)"/>
-        <param name="reconstruction/sensor/extrinsics/sensor_filepath" value="$(arg kimera_sensor_filepath)"/>
-        <param name="reconstruction/sensor/camera_info_topic" value="$(arg rgb_info_topic)"/>
         <!-- frontend params -->
         <param name="frontend/objects/bounding_box_type" value="RAABB" if="$(arg use_oriented_bounding_boxes)"/>
         <param name="frontend/objects/bounding_box_type" value="AABB" unless="$(arg use_oriented_bounding_boxes)"/>

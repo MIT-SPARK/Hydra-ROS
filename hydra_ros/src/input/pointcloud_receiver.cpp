@@ -1,15 +1,15 @@
-#include "hydra_ros/reconstruction/pointcloud_receiver.h"
+#include "hydra_ros/input/pointcloud_receiver.h"
 
 #include <glog/logging.h>
 #include <hydra/common/common.h>
 #include <hydra/common/hydra_config.h>
 
-#include "hydra_ros/reconstruction/pointcloud_adaptor.h"
+#include "hydra_ros/input/pointcloud_adaptor.h"
 
 namespace hydra {
 
-PointcloudReceiver::PointcloudReceiver(const Config& config)
-    : DataReceiver(config), nh_(config.ns) {}
+PointcloudReceiver::PointcloudReceiver(const Config& config, size_t sensor_id)
+    : DataReceiver(config, sensor_id), nh_(config.ns) {}
 
 PointcloudReceiver::~PointcloudReceiver() {}
 
@@ -28,7 +28,7 @@ void PointcloudReceiver::callback(const sensor_msgs::PointCloud2& msg) {
     return;
   }
 
-  auto packet = std::make_shared<CloudInputPacket>(timestamp_ns);
+  auto packet = std::make_shared<CloudInputPacket>(timestamp_ns, sensor_id_);
   fillPointcloudPacket(msg, *packet, false);
   // TODO(nathan) this is brittle, but at least handles kitti
   packet->in_world_frame =

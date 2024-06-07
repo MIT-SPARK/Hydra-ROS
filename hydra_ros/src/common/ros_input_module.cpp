@@ -56,8 +56,6 @@ RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& que
     : InputModule(config, queue), nh_(ros::NodeHandle(config.ns)) {
   buffer_.reset(new tf2_ros::Buffer(ros::Duration(config.tf_buffer_size_s)));
   tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
-
-  receiver_ = config.receiver.create();
 }
 
 RosInputModule::~RosInputModule() = default;
