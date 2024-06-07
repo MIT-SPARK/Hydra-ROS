@@ -51,7 +51,6 @@
         <arg name="dataset_name" value="penn_quad"/>
         <arg name="zmq_ip" value="$(arg zmq_ip)"/>
         <arg name="config_dir" default="$(find hydra)/config/phoenix"/>
-        <arg name="extrinsics_type" value="kimera"/>
         <arg name="kimera_sensor_filepath"
              value="$(find hydra_vio_configs)/config/robots/penn/LeftCameraParams.yaml"/>
         <arg name="rviz_file" default="phoenix.rviz"/>

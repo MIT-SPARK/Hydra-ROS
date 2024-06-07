@@ -25,6 +25,5 @@
         <arg name="dataset_name" value="kitti_360"/>
         <arg name="rviz_file" default="kitti_360.rviz"/>
         <arg name="use_gt_frame" value="true"/>
-        <arg name="sensor_config_path" default="$(find hydra)/config/kitti_360/sensor.yaml"/>
     </include>
 </launch>

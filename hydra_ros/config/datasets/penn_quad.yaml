@@ -2,12 +2,11 @@
 type: RosInput
 receivers:
   - type: PointcloudReceiver
-    sensor: 
-      type: $(arg sensor_type)
+    sensor:
+      type: camera_info
       min_range: $(arg sensor_min_range)
       max_range: $(arg sensor_max_range)
       camera_info_topic: $(arg rgb_info_topic)
       extrinsics:
-        type: $(arg extrinsics_type)
-        sensor_frame: $(arg sensor_frame)
+        type: kimera
         sensor_filepath: $(arg kimera_sensor_filepath)

@@ -2,12 +2,16 @@
 type: RosInput
 receivers:
   - type: PointcloudReceiver
-    sensor: 
-      type: $(arg sensor_type)
+    sensor:
+      type: lidar
       min_range: $(arg sensor_min_range)
       max_range: $(arg sensor_max_range)
-      camera_info_topic: $(arg rgb_info_topic)
+      is_asymmetric: true
+      horizontal_resolution: 0.16  # true resolution 0.08
+      vertical_resolution: 0.8  # true resolution 0.41875
+      horizontal_fov: 360.0
+      vertical_fov: 26.8
+      vertical_fov_top: 2.0
       extrinsics:
-        type: $(arg extrinsics_type)
+        type: ros
         sensor_frame: $(arg sensor_frame)
-        sensor_filepath: $(arg kimera_sensor_filepath)

@@ -36,7 +36,5 @@
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="dataset_name" default="sidpac"/>
         <arg name="rviz_file" default="sidpac.rviz"/>
-        <arg name="sensor_config_path" default="$(find hydra)/config/sensors/sidpac.yaml"/>
-        <arg name="extrinsics_type" default="param"/>
     </include>
 </launch>

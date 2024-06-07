@@ -19,7 +19,6 @@
     <arg name="semantic_map_path"/>
     <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
     <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
-    <arg name="sensor_config_path" default=""/>
     <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
     <arg name="frontend_config_path" default="$(arg config_dir)/frontend_config.yaml"/>
     <arg name="backend_config_path" default="$(arg config_dir)/backend_config.yaml"/>
@@ -31,10 +30,8 @@
     <arg name="labelspace_path" default="$(arg labelspace_dir)/$(arg labelspace_name)_label_space.yaml"/>
 
     <!-- sensor configuration -->
-    <arg name="sensor_type" default="camera_info" doc="kind of sensor to instantiate"/>
     <arg name="sensor_min_range" default="0.1" doc="minimum sensor range in meters"/>
     <arg name="sensor_max_range" default="5.0" doc="maximum sensor range in meters"/>
-    <arg name="extrinsics_type" default="ros" doc="kind of sensor extrinsics to instantiate"/>
     <arg name="sensor_frame" default="" doc="robot sensor frame (for looking up extrinsics)"/>
     <arg name="kimera_sensor_filepath" default="" doc="optional path to kimera camera file (for extrinsics)"/>
     <!-- pipeline configuration -->
@@ -174,9 +171,6 @@
         <rosparam file="$(arg reconstruction_sinks)" ns="reconstruction"/>
     </node>
 
-    <!-- goes outside to make sure params actually override -->
-    <rosparam file="$(arg sensor_config_path)" ns="hydra_ros_node/reconstruction/sensor"
-              if="$(eval len(arg('sensor_config_path')) > 0)"/>
     <rosparam file="$(arg param_overrides_file)" ns="hydra_ros_node"/>
 
     <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch"

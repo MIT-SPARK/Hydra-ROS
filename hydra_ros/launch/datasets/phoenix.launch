@@ -59,10 +59,9 @@
     <remap from="/clock" to="$(arg phoenix_clock_remap)"/>
 
     <include file="$(find hydra_ros)/launch/hydra.launch" ns="$(arg robot_name)" pass_all_args="true">
-        <arg name="dataset_name" value="phoenix"/>
+        <arg name="dataset_name" value="$(eval 'phoenix_lidar' if arg('use_lidar_pointcloud') else 'phoenix')"/>
         <arg name="zmq_ip" value="$(arg zmq_ip)"/>
         <arg name="config_dir" default="$(find hydra)/config/phoenix"/>
-        <arg name="extrinsics_type" value="kimera" unless="$(arg use_lidar_pointcloud)"/>
         <arg name="kimera_sensor_filepath"
              value="$(find hydra_vio_configs)/config/robots/$(arg robot_name)/LeftCameraParams.yaml"
              unless="$(arg use_lidar_pointcloud)"/>
