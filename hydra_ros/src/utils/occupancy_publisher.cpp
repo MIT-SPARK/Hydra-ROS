@@ -154,7 +154,7 @@ void fillOccupancySlice(const OccupancyPublisher::Config& config,
         const size_t index = r * msg.info.width + c;
 
         if (config.add_robot_footprint &&
-            bbox.isInside((sensor_T_world * pos).eval())) {
+            bbox.contains((sensor_T_world * pos).eval())) {
           msg.data[index] = 0;
           continue;
         }

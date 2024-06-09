@@ -241,23 +241,9 @@ geometry_msgs::Point getPointFromMatrix(const Eigen::MatrixXf& matrix, int col) 
 }
 
 void fillCornersFromBbox(const BoundingBox& bbox, Eigen::MatrixXf& corners) {
-  const Eigen::Vector3f dims = bbox.max - bbox.min;
-
-  corners.block<3, 1>(0, 0) = bbox.min;
-  for (int c = 1; c < corners.cols(); ++c) {
-    // x: lsb, y: second lsb, z: third lsb
-    Eigen::Vector3f offset;
-    offset(0) = ((c & 0x01) != 0) ? dims(0) : 0.0f;
-    offset(1) = ((c & 0x02) != 0) ? dims(1) : 0.0f;
-    offset(2) = ((c & 0x04) != 0) ? dims(2) : 0.0f;
-    corners.block<3, 1>(0, c) = bbox.min + offset;
-  }
-
-  if (bbox.type != BoundingBox::Type::AABB) {
-    corners = (bbox.world_R_center * corners).eval();
-    for (int c = 0; c < corners.cols(); ++c) {
-      corners.block<3, 1>(0, c) += bbox.world_P_center;
-    }
+  const auto corner_array = bbox.corners();
+  for (int i = 0; i < 8; ++i) {
+    corners.block<3, 1>(0, i) = corner_array[i];
   }
 }
 
@@ -412,35 +398,15 @@ Marker makeBoundingBoxMarker(const std_msgs::Header& header,
   marker.ns = ns;
   marker.color = makeColorMsg(func(node), config.bounding_box_alpha);
 
-  BoundingBox bounding_box = node.attributes<SemanticNodeAttributes>().bounding_box;
+  const BoundingBox& bounding_box =
+      node.attributes<SemanticNodeAttributes>().bounding_box;
 
-  Eigen::Quaternionf world_q_center =
-      bounding_box.type == BoundingBox::Type::AABB
-          ? Eigen::Quaternionf::Identity()
-          : Eigen::Quaternionf(bounding_box.world_R_center);
-
-  switch (bounding_box.type) {
-    case BoundingBox::Type::OBB:
-      marker.pose.position =
-          tf2::toMsg(bounding_box.world_P_center.cast<double>().eval());
-      tf2::convert(world_q_center.cast<double>(), marker.pose.orientation);
-      marker.pose.position.z +=
-          config.collapse_bounding_box ? 0.0 : getZOffset(config, visualizer_config);
-      break;
-    case BoundingBox::Type::AABB:
-    case BoundingBox::Type::RAABB:
-      marker.pose.position =
-          tf2::toMsg(bounding_box.world_P_center.cast<double>().eval());
-      tf2::convert(world_q_center.cast<double>(), marker.pose.orientation);
-      marker.pose.position.z +=
-          config.collapse_bounding_box ? 0.0 : getZOffset(config, visualizer_config);
-      break;
-    default:
-      ROS_ERROR("Invalid bounding box encountered!");
-      break;
-  }
-
-  tf2::toMsg((bounding_box.max - bounding_box.min).cast<double>().eval(), marker.scale);
+  Eigen::Quaternionf world_q_center = Eigen::Quaternionf(bounding_box.world_R_center);
+  marker.pose.position = tf2::toMsg(bounding_box.world_P_center.cast<double>().eval());
+  tf2::convert(world_q_center.cast<double>(), marker.pose.orientation);
+  marker.pose.position.z +=
+      config.collapse_bounding_box ? 0.0 : getZOffset(config, visualizer_config);
+  tf2::toMsg(bounding_box.dimensions.cast<double>().eval(), marker.scale);
 
   return marker;
 }
