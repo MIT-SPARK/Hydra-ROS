@@ -33,8 +33,8 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <hydra/common/output_sink.h>
-#include <hydra/reconstruction/frame_data.h>
 #include <sensor_msgs/Image.h>
+#include <hydra/input/input_data.h>
 
 #include <filesystem>
 
@@ -58,7 +58,7 @@ class PoseCache;
 
 class BagReader {
  public:
-  using Sink = OutputSink<const Sensor&, const FrameData&>;
+  using Sink = OutputSink<const Sensor&, const InputData&>;
   struct Config {
     std::vector<BagConfig> bags;
     std::vector<Sink::Factory> sinks;

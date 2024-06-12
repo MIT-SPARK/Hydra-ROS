@@ -41,7 +41,7 @@ namespace hydra {
 
 class RosInputModule : public InputModule {
  public:
-  using OutputQueue = InputQueue<ReconstructionInput::Ptr>;
+  using OutputQueue = InputQueue<InputPacket::Ptr>;
   struct Config : InputModule::Config {
     std::string ns = "~";
     bool publish_pointcloud = false;

@@ -43,6 +43,8 @@
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
 #include <hydra/input/camera.h>
+#include <hydra/input/input_packet.h>
+#include <hydra/utils/conversion_utilities.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
@@ -204,14 +206,14 @@ void BagReader::handleImages(const BagConfig& bag_config,
     return;
   }
 
-  FrameData data;
+  InputData data;
   data.timestamp_ns = timestamp_ns;
   data.world_T_body = pose.to_T_from();
   data.color_image = cv_bridge::toCvCopy(color_msg)->image.clone();
   data.color_is_bgr = true;
   data.depth_image = cv_bridge::toCvCopy(depth_msg)->image.clone();
 
-  const auto valid = data.normalizeData(false);
+  const auto valid = conversions::normalizeData(data, false);
   if (!valid) {
     LOG(ERROR) << "Failed to normalize frame data @ " << data.timestamp_ns << " [ns]";
     return;
