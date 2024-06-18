@@ -37,20 +37,22 @@
 
 #include "hydra_ros/visualizer/visualizer_types.h"
 
-namespace hydra {
-namespace dsg_utils {
+namespace hydra::dsg_utils {
 
 inline double computeRatio(double min, double max, double value) {
-  double ratio = (value - min) / (max - min);
-  ratio = !std::isfinite(ratio) ? 0.0 : ratio;
-  return ratio;
+  if (value <= min) {
+    return 0.0;
+  }
+  if (value >= max) {
+    return 1.0;
+  }
+  return (value - min) / (max - min);
 }
 
-std_msgs::ColorRGBA makeColorMsg(const NodeColor& color, double alpha = 1.0);
+std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha = -1.0);
 
-NodeColor getRgbFromHls(double hue, double luminance, double saturation);
+Color getRgbFromHls(double hue, double luminance, double saturation);
 
-NodeColor interpolateColorMap(const ColormapConfig& config, double ratio);
+Color interpolateColorMap(const ColormapConfig& config, double ratio);
 
-}  // namespace dsg_utils
-}  // namespace hydra
+}  // namespace hydra::dsg_utils

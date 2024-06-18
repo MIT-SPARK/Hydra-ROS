@@ -188,10 +188,10 @@ void BasisPointPlugin::drawNodes(const std_msgs::Header& header,
       layer,
       viz_config,
       "places_parent_graph_nodes",
-      [&](const SceneGraphNode& node) -> NodeColor {
+      [&](const SceneGraphNode& node) -> Color {
         const auto parent = node.getParent();
         if (!parent) {
-          return NodeColor::Zero();
+          return Color();
         } else {
           return graph.getNode(*parent).attributes<SemanticNodeAttributes>().color;
         }

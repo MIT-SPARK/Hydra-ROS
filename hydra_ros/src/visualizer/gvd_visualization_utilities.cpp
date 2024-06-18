@@ -43,14 +43,11 @@
 namespace hydra {
 
 using places::GvdGraph;
+using places::GvdLayer;
 using places::GvdVoxel;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-using voxblox::BlockIndexList;
-using voxblox::FloatingPoint;
-using voxblox::Layer;
-using voxblox::MeshLayer;
-using voxblox::TsdfVoxel;
+
 using dsg_utils::computeRatio;
 
 MarkerGroupPub::MarkerGroupPub(const ros::NodeHandle& nh) : nh_(nh) {}
@@ -105,10 +102,7 @@ double getRatio(const GvdVisualizerConfig& config, const GvdVoxel& voxel) {
 
 Marker makeGvdMarker(const GvdVisualizerConfig& config,
                      const ColormapConfig& colors,
-                     const Layer<GvdVoxel>& layer) {
-  BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-
+                     const GvdLayer& layer) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
@@ -119,26 +113,24 @@ Marker makeGvdMarker(const GvdVisualizerConfig& config,
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  marker.scale.x = layer.voxel_size();
-  marker.scale.y = layer.voxel_size();
-  marker.scale.z = layer.voxel_size();
+  marker.scale.x = layer.voxel_size;
+  marker.scale.y = layer.voxel_size;
+  marker.scale.z = layer.voxel_size;
 
-  for (const auto& idx : blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
-    for (size_t i = 0; i < block.num_voxels(); ++i) {
-      const auto& voxel = block.getVoxelByLinearIndex(i);
+  for (const auto& block : layer) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
       if (!voxel.observed || voxel.num_extra_basis < config.basis_threshold) {
         continue;
       }
 
-      Eigen::Vector3d voxel_pos =
-          block.computeCoordinatesFromLinearIndex(i).cast<double>();
+      const Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
       geometry_msgs::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
       double ratio = getRatio(config, voxel);
-      NodeColor color = dsg_utils::interpolateColorMap(colors, ratio);
+      Color color = dsg_utils::interpolateColorMap(colors, ratio);
 
       std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.gvd_alpha);
       marker.colors.push_back(color_msg);
@@ -150,8 +142,8 @@ Marker makeGvdMarker(const GvdVisualizerConfig& config,
 
 Marker makeErrorMarker(const GvdVisualizerConfig& config,
                        const ColormapConfig& colors,
-                       const Layer<GvdVoxel>& lhs,
-                       const Layer<GvdVoxel>& rhs,
+                       const GvdLayer& lhs,
+                       const GvdLayer& rhs,
                        double threshold) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
@@ -163,24 +155,16 @@ Marker makeErrorMarker(const GvdVisualizerConfig& config,
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  marker.scale.x = lhs.voxel_size();
-  marker.scale.y = lhs.voxel_size();
-  marker.scale.z = lhs.voxel_size();
+  marker.scale.x = lhs.voxel_size;
+  marker.scale.y = lhs.voxel_size;
+  marker.scale.z = lhs.voxel_size;
 
-  BlockIndexList blocks;
-  lhs.getAllAllocatedBlocks(&blocks);
+  for (const auto& lhs_block : lhs) {
+    const auto& rhs_block = rhs.getBlock(lhs_block.index);
 
-  for (const auto& idx : blocks) {
-    if (!rhs.hasBlock(idx)) {
-      continue;
-    }
-
-    const auto& lhs_block = lhs.getBlockByIndex(idx);
-    const auto& rhs_block = rhs.getBlockByIndex(idx);
-
-    for (size_t i = 0; i < lhs_block.num_voxels(); ++i) {
-      const auto& lvoxel = lhs_block.getVoxelByLinearIndex(i);
-      const auto& rvoxel = rhs_block.getVoxelByLinearIndex(i);
+    for (size_t i = 0; i < lhs_block.numVoxels(); ++i) {
+      const auto& lvoxel = lhs_block.getVoxel(i);
+      const auto& rvoxel = rhs_block.getVoxel(i);
 
       if (!lvoxel.observed || !rvoxel.observed) {
         continue;
@@ -192,10 +176,9 @@ Marker makeErrorMarker(const GvdVisualizerConfig& config,
       }
 
       double ratio = computeRatio(0, 10, error);
-      NodeColor color = dsg_utils::interpolateColorMap(colors, ratio);
+      Color color = dsg_utils::interpolateColorMap(colors, ratio);
 
-      Eigen::Vector3d voxel_pos =
-          lhs_block.computeCoordinatesFromLinearIndex(i).cast<double>();
+      const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
       geometry_msgs::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
@@ -210,10 +193,7 @@ Marker makeErrorMarker(const GvdVisualizerConfig& config,
 
 Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
                               const ColormapConfig& colors,
-                              const Layer<GvdVoxel>& layer) {
-  BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-
+                              const GvdLayer& layer) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
@@ -224,26 +204,24 @@ Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  marker.scale.x = layer.voxel_size();
-  marker.scale.y = layer.voxel_size();
-  marker.scale.z = layer.voxel_size();
+  marker.scale.x = layer.voxel_size;
+  marker.scale.y = layer.voxel_size;
+  marker.scale.z = layer.voxel_size;
 
-  for (const auto& idx : blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
-    for (size_t i = 0; i < block.num_voxels(); ++i) {
-      const auto& voxel = block.getVoxelByLinearIndex(i);
+  for (const auto& block : layer) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
       if (!voxel.on_surface) {
         continue;
       }
 
-      Eigen::Vector3d voxel_pos =
-          block.computeCoordinatesFromLinearIndex(i).cast<double>();
+      Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
       geometry_msgs::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
       double ratio = computeRatio(-0.4, 0.4, voxel.distance);
-      NodeColor color = dsg_utils::interpolateColorMap(colors, ratio);
+      Color color = dsg_utils::interpolateColorMap(colors, ratio);
 
       std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.gvd_alpha);
       marker.colors.push_back(color_msg);
@@ -255,10 +233,7 @@ Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
 
 Marker makeEsdfMarker(const GvdVisualizerConfig& config,
                       const ColormapConfig& colors,
-                      const Layer<GvdVoxel>& layer) {
-  BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-
+                      const GvdLayer& layer) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
@@ -269,26 +244,24 @@ Marker makeEsdfMarker(const GvdVisualizerConfig& config,
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  marker.scale.x = layer.voxel_size();
-  marker.scale.y = layer.voxel_size();
-  marker.scale.z = layer.voxel_size();
+  marker.scale.x = layer.voxel_size;
+  marker.scale.y = layer.voxel_size;
+  marker.scale.z = layer.voxel_size;
 
-  const FloatingPoint voxel_size = layer.voxel_size();
-  const FloatingPoint half_voxel_size = voxel_size / 2.0;
+  const float voxel_size = layer.voxel_size;
+  const float half_voxel_size = voxel_size / 2.0;
   // rounds down and points the slice at the middle of the nearest voxel boundary
-  const FloatingPoint slice_height =
+  const float slice_height =
       std::floor(config.slice_height / voxel_size) * voxel_size + half_voxel_size;
 
-  for (const auto& idx : blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
-    for (size_t i = 0; i < block.num_voxels(); ++i) {
-      const auto& voxel = block.getVoxelByLinearIndex(i);
+  for (const auto& block : layer) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
       if (!voxel.observed) {
         continue;
       }
 
-      Eigen::Vector3d voxel_pos =
-          block.computeCoordinatesFromLinearIndex(i).cast<double>();
+      Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
       if (voxel_pos(2) < slice_height - half_voxel_size ||
           voxel_pos(2) > slice_height + half_voxel_size) {
         continue;
@@ -300,7 +273,7 @@ Marker makeEsdfMarker(const GvdVisualizerConfig& config,
 
       double ratio = computeRatio(
           config.esdf_min_distance, config.esdf_max_distance, voxel.distance);
-      NodeColor color = dsg_utils::interpolateColorMap(colors, ratio);
+      Color color = dsg_utils::interpolateColorMap(colors, ratio);
 
       std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.esdf_alpha);
       marker.colors.push_back(color_msg);
@@ -358,8 +331,9 @@ void fillMarkerFromBlock(Marker& marker,
   }
 }
 
-template <typename LayerType>
-Marker makeBlocksMarkerImpl(const LayerType& layer, double scale) {
+template <typename BlockT>
+Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
+                            double scale) {
   Marker marker;
   marker.type = Marker::LINE_LIST;
   marker.action = Marker::ADD;
@@ -376,13 +350,9 @@ Marker makeBlocksMarkerImpl(const LayerType& layer, double scale) {
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-
-  for (const auto& idx : blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
-    Eigen::Vector3f block_pos = block.origin();
-    fillMarkerFromBlock(marker, block_pos.cast<double>(), block.block_size());
+  for (const auto& block : layer) {
+    Point position = block.origin();
+    fillMarkerFromBlock(marker, position.cast<double>(), block.block_size);
   }
 
   return marker;
@@ -401,9 +371,6 @@ Marker makeMeshBlocksMarker(const MeshLayer& layer, double scale) {
   tf2::convert(identity_pos, marker.pose.position);
   tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
 
-  BlockIndexList blocks;
-  layer.getAllAllocatedMeshes(&blocks);
-
   std_msgs::ColorRGBA good;
   good.r = 0.2;
   good.g = 1.0;
@@ -416,24 +383,22 @@ Marker makeMeshBlocksMarker(const MeshLayer& layer, double scale) {
   bad.b = 0.2;
   bad.a = 0.8;
 
-  for (const auto& idx : blocks) {
-    const auto block = layer.getMeshPtrByIndex(idx);
-    Eigen::Vector3f block_pos = block->origin;
-    fillMarkerFromBlock(marker, block_pos.cast<double>(), block->block_size);
+  for (const auto& block : layer) {
+    fillMarkerFromBlock(marker, block.origin().cast<double>(), block.block_size);
 
     while (marker.colors.size() < marker.points.size()) {
-      marker.colors.push_back(block->vertices.size() != 0 ? good : bad);
+      marker.colors.push_back(block.points.size() != 0 ? good : bad);
     }
   }
 
   return marker;
 }
 
-Marker makeBlocksMarker(const Layer<TsdfVoxel>& layer, double scale) {
+Marker makeBlocksMarker(const TsdfLayer& layer, double scale) {
   return makeBlocksMarkerImpl(layer, scale);
 }
 
-Marker makeBlocksMarker(const Layer<GvdVoxel>& layer, double scale) {
+Marker makeBlocksMarker(const GvdLayer& layer, double scale) {
   return makeBlocksMarkerImpl(layer, scale);
 }
 
@@ -459,7 +424,7 @@ std_msgs::ColorRGBA makeGvdColor(const GvdVisualizerConfig& config,
       break;
   }
 
-  NodeColor color = dsg_utils::interpolateColorMap(colors, ratio);
+  Color color = dsg_utils::interpolateColorMap(colors, ratio);
   return dsg_utils::makeColorMsg(color, alpha);
 }
 
@@ -658,8 +623,7 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
       const auto& cluster_color = colors.at(color_mapping.at(cluster_id));
       nodes.colors.push_back(cluster_color);
     } else {
-      nodes.colors.push_back(
-          dsg_utils::makeColorMsg(NodeColor(0, 0, 0), config.gvd_alpha));
+      nodes.colors.push_back(dsg_utils::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
     }
 
     auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
@@ -685,7 +649,7 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
         edges.colors.push_back(neighbor_color);
       } else {
         edges.colors.push_back(
-            dsg_utils::makeColorMsg(NodeColor(0, 0, 0), config.gvd_alpha));
+            dsg_utils::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
       }
     }
   }
@@ -718,7 +682,7 @@ MarkerArray makePlaceSpheres(const std_msgs::Header& header,
     marker.pose.orientation.z = 0.0;
     tf2::convert(id_node_pair.second->attributes().position, marker.pose.position);
 
-    NodeColor desired_color(255, 0, 0);
+    Color desired_color(255, 0, 0);
     marker.color = dsg_utils::makeColorMsg(desired_color, alpha);
     spheres.markers.push_back(marker);
     ++id;

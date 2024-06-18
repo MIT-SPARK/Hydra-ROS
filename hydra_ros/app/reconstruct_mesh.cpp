@@ -41,7 +41,6 @@
 #include <hydra/reconstruction/mesh_integrator.h>
 #include <hydra/reconstruction/projective_integrator.h>
 #include <hydra/utils/timing_utilities.h>
-#include <voxblox/io/mesh_ply.h>
 
 #include <filesystem>
 
@@ -71,7 +70,7 @@ struct Reconstructor {
   }
 
   void reconstruct(const std::string& output_dir) {
-    if (!map.getTsdfLayer().getNumberOfAllocatedBlocks()) {
+    if (!map.getTsdfLayer().numBlocks()) {
       LOG(ERROR) << "TSDF is empty! Not saving output";
       return;
     }
@@ -88,15 +87,19 @@ struct Reconstructor {
       std::filesystem::create_directories(output_path);
     }
 
-    voxblox::Mesh full_mesh;
+    Mesh full_mesh;
     {
       timing::ScopedTimer timer("connect_mesh", 0, true, 1);
-      map.getMeshLayer().getVoxbloxMesh()->getConnectedMesh(&full_mesh);
+      // TODO(lschmid): BROKEN fix the mesh connecting. Can be implemented by adapting
+      // this
+      // https://github.mit.edu/SPARK/Hydra/blob/66b701702adb51a4c076ba0e26baf59462863d5a/eval/tools/compress_graph.cpp#L201-L217
+      // to 'full_mesh = connectMesh(map.getMeshLayer());'
+      LOG(ERROR) << "Mesh blocks  are currently not being connected!";
     }
 
     LOG(INFO) << "Saving mesh and tsdf to " << output_path;
     timing::ScopedTimer io_timer("save_files", 0, true, 1);
-    voxblox::outputMeshAsPly(output_path / "mesh.ply", full_mesh);
+    full_mesh.save(output_path / "mesh");
     map.save(output_path / "map");
   }
 

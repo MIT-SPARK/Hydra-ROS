@@ -41,11 +41,11 @@
 namespace hydra {
 
 using FilterFunction = std::function<bool(const SceneGraphNode&)>;
-using ColorFunction = std::function<NodeColor(const SceneGraphNode&)>;
-using EdgeColorFunction = std::function<NodeColor(
+using ColorFunction = std::function<Color(const SceneGraphNode&)>;
+using EdgeColorFunction = std::function<Color(
     const SceneGraphNode&, const SceneGraphNode&, const SceneGraphEdge&, bool)>;
 
-NodeColor getDistanceColor(const VisualizerConfig& config,
+Color getDistanceColor(const VisualizerConfig& config,
                            const ColormapConfig& colors,
                            double distance);
 
@@ -187,7 +187,7 @@ visualization_msgs::Marker makeLayerEdgeMarkers(
     const LayerConfig& config,
     const SceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const NodeColor& color,
+    const Color& color,
     const std::string& ns,
     const FilterFunction& filter = {});
 
@@ -214,7 +214,7 @@ visualization_msgs::Marker makeDynamicCentroidMarkers(
     const DynamicLayerConfig& config,
     const DynamicSceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const NodeColor& color,
+    const Color& color,
     const std::string& ns,
     size_t marker_id = 0);
 
@@ -241,7 +241,7 @@ visualization_msgs::Marker makeDynamicEdgeMarkers(
     const DynamicLayerConfig& config,
     const DynamicSceneGraphLayer& layer,
     const VisualizerConfig& visualizer_config,
-    const NodeColor& color,
+    const Color& color,
     const std::string& ns,
     size_t marker_id);
 

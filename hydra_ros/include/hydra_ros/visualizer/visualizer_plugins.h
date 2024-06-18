@@ -49,9 +49,9 @@ struct PMGraphPluginConfig {
   double mesh_edge_alpha = 0.8;
   double mesh_marker_scale = 0.1;
   double mesh_marker_alpha = 0.8;
-  NodeColor leaf_color;
-  NodeColor interior_color;
-  NodeColor invalid_color;
+  Color leaf_color;
+  Color interior_color;
+  Color invalid_color;
   LayerConfig layer_config;
 };
 

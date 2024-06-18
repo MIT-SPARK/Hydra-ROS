@@ -36,6 +36,7 @@
 
 #include <mesh_msgs/TriangleMesh.h>
 #include <mesh_msgs/TriangleMeshStamped.h>
+#include <spark_dsg/color.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -65,10 +66,10 @@ PMGraphPluginConfig::PMGraphPluginConfig(const ros::NodeHandle& nh) {
   if (leaf_color_float.size() != 3) {
     throw std::runtime_error("color size must be 3!");
   }
-  leaf_color << 255 * leaf_color_float[0], 255 * leaf_color_float[1],
-      255 * leaf_color_float[2];
+  leaf_color = Color(
+      255 * leaf_color_float[0], 255 * leaf_color_float[1], 255 * leaf_color_float[2]);
 
-  invalid_color << 64, 235, 52;
+  invalid_color = Color(64, 235, 52);
 
   // grey
   std::vector<double> interior_color_float{0.3333, 0.3764, 0.4509};
@@ -76,8 +77,9 @@ PMGraphPluginConfig::PMGraphPluginConfig(const ros::NodeHandle& nh) {
   if (interior_color_float.size() != 3) {
     throw std::runtime_error("color size must be 3!");
   }
-  interior_color << 255 * interior_color_float[0], 255 * interior_color_float[1],
-      255 * interior_color_float[2];
+  interior_color = Color(255 * interior_color_float[0],
+                         255 * interior_color_float[1],
+                         255 * interior_color_float[2]);
 
   // TODO(nathan) fix the config for this
 }
@@ -173,8 +175,7 @@ Marker makeMstEdges(const PMGraphPluginConfig& config,
   edges.ns = "places_mesh_graph_mst_edges";
 
   edges.scale.x = config.mesh_edge_scale;
-  edges.color =
-      makeColorMsg(NodeColor::Zero(), config.layer_config.intralayer_edge_alpha);
+  edges.color = makeColorMsg(Color(), config.layer_config.intralayer_edge_alpha);
 
   fillPoseWithIdentity(edges);
 

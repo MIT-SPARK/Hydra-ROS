@@ -183,12 +183,12 @@ inline double getDynamicHue(const DynamicLayerConfig& config, char prefix) {
   return static_cast<double>(color_num) / static_cast<double>(config.num_colors);
 }
 
-NodeColor getNodeColor(const DynamicLayerConfig& config, char prefix) {
+Color getNodeColor(const DynamicLayerConfig& config, char prefix) {
   const double hue = getDynamicHue(config, prefix);
   return dsg_utils::getRgbFromHls(hue, config.luminance, config.saturation);
 }
 
-NodeColor getEdgeColor(const DynamicLayerConfig& config, char prefix) {
+Color getEdgeColor(const DynamicLayerConfig& config, char prefix) {
   const double hue = getDynamicHue(config, prefix);
   const double saturation = config.saturation * config.edge_sl_ratio;
   const double luminance = config.luminance * config.edge_sl_ratio;
@@ -476,43 +476,43 @@ void DynamicSceneGraphVisualizer::deleteLayer(const std_msgs::Header& header,
   prev_labels_.at(layer.id).clear();
 }
 
-NodeColor getActiveColor(const SceneGraphNode& node) {
-  return node.attributes().is_active ? NodeColor(0, 255, 0) : NodeColor::Zero();
+Color getActiveColor(const SceneGraphNode& node) {
+  return node.attributes().is_active ? Color(0, 255, 0) : Color();
 }
 
-NodeColor getCleanupColor(const SceneGraphNode& node) {
+Color getCleanupColor(const SceneGraphNode& node) {
   return node.attributes<Place2dNodeAttributes>().need_cleanup_splitting
-             ? NodeColor(255, 0, 0)
-             : NodeColor(0, 255, 0);
+             ? Color(255, 0, 0)
+             : Color(0, 255, 0);
 }
 
-NodeColor getActiveMeshColor(const SceneGraphNode& node) {
+Color getActiveMeshColor(const SceneGraphNode& node) {
   return node.attributes<Place2dNodeAttributes>().has_active_mesh_indices
-             ? NodeColor(255, 255, 0)
-             : NodeColor(0, 0, 255);
+             ? Color(255, 255, 0)
+             : Color(0, 0, 255);
 }
 
-NodeColor getFrontierColor(const SceneGraphNode& node) {
+Color getFrontierColor(const SceneGraphNode& node) {
   auto attrs = node.attributes<FrontierNodeAttributes>();
   if (attrs.real_place) {
-    return NodeColor::Zero();
+    return Color();
   } else {
     if (attrs.predicted_place) {
-      return NodeColor(0, 0, 255);
+      return Color(0, 0, 255);
     }
     if (attrs.active_frontier) {
-      return NodeColor(0, 255, 0);
+      return Color(0, 255, 0);
     } else {
-      return NodeColor(255, 0, 0);
+      return Color(255, 0, 0);
     }
   }
 }
 
-NodeColor DynamicSceneGraphVisualizer::getParentColor(
+Color DynamicSceneGraphVisualizer::getParentColor(
     const SceneGraphNode& node) const {
   auto parent = node.getParent();
   if (!parent) {
-    return NodeColor::Zero();
+    return Color();
   }
 
   return scene_graph_->getNode(*parent).attributes<SemanticNodeAttributes>().color;
@@ -545,14 +545,14 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
         layer_color_func = getFrontierColor;
         break;
       case NodeColorMode::DISTANCE:
-        layer_color_func = [&](const SceneGraphNode& node) -> NodeColor {
+        layer_color_func = [&](const SceneGraphNode& node) -> Color {
           try {
             return getDistanceColor(
                 viz_config,
                 config_manager_->getColormapConfig("places_colormap"),
                 node.attributes<PlaceNodeAttributes>().distance);
           } catch (const std::bad_cast&) {
-            return NodeColor::Zero();
+            return Color();
           }
         };
         break;
@@ -561,11 +561,11 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
         break;
       case NodeColorMode::DEFAULT:
       default:
-        layer_color_func = [](const SceneGraphNode& node) -> NodeColor {
+        layer_color_func = [](const SceneGraphNode& node) -> Color {
           try {
             return node.attributes<SemanticNodeAttributes>().color;
           } catch (const std::bad_cast&) {
-            return NodeColor::Zero();
+            return Color();
           }
         };
         break;
@@ -599,7 +599,7 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
                                  edge_ns);
   } else {
     edges = makeLayerEdgeMarkers(
-        header, config, layer, viz_config, NodeColor::Zero(), edge_ns);
+        header, config, layer, viz_config, Color(), edge_ns);
   }
   addMultiMarkerIfValid(edges, msg);
 

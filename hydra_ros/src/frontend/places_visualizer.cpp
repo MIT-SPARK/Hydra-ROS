@@ -50,13 +50,11 @@ namespace hydra {
 using places::CompressionGraphExtractor;
 using places::GraphExtractorInterface;
 using places::GvdGraph;
+using places::GvdLayer;
 using places::GvdVoxel;
 using timing::ScopedTimer;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-using voxblox::Layer;
-using voxblox::MeshLayer;
-using voxblox::TsdfVoxel;
 
 void declare_config(PlacesVisualizer::Config& config) {
   using namespace config;
@@ -89,7 +87,7 @@ std::string PlacesVisualizer::printInfo() const {
 
 void PlacesVisualizer::call(uint64_t timestamp_ns,
                             const Eigen::Isometry3f&,
-                            const voxblox::Layer<places::GvdVoxel>& gvd,
+                            const GvdLayer& gvd,
                             const GraphExtractorInterface* extractor) const {
   ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
 
@@ -142,8 +140,8 @@ void PlacesVisualizer::call(uint64_t timestamp_ns,
 }
 
 void PlacesVisualizer::visualizeError(uint64_t timestamp_ns,
-                                      const Layer<GvdVoxel>& lhs,
-                                      const Layer<GvdVoxel>& rhs,
+                                      const GvdLayer& lhs,
+                                      const GvdLayer& rhs,
                                       double threshold) {
   pubs_->publish("error_viz", [&](Marker& msg) {
     msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
@@ -186,7 +184,7 @@ void PlacesVisualizer::visualizeGraph(const std_msgs::Header& header,
                                                 config_.graph_layer,
                                                 graph,
                                                 config_.graph,
-                                                NodeColor::Zero(),
+                                                Color(),
                                                 config_.place_marker_ns + "_edges");
       markers.markers.push_back(edge_marker);
     }
@@ -222,7 +220,7 @@ void PlacesVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
 }
 
 void PlacesVisualizer::visualizeGvd(const std_msgs::Header& header,
-                                    const Layer<GvdVoxel>& gvd) const {
+                                    const GvdLayer& gvd) const {
   pubs_->publish("esdf_viz", [&](Marker& msg) {
     msg = makeEsdfMarker(config_.gvd, config_.colormap, gvd);
     msg.header = header;
@@ -264,7 +262,7 @@ void PlacesVisualizer::visualizeGvd(const std_msgs::Header& header,
 }
 
 void PlacesVisualizer::visualizeBlocks(const std_msgs::Header& header,
-                                       const Layer<GvdVoxel>& gvd) const {
+                                       const GvdLayer& gvd) const {
   pubs_->publish("voxel_block_viz", [&](Marker& msg) {
     msg = makeBlocksMarker(gvd, config_.outline_scale);
     msg.header = header;
@@ -308,7 +306,7 @@ void PlacesVisualizer::publishFreespace(const std_msgs::Header& header,
     freespace_conf.marker_alpha = 0.5;
     Marker node_marker = makeCentroidMarkers(
         header, freespace_conf, graph, config_.graph, node_ns, [](const auto&) {
-          return NodeColor::Zero();
+          return Color();
         });
     markers.markers.push_back(node_marker);
 
@@ -318,7 +316,7 @@ void PlacesVisualizer::publishFreespace(const std_msgs::Header& header,
                                config_.graph_layer,
                                graph,
                                config_.graph,
-                               NodeColor::Zero(),
+                               Color(),
                                config_.place_marker_ns + "_freespace_edges");
       markers.markers.push_back(edge_marker);
     }

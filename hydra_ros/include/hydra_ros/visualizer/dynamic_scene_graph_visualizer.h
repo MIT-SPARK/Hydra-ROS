@@ -177,7 +177,7 @@ class DynamicSceneGraphVisualizer {
 
   void drawDynamicLayers(const std_msgs::Header& header, MarkerArray& msg);
 
-  NodeColor getParentColor(const SceneGraphNode& node) const;
+  Color getParentColor(const SceneGraphNode& node) const;
 
  protected:
   ros::NodeHandle nh_;

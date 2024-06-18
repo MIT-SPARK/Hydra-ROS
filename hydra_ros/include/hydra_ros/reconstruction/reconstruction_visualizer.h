@@ -35,8 +35,6 @@
 #pragma once
 #include <hydra/reconstruction/reconstruction_module.h>
 #include <ros/ros.h>
-#include <voxblox/core/layer.h>
-#include <voxblox/core/voxel.h>
 
 #include "hydra_ros/visualizer/visualizer_types.h"
 
@@ -67,7 +65,7 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3d& world_T_sensor,
-            const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
+            const TsdfLayer& tsdf,
             const ReconstructionOutput& msg) const override;
 
  protected:

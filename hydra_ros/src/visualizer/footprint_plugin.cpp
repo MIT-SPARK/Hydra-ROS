@@ -135,10 +135,7 @@ void FootprintPlugin::draw(const ConfigManager&,
     const auto mean_z = getMeanNeighborHeight(layer, *node);
     const auto& attrs = node->attributes<SemanticNodeAttributes>();
 
-    std_msgs::ColorRGBA color;
-    color.r = attrs.color.x() / 255.0;
-    color.g = attrs.color.y() / 255.0;
-    color.b = attrs.color.z() / 255.0;
+    auto color = dsg_utils::makeColorMsg(attrs.color);
     color.a = config.line_alpha;
 
     double radius = config.footprint_radius;

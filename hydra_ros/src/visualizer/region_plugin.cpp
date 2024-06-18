@@ -115,10 +115,7 @@ void RegionPlugin::draw(const ConfigManager&,
     if (config.skip_unknown && attrs.name == "unknown") {
       continue;
     }
-    std_msgs::ColorRGBA color;
-    color.r = attrs.color.x() / 255.0;
-    color.g = attrs.color.y() / 255.0;
-    color.b = attrs.color.z() / 255.0;
+    auto color =dsg_utils::makeColorMsg(attrs.color);
     color.a = config.line_alpha;
 
     const double mean_z = getMeanChildHeight(graph, *node);

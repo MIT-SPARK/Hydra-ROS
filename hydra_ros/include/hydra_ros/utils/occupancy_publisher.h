@@ -38,8 +38,6 @@
 #include <hydra/places/gvd_voxel.h>
 #include <hydra/reconstruction/reconstruction_module.h>
 #include <ros/ros.h>
-#include <voxblox/core/layer.h>
-#include <voxblox/core/voxel.h>
 
 namespace hydra {
 
@@ -62,11 +60,11 @@ class OccupancyPublisher {
 
   void publishTsdf(uint64_t timestamp_ns,
                    const Eigen::Isometry3d& world_T_sensor,
-                   const voxblox::Layer<voxblox::TsdfVoxel>& tsdf) const;
+                   const TsdfLayer& tsdf) const;
 
   void publishGvd(uint64_t timestamp_ns,
                   const Eigen::Isometry3d& world_T_sensor,
-                  const voxblox::Layer<places::GvdVoxel>& gvd) const;
+                  const places::GvdLayer& gvd) const;
 
  private:
   ros::NodeHandle nh_;
@@ -87,12 +85,12 @@ class TsdfOccupancyPublisher : public ReconstructionModule::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3d& world_T_sensor,
-            const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
+            const TsdfLayer& tsdf,
             const ReconstructionOutput& msg) const override;
 
  private:
   OccupancyPublisher pub_;
-  mutable voxblox::Layer<voxblox::TsdfVoxel>::Ptr tsdf_;
+  mutable TsdfLayer::Ptr tsdf_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<ReconstructionModule::Sink,
@@ -114,12 +112,12 @@ class GvdOccupancyPublisher : public GvdPlaceExtractor::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3f& world_T_sensor,
-            const voxblox::Layer<places::GvdVoxel>& gvd,
+            const places::GvdLayer& gvd,
             const places::GraphExtractorInterface* extractor) const override;
 
  private:
   OccupancyPublisher pub_;
-  mutable voxblox::Layer<places::GvdVoxel>::Ptr gvd_;
+  mutable places::GvdLayer::Ptr gvd_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<GvdPlaceExtractor::Sink,

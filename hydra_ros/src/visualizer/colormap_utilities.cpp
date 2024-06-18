@@ -37,23 +37,22 @@
 #include <algorithm>
 #include <opencv2/imgproc.hpp>
 
-namespace hydra {
-namespace dsg_utils {
+namespace hydra::dsg_utils {
 
 inline double lerp(double min, double max, double ratio) {
   return (max - min) * ratio + min;
 }
 
-std_msgs::ColorRGBA makeColorMsg(const NodeColor& color, double alpha) {
+std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha) {
   std_msgs::ColorRGBA msg;
-  msg.r = static_cast<double>(color(0)) / 255.0;
-  msg.g = static_cast<double>(color(1)) / 255.0;
-  msg.b = static_cast<double>(color(2)) / 255.0;
-  msg.a = alpha;
+  msg.r = static_cast<double>(color.r) / 255.0;
+  msg.g = static_cast<double>(color.g) / 255.0;
+  msg.b = static_cast<double>(color.b) / 255.0;
+  msg.a = alpha >= 0.0 ? alpha : static_cast<double>(color.a) / 255.0;
   return msg;
 }
 
-NodeColor getRgbFromHls(double hue, double luminance, double saturation) {
+Color getRgbFromHls(double hue, double luminance, double saturation) {
   // make sure we clip the inputs to the expected range
   hue = std::clamp(hue, 0.0, 1.0);
   luminance = std::clamp(luminance, 0.0, 1.0);
@@ -68,14 +67,14 @@ NodeColor getRgbFromHls(double hue, double luminance, double saturation) {
   cv::Mat bgr;
   cv::cvtColor(hls_value, bgr, cv::COLOR_HLS2BGR);
 
-  NodeColor color;
-  color(0, 0) = static_cast<uint8_t>(255 * bgr.at<float>(2));
-  color(1, 0) = static_cast<uint8_t>(255 * bgr.at<float>(1));
-  color(2, 0) = static_cast<uint8_t>(255 * bgr.at<float>(0));
+  Color color;
+  color.r = static_cast<uint8_t>(255 * bgr.at<float>(2));
+  color.g = static_cast<uint8_t>(255 * bgr.at<float>(1));
+  color.b = static_cast<uint8_t>(255 * bgr.at<float>(0));
   return color;
 }
 
-NodeColor interpolateColorMap(const ColormapConfig& config, double ratio) {
+Color interpolateColorMap(const ColormapConfig& config, double ratio) {
   // override ratio input to be in [0, 1]
   ratio = std::clamp(ratio, 0.0, 1.0);
 
@@ -88,12 +87,11 @@ NodeColor interpolateColorMap(const ColormapConfig& config, double ratio) {
   cv::Mat bgr;
   cv::cvtColor(hls_value, bgr, cv::COLOR_HLS2BGR);
 
-  NodeColor color;
-  color(0, 0) = static_cast<uint8_t>(255 * bgr.at<float>(2));
-  color(1, 0) = static_cast<uint8_t>(255 * bgr.at<float>(1));
-  color(2, 0) = static_cast<uint8_t>(255 * bgr.at<float>(0));
+  Color color;
+  color.r = static_cast<uint8_t>(255 * bgr.at<float>(2));
+  color.g = static_cast<uint8_t>(255 * bgr.at<float>(1));
+  color.b = static_cast<uint8_t>(255 * bgr.at<float>(0));
   return color;
 }
 
-}  // namespace dsg_utils
-}  // namespace hydra
+}  // namespace hydra::dsg_utils

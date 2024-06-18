@@ -73,31 +73,31 @@ GvdVisualizationMode getModeFromString(const std::string& mode);
 
 visualization_msgs::Marker makeGvdMarker(const GvdVisualizerConfig& config,
                                          const ColormapConfig& colors,
-                                         const voxblox::Layer<places::GvdVoxel>& layer);
+                                         const places::GvdLayer& layer);
 
 visualization_msgs::Marker makeSurfaceVoxelMarker(
     const GvdVisualizerConfig& config,
     const ColormapConfig& colors,
-    const voxblox::Layer<places::GvdVoxel>& layer);
+    const places::GvdLayer& layer);
 
 visualization_msgs::Marker makeErrorMarker(const GvdVisualizerConfig& config,
                                            const ColormapConfig& colors,
-                                           const voxblox::Layer<places::GvdVoxel>& lhs,
-                                           const voxblox::Layer<places::GvdVoxel>& rhs,
+                                           const places::GvdLayer& lhs,
+                                           const places::GvdLayer& rhs,
                                            double threshold);
 
 visualization_msgs::Marker makeEsdfMarker(
     const GvdVisualizerConfig& config,
     const ColormapConfig& colors,
-    const voxblox::Layer<places::GvdVoxel>& layer);
+    const places::GvdLayer& layer);
 
 visualization_msgs::Marker makeBlocksMarker(
-    const voxblox::Layer<voxblox::TsdfVoxel>& layer, double scale);
+    const TsdfLayer& layer, double scale);
 
 visualization_msgs::Marker makeBlocksMarker(
-    const voxblox::Layer<places::GvdVoxel>& layer, double scale);
+    const places::GvdLayer& layer, double scale);
 
-visualization_msgs::Marker makeMeshBlocksMarker(const voxblox::MeshLayer& layer,
+visualization_msgs::Marker makeMeshBlocksMarker(const MeshLayer& layer,
                                                 double scale);
 
 visualization_msgs::MarkerArray makeGvdGraphMarkers(const places::GvdGraph& graph,

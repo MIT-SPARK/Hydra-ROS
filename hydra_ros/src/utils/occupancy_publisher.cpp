@@ -44,31 +44,33 @@
 
 namespace hydra {
 
-using voxblox::Layer;
-
 template <typename T>
-float getDistance(const T& voxel);
+float getDistance(const T& voxel) {
+  return 0.0f;
+}
 
 template <>
-float getDistance<voxblox::TsdfVoxel>(const voxblox::TsdfVoxel& voxel) {
+float getDistance(const TsdfVoxel& voxel) {
   return voxel.distance;
 }
 
 template <>
-float getDistance<places::GvdVoxel>(const places::GvdVoxel& voxel) {
+float getDistance(const places::GvdVoxel& voxel) {
   return voxel.distance;
 }
 
 template <typename T>
-bool isObserved(const T& voxel, float min_weight);
+bool isObserved(const T& voxel, float min_weight) {
+  return false;
+}
 
 template <>
-bool isObserved<voxblox::TsdfVoxel>(const voxblox::TsdfVoxel& voxel, float min_weight) {
+bool isObserved(const TsdfVoxel& voxel, float min_weight) {
   return voxel.weight >= min_weight;
 }
 
 template <>
-bool isObserved<places::GvdVoxel>(const places::GvdVoxel& voxel, float) {
+bool isObserved(const places::GvdVoxel& voxel, float) {
   return voxel.observed;
 }
 
@@ -79,29 +81,27 @@ struct Bounds {
   Eigen::Vector2f dims = Eigen::Vector2f::Zero();
 };
 
-template <typename T>
-Bounds getLayerBounds(const Layer<T>& layer) {
+template <typename BlockT>
+Bounds getLayerBounds(const spatial_hash::VoxelLayer<BlockT>& layer) {
   Bounds bounds;
-  voxblox::BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-  for (const auto& idx : blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
+
+  for (const auto& block : layer) {
     const auto lower = block.origin();
-    const auto upper = lower + Eigen::Vector3f::Constant(block.block_size());
+    const auto upper = lower + Point::Constant(block.block_size);
     bounds.x_min = bounds.x_min.array().min(lower.template head<2>().array());
     bounds.x_max = bounds.x_max.array().max(upper.template head<2>().array());
   }
 
-  bounds.dims = (bounds.x_max - bounds.x_min) / layer.voxel_size();
+  bounds.dims = (bounds.x_max - bounds.x_min) / layer.voxel_size;
   return bounds;
 }
 
-template <typename T>
-void initGrid(const Layer<T>& layer,
+template <typename BlockT>
+void initGrid(const spatial_hash::VoxelLayer<BlockT>& layer,
               const Bounds& bounds,
               double height,
               nav_msgs::OccupancyGrid& msg) {
-  msg.info.resolution = layer.voxel_size();
+  msg.info.resolution = layer.voxel_size;
   msg.info.width = std::ceil(bounds.dims.x());
   msg.info.height = std::ceil(bounds.dims.y());
   msg.info.origin.position.x = bounds.x_min.x();
@@ -111,46 +111,33 @@ void initGrid(const Layer<T>& layer,
   msg.data.resize(msg.info.width * msg.info.height, -1);
 }
 
-template <typename T>
+template <typename BlockT>
 void fillOccupancySlice(const OccupancyPublisher::Config& config,
-                        const Layer<T>& layer,
+                        const spatial_hash::VoxelLayer<BlockT>& layer,
                         const Eigen::Isometry3d& world_T_sensor,
                         const Bounds& bounds,
                         double height,
                         nav_msgs::OccupancyGrid& msg) {
-  const voxblox::Point slice_pos(0, 0, height);
-  const auto slice_index = layer.computeBlockIndexFromCoordinates(slice_pos);
-  const auto origin =
-      voxblox::getOriginPointFromGridIndex(slice_index, layer.block_size());
-  const auto grid_index = voxblox::getGridIndexFromPoint<voxblox::VoxelIndex>(
-      slice_pos - origin, layer.voxel_size_inv());
-
-  voxblox::BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-
-  voxblox::BlockIndexList matching_blocks;
-  for (const auto& idx : blocks) {
-    if (idx.z() == slice_index.z()) {
-      matching_blocks.push_back(idx);
-    }
-  }
-
+  const Point slice_pos(0, 0, height);
+  const auto slice_key = layer.getVoxelKey(slice_pos);
   auto bbox = config.add_robot_footprint
                   ? BoundingBox(config.footprint_min, config.footprint_max)
                   : BoundingBox();
   const Eigen::Isometry3f sensor_T_world = world_T_sensor.inverse().cast<float>();
 
-  for (const auto& idx : matching_blocks) {
-    const auto& block = layer.getBlockByIndex(idx);
-    for (size_t x = 0; x < block.voxels_per_side(); ++x) {
-      for (size_t y = 0; y < block.voxels_per_side(); ++y) {
-        const voxblox::VoxelIndex voxel_index(x, y, grid_index.z());
-        const auto& voxel = block.getVoxelByVoxelIndex(voxel_index);
-        const Eigen::Vector3f pos = block.computeCoordinatesFromVoxelIndex(voxel_index);
+  for (const auto block_ptr :
+       layer.blocksWithCondition([&slice_key](const BlockT& block) {
+         return block.index.z() == slice_key.first.z();
+       })) {
+    for (size_t x = 0; x < block_ptr->voxels_per_side; ++x) {
+      for (size_t y = 0; y < block_ptr->voxels_per_side; ++y) {
+        const VoxelIndex voxel_index(x, y, slice_key.second.z());
+        const auto& voxel = block_ptr->getVoxel(voxel_index);
+        const Eigen::Vector3f pos = block_ptr->getVoxelPosition(voxel_index);
         const auto rel_pos = pos.head<2>() - bounds.x_min;
         // pos is center point, so we want floor
-        const auto r = std::floor(rel_pos.y() / layer.voxel_size());
-        const auto c = std::floor(rel_pos.x() / layer.voxel_size());
+        const auto r = std::floor(rel_pos.y() / layer.voxel_size);
+        const auto c = std::floor(rel_pos.x() / layer.voxel_size);
         const size_t index = r * msg.info.width + c;
 
         if (config.add_robot_footprint &&
@@ -179,9 +166,9 @@ void fillOccupancySlice(const OccupancyPublisher::Config& config,
   }
 }
 
-template <typename T>
+template <typename BlockT>
 void fillOccupancy(const OccupancyPublisher::Config& config,
-                   const Layer<T>& layer,
+                   const spatial_hash::VoxelLayer<BlockT>& layer,
                    const Eigen::Isometry3d& world_T_sensor,
                    nav_msgs::OccupancyGrid& msg) {
   const auto bounds = getLayerBounds(layer);
@@ -192,7 +179,7 @@ void fillOccupancy(const OccupancyPublisher::Config& config,
 
   initGrid(layer, bounds, height, msg);
   for (size_t i = 0; i < config.num_slices; ++i) {
-    const auto curr_height = height + i * layer.voxel_size();
+    const auto curr_height = height + i * layer.voxel_size;
     fillOccupancySlice(config, layer, world_T_sensor, bounds, curr_height, msg);
   }
 
@@ -204,18 +191,14 @@ void fillOccupancy(const OccupancyPublisher::Config& config,
   }
 }
 
-template <typename T>
-void collate(const Layer<T>& layer_in,
-             Layer<T>& layer_out,
+template <typename BlockT>
+void collate(const spatial_hash::VoxelLayer<BlockT>& layer_in,
+             spatial_hash::VoxelLayer<BlockT>& layer_out,
              double min_observation_weight) {
-  voxblox::BlockIndexList blocks;
-  layer_in.getAllAllocatedBlocks(&blocks);
-
-  for (const auto& idx : blocks) {
-    const auto& block = *CHECK_NOTNULL(layer_in.getBlockPtrByIndex(idx));
+  for (const auto& block : layer_in) {
     bool unobserved = true;
-    for (size_t i = 0; i < block.num_voxels(); ++i) {
-      if (isObserved(block.getVoxelByLinearIndex(i), min_observation_weight)) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      if (isObserved(block.getVoxel(i), min_observation_weight)) {
         unobserved = false;
         break;
       }
@@ -225,13 +208,12 @@ void collate(const Layer<T>& layer_in,
       continue;
     }
 
-    auto new_block = layer_out.allocateBlockPtrByIndex(idx);
-    new_block->has_data() = block.has_data();
-    new_block->updated() = block.updated();
-    for (size_t i = 0; i < block.num_voxels(); ++i) {
-      const auto& voxel = block.getVoxelByLinearIndex(i);
+    auto new_block = layer_out.allocateBlockPtr(block.index);
+    new_block->updated = block.updated;
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
       if (isObserved(voxel, min_observation_weight)) {
-        new_block->getVoxelByLinearIndex(i) = voxel;
+        new_block->getVoxel(i) = voxel;
       }
     }
   }
@@ -259,7 +241,7 @@ OccupancyPublisher::~OccupancyPublisher() {}
 
 void OccupancyPublisher::publishTsdf(uint64_t timestamp_ns,
                                      const Eigen::Isometry3d& world_T_sensor,
-                                     const Layer<voxblox::TsdfVoxel>& tsdf) const {
+                                     const TsdfLayer& tsdf) const {
   if (pub_.getNumSubscribers() == 0) {
     return;
   }
@@ -276,7 +258,7 @@ void OccupancyPublisher::publishTsdf(uint64_t timestamp_ns,
 
 void OccupancyPublisher::publishGvd(uint64_t timestamp_ns,
                                     const Eigen::Isometry3d& world_T_sensor,
-                                    const Layer<places::GvdVoxel>& gvd) const {
+                                    const places::GvdLayer& gvd) const {
   if (pub_.getNumSubscribers() == 0) {
     return;
   }
@@ -300,7 +282,7 @@ GvdOccupancyPublisher::GvdOccupancyPublisher(const Config& config)
 
 void TsdfOccupancyPublisher::call(uint64_t timestamp_ns,
                                   const Eigen::Isometry3d& world_T_sensor,
-                                  const voxblox::Layer<voxblox::TsdfVoxel>& tsdf,
+                                  const TsdfLayer& tsdf,
                                   const ReconstructionOutput&) const {
   if (!config.collate) {
     pub_.publishTsdf(timestamp_ns, world_T_sensor, tsdf);
@@ -308,8 +290,7 @@ void TsdfOccupancyPublisher::call(uint64_t timestamp_ns,
   }
 
   if (!tsdf_) {
-    tsdf_.reset(new voxblox::Layer<voxblox::TsdfVoxel>(tsdf.voxel_size(),
-                                                       tsdf.voxels_per_side()));
+    tsdf_.reset(new TsdfLayer(tsdf.voxel_size, tsdf.voxels_per_side));
   }
 
   collate(tsdf, *tsdf_, config.extraction.min_observation_weight);
@@ -318,7 +299,7 @@ void TsdfOccupancyPublisher::call(uint64_t timestamp_ns,
 
 void GvdOccupancyPublisher::call(uint64_t timestamp_ns,
                                  const Eigen::Isometry3f& world_T_body,
-                                 const voxblox::Layer<places::GvdVoxel>& gvd,
+                                 const places::GvdLayer& gvd,
                                  const places::GraphExtractorInterface*) const {
   if (!config.collate) {
     pub_.publishGvd(timestamp_ns, world_T_body.cast<double>(), gvd);
@@ -326,8 +307,7 @@ void GvdOccupancyPublisher::call(uint64_t timestamp_ns,
   }
 
   if (!gvd_) {
-    gvd_.reset(
-        new voxblox::Layer<places::GvdVoxel>(gvd.voxel_size(), gvd.voxels_per_side()));
+    gvd_.reset(new places::GvdLayer(gvd.voxel_size, gvd.voxels_per_side));
   }
 
   collate(gvd, *gvd_, config.extraction.min_observation_weight);

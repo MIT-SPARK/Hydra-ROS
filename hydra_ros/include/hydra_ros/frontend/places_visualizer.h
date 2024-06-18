@@ -37,7 +37,6 @@
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/gvd_voxel.h>
 #include <hydra_ros/GvdVisualizerConfig.h>
-#include <voxblox/core/layer.h>
 
 #include "hydra_ros/visualizer/visualizer_types.h"
 
@@ -73,12 +72,12 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
 
   void call(uint64_t timestamp_ns,
             const Eigen::Isometry3f& world_T_body,
-            const voxblox::Layer<places::GvdVoxel>& gvd,
+            const places::GvdLayer& gvd,
             const places::GraphExtractorInterface* extractor) const override;
 
   void visualizeError(uint64_t timestamp_ns,
-                      const voxblox::Layer<places::GvdVoxel>& lhs,
-                      const voxblox::Layer<places::GvdVoxel>& rhs,
+                      const places::GvdLayer& lhs,
+                      const places::GvdLayer& rhs,
                       double threshold);
 
  private:
@@ -86,13 +85,13 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
                       const SceneGraphLayer& graph) const;
 
   void visualizeGvd(const std_msgs::Header& header,
-                    const voxblox::Layer<places::GvdVoxel>& gvd) const;
+                    const places::GvdLayer& gvd) const;
 
   void visualizeGvdGraph(const std_msgs::Header& header,
                          const places::GvdGraph& gvd_graph) const;
 
   void visualizeBlocks(const std_msgs::Header& header,
-                       const voxblox::Layer<places::GvdVoxel>& gvd) const;
+                       const places::GvdLayer& gvd) const;
 
   void publishGraphLabels(const std_msgs::Header& header,
                           const SceneGraphLayer& graph) const;

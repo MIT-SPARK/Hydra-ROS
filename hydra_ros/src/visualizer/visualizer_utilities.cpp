@@ -65,12 +65,12 @@ inline void fillPoseWithIdentity(geometry_msgs::Pose& pose) {
 
 }  // namespace
 
-NodeColor getDistanceColor(const VisualizerConfig& config,
+Color getDistanceColor(const VisualizerConfig& config,
                            const ColormapConfig& colors,
                            double distance) {
   if (config.places_colormap_max_distance <= config.places_colormap_min_distance) {
     // TODO(nathan) consider warning
-    return NodeColor::Zero();
+    return Color();
   }
 
   double ratio = getRatio(config.places_colormap_min_distance,
@@ -211,7 +211,7 @@ Marker makeLayerPolygonBoundaries(const std_msgs::Header& header,
     if (config.boundary_use_node_color) {
       color = makeColorMsg(attrs.color, config.boundary_alpha);
     } else {
-      color = makeColorMsg(NodeColor::Zero(), config.boundary_alpha);
+      color = makeColorMsg(Color(), config.boundary_alpha);
     }
 
     geometry_msgs::Point last_point;
@@ -430,7 +430,7 @@ Marker makeTextMarker(const std_msgs::Header& header,
   }
   marker.text = name.empty() ? NodeSymbol(node.id).getLabel() : name;
   marker.scale.z = config.label_scale;
-  marker.color = makeColorMsg(NodeColor::Zero());
+  marker.color = makeColorMsg(Color());
 
   fillPoseWithIdentity(marker.pose);
   tf2::convert(node.attributes().position, marker.pose.position);
@@ -461,7 +461,7 @@ Marker makeTextMarkerNoHeight(const std_msgs::Header& header,
   marker.lifetime = ros::Duration(0);
   marker.text = node.attributes<SemanticNodeAttributes>().name;
   marker.scale.z = config.label_scale;
-  marker.color = makeColorMsg(NodeColor::Zero());
+  marker.color = makeColorMsg(Color());
 
   fillPoseWithIdentity(marker.pose);
   tf2::convert(node.attributes().position, marker.pose.position);
@@ -500,7 +500,7 @@ std::vector<Marker> makeEllipsoidMarkers(const std_msgs::Header& header,
     marker.pose.position.z += getZOffset(config, visualizer_config);
     marker.color = makeColorMsg(color_func(*id_node_pair.second), config.marker_alpha);
 
-    NodeColor desired_color = color_func(*id_node_pair.second);
+    Color desired_color = color_func(*id_node_pair.second);
     marker.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
     markers.push_back(marker);
   }
@@ -539,7 +539,7 @@ Marker makeCentroidMarkers(const std_msgs::Header& header,
     node_centroid.z += getZOffset(config, visualizer_config);
     marker.points.push_back(node_centroid);
 
-    NodeColor desired_color = color_func(*id_node_pair.second);
+    Color desired_color = color_func(*id_node_pair.second);
     marker.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
   }
 
@@ -577,7 +577,7 @@ Marker makePlaceCentroidMarkers(const std_msgs::Header& header,
     node_centroid.z += getZOffset(config, visualizer_config);
     marker.points.push_back(node_centroid);
 
-    NodeColor desired_color = color_func(*id_node_pair.second);
+    Color desired_color = color_func(*id_node_pair.second);
     marker.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
   }
 
@@ -659,7 +659,7 @@ MarkerArray makeDynamicGraphEdgeMarkers(
       layer_markers[source.layer] = makeNewEdgeList(
           header, configs.at(source.layer), ns_prefix, source.layer, target.layer);
       layer_markers[source.layer].color =
-          makeColorMsg(NodeColor::Zero(), config.edge_alpha);
+          makeColorMsg(Color(), config.edge_alpha);
       // make sure we always draw at least one edge
       num_since_last_insertion[source.layer] = num_between_insertions;
     }
@@ -754,7 +754,7 @@ MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& header,
     target_point.z += getZOffset(configs.at(target.layer), visualizer_config);
     marker.points.push_back(target_point);
 
-    NodeColor edge_color;
+    Color edge_color;
     if (configs.at(source.layer).interlayer_edge_use_color) {
       if (configs.at(source.layer).use_edge_source) {
         // TODO(nathan) this might not be a safe cast in general
@@ -764,7 +764,7 @@ MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& header,
         edge_color = target.attributes<SemanticNodeAttributes>().color;
       }
     } else {
-      edge_color = NodeColor::Zero();
+      edge_color = Color();
     }
 
     marker.colors.push_back(
@@ -825,9 +825,9 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
       marker.colors.push_back(makeColorMsg(attrs.color, config.interlayer_edge_alpha));
     } else {
       marker.colors.push_back(
-          makeColorMsg(NodeColor::Zero(), config.interlayer_edge_alpha));
+          makeColorMsg(Color(), config.interlayer_edge_alpha));
       marker.colors.push_back(
-          makeColorMsg(NodeColor::Zero(), config.interlayer_edge_alpha));
+          makeColorMsg(Color(), config.interlayer_edge_alpha));
     }
 
     size_t i = 0;
@@ -858,9 +858,9 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
             makeColorMsg(attrs.color, config.interlayer_edge_alpha));
       } else {
         marker.colors.push_back(
-            makeColorMsg(NodeColor::Zero(), config.interlayer_edge_alpha));
+            makeColorMsg(Color(), config.interlayer_edge_alpha));
         marker.colors.push_back(
-            makeColorMsg(NodeColor::Zero(), config.interlayer_edge_alpha));
+            makeColorMsg(Color(), config.interlayer_edge_alpha));
       }
     }
   }
@@ -931,7 +931,7 @@ MarkerArray makeGvdWireframe(const std_msgs::Header& header,
     tf2::convert(id_node_pair.second->attributes().position, node_centroid);
     nodes.points.push_back(node_centroid);
 
-    NodeColor desired_color = color_func(*id_node_pair.second);
+    Color desired_color = color_func(*id_node_pair.second);
     nodes.colors.push_back(makeColorMsg(desired_color, config.marker_alpha));
   }
 
@@ -965,7 +965,7 @@ Marker makeLayerEdgeMarkers(const std_msgs::Header& header,
                             const LayerConfig& config,
                             const SceneGraphLayer& layer,
                             const VisualizerConfig& visualizer_config,
-                            const NodeColor& color,
+                            const Color& color,
                             const std::string& ns,
                             const FilterFunction& filter) {
   return makeLayerEdgeMarkers(
@@ -1054,7 +1054,7 @@ Marker makeDynamicCentroidMarkers(const std_msgs::Header& header,
                                   const DynamicLayerConfig& config,
                                   const DynamicSceneGraphLayer& layer,
                                   const VisualizerConfig& visualizer_config,
-                                  const NodeColor& color,
+                                  const Color& color,
                                   const std::string& ns,
                                   size_t marker_id) {
   return makeDynamicCentroidMarkers(
@@ -1064,7 +1064,7 @@ Marker makeDynamicCentroidMarkers(const std_msgs::Header& header,
       config.z_offset_scale,
       visualizer_config,
       ns,
-      [&](const auto&) -> NodeColor { return color; },
+      [&](const auto&) -> Color { return color; },
       marker_id);
 }
 
@@ -1109,7 +1109,7 @@ Marker makeDynamicEdgeMarkers(const std_msgs::Header& header,
                               const DynamicLayerConfig& config,
                               const DynamicSceneGraphLayer& layer,
                               const VisualizerConfig& visualizer_config,
-                              const NodeColor& color,
+                              const Color& color,
                               const std::string& ns,
                               size_t marker_id) {
   Marker marker;
@@ -1153,7 +1153,7 @@ Marker makeDynamicLabelMarker(const std_msgs::Header& header,
   marker.lifetime = ros::Duration(0);
   marker.text = "Agent";  // std::to_string(layer.id) + ":" + layer.prefix.str();
   marker.scale.z = config.label_scale;
-  marker.color = makeColorMsg(NodeColor::Zero());
+  marker.color = makeColorMsg(Color());
 
   Eigen::Vector3d latest_position = layer.getPositionByIndex(layer.numNodes() - 1);
   fillPoseWithIdentity(marker.pose);

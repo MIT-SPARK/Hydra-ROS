@@ -47,10 +47,6 @@ namespace hydra {
 
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-using voxblox::BlockIndexList;
-using voxblox::Layer;
-using voxblox::TsdfVoxel;
-using voxblox::VoxelIndex;
 using VizConfig = ReconstructionVisualizer::Config;
 
 using ColorFunction =
@@ -75,7 +71,7 @@ std_msgs::ColorRGBA colorVoxelByWeight(const VizConfig& config,
 // adapted from khronos
 Marker makeTsdfMarker(const VizConfig& config,
                       const std_msgs::Header& header,
-                      const Layer<TsdfVoxel>& layer,
+                      const TsdfLayer& layer,
                       const Eigen::Isometry3d& world_T_sensor,
                       const ColorFunction& color_func,
                       const std::string& ns) {
@@ -85,9 +81,9 @@ Marker makeTsdfMarker(const VizConfig& config,
   msg.id = 0;
   msg.ns = ns;
   msg.type = visualization_msgs::Marker::CUBE_LIST;
-  msg.scale.x = layer.voxel_size();
-  msg.scale.y = layer.voxel_size();
-  msg.scale.z = layer.voxel_size();
+  msg.scale.x = layer.voxel_size;
+  msg.scale.y = layer.voxel_size;
+  msg.scale.z = layer.voxel_size;
 
   Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
   tf2::convert(identity_pos, msg.pose.position);
@@ -98,31 +94,28 @@ Marker makeTsdfMarker(const VizConfig& config,
     height += world_T_sensor.translation().z();
   }
 
-  const voxblox::Point slice_pos(0, 0, height);
-  const auto slice_index = layer.computeBlockIndexFromCoordinates(slice_pos);
+  const Point slice_pos(0, 0, height);
+  const auto slice_index = layer.getBlockIndex(slice_pos);
   const auto origin =
-      voxblox::getOriginPointFromGridIndex(slice_index, layer.block_size());
-  const auto grid_index = voxblox::getGridIndexFromPoint<VoxelIndex>(
-      slice_pos - origin, layer.voxel_size_inv());
+      spatial_hash::originPointFromIndex(slice_index, layer.blockSize());
+  const auto grid_index = spatial_hash::indexFromPoint<VoxelIndex>(
+      slice_pos - origin, layer.voxel_size_inv);
 
-  BlockIndexList blocks;
-  layer.getAllAllocatedBlocks(&blocks);
-  for (const auto& idx : blocks) {
-    if (idx.z() != slice_index.z()) {
+  for (const auto& block : layer) {
+    if (block.index.z() != slice_index.z()) {
       continue;
     }
 
-    const auto& block = layer.getBlockByIndex(idx);
-    for (size_t x = 0; x < block.voxels_per_side(); ++x) {
-      for (size_t y = 0; y < block.voxels_per_side(); ++y) {
+    for (size_t x = 0; x < block.voxels_per_side; ++x) {
+      for (size_t y = 0; y < block.voxels_per_side; ++y) {
         const VoxelIndex voxel_index(x, y, grid_index.z());
-        const auto& voxel = block.getVoxelByVoxelIndex(voxel_index);
+        const auto& voxel = block.getVoxel(voxel_index);
         if (voxel.weight < config.min_observation_weight) {
           continue;
         }
 
         const Eigen::Vector3d pos =
-            block.computeCoordinatesFromVoxelIndex(voxel_index).cast<double>();
+            block.getVoxelPosition(voxel_index).cast<double>();
         geometry_msgs::Point marker_pos;
         tf2::convert(pos, marker_pos);
         msg.points.push_back(marker_pos);
@@ -169,7 +162,7 @@ std::string ReconstructionVisualizer::printInfo() const {
 
 void ReconstructionVisualizer::call(uint64_t timestamp_ns,
                                     const Eigen::Isometry3d& world_T_sensor,
-                                    const Layer<TsdfVoxel>& tsdf,
+                                    const TsdfLayer& tsdf,
                                     const ReconstructionOutput&) const {
   std_msgs::Header header;
   header.frame_id = GlobalInfo::instance().getFrames().map;
