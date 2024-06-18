@@ -45,7 +45,7 @@
 namespace hydra {
 
 template <typename T>
-float getDistance(const T& voxel) {
+float getDistance(const T& /*voxel*/) {
   return 0.0f;
 }
 
@@ -60,7 +60,7 @@ float getDistance(const places::GvdVoxel& voxel) {
 }
 
 template <typename T>
-bool isObserved(const T& voxel, float min_weight) {
+bool isObserved(const T& /*voxel*/, float /*min_weight*/) {
   return false;
 }
 
