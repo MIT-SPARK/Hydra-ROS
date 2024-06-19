@@ -58,7 +58,7 @@ class PoseCache;
 
 class BagReader {
  public:
-  using Sink = OutputSink<const Sensor&, const InputData&>;
+  using Sink = OutputSink<const InputData&>;
   struct Config {
     std::vector<BagConfig> bags;
     std::vector<Sink::Factory> sinks;
@@ -73,7 +73,7 @@ class BagReader {
   void addSink(const Sink::Ptr& sink);
 
   void handleImages(const BagConfig& bag_config,
-                    const Sensor* sensor,
+                    const Sensor::ConstPtr& sensor,
                     const PoseCache& cache,
                     const sensor_msgs::Image::ConstPtr& color_msg,
                     const sensor_msgs::Image::ConstPtr& depth_msg);

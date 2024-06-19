@@ -111,7 +111,7 @@ struct Trampoline {
   const BagConfig config;
   BagReader* reader;
   const PoseCache* cache;
-  const Sensor* sensor;
+  Sensor::ConstPtr sensor;
 
   void call(const sensor_msgs::Image::ConstPtr& msg1,
             const sensor_msgs::Image::ConstPtr& msg2) {
@@ -126,14 +126,14 @@ void BagReader::readBag(const BagConfig& bag_config) {
   rosbag::Bag bag;
   bag.open(bag_config.bag_path, rosbag::bagmode::Read);
 
-  const auto sensor = bag_config.sensor.create();
+  const Sensor::ConstPtr sensor = bag_config.sensor.create();
   if (!sensor) {
     LOG(ERROR) << "Could not load sensor for bag " << bag_config.bag_path;
     return;
   }
 
   PoseCache cache(bag);
-  Trampoline trampoline{bag_config, this, &cache, sensor.get()};
+  Trampoline trampoline{bag_config, this, &cache, sensor};
 
   TimeSync sync(Policy(10));
   sync.registerCallback(&Trampoline::call, &trampoline);
@@ -182,7 +182,7 @@ void BagReader::readBag(const BagConfig& bag_config) {
 }
 
 void BagReader::handleImages(const BagConfig& bag_config,
-                             const Sensor* sensor,
+                             const Sensor::ConstPtr& sensor,
                              const PoseCache& cache,
                              const sensor_msgs::Image::ConstPtr& color_msg,
                              const sensor_msgs::Image::ConstPtr& depth_msg) {
@@ -206,11 +206,11 @@ void BagReader::handleImages(const BagConfig& bag_config,
     return;
   }
 
-  InputData data;
+  InputData data(sensor);
   data.timestamp_ns = timestamp_ns;
   data.world_T_body = pose.to_T_from();
   data.color_image = cv_bridge::toCvCopy(color_msg)->image.clone();
-  data.color_is_bgr = true;
+  cv::cvtColor(data.color_image, data.color_image, cv::COLOR_BGR2RGB);
   data.depth_image = cv_bridge::toCvCopy(depth_msg)->image.clone();
 
   const auto valid = conversions::normalizeData(data, false);
@@ -224,7 +224,7 @@ void BagReader::handleImages(const BagConfig& bag_config,
     return;
   }
 
-  Sink::callAll(sinks_, *sensor, data);
+  Sink::callAll(sinks_, data);
 }
 
 void declare_config(BagReader::Config& config) {

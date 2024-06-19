@@ -51,8 +51,6 @@ inline double computeRatio(double min, double max, double value) {
 
 std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha = -1.0);
 
-Color getRgbFromHls(double hue, double luminance, double saturation);
-
 Color interpolateColorMap(const ColormapConfig& config, double ratio);
 
 }  // namespace hydra::dsg_utils

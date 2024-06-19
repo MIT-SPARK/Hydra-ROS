@@ -185,14 +185,14 @@ inline double getDynamicHue(const DynamicLayerConfig& config, char prefix) {
 
 Color getNodeColor(const DynamicLayerConfig& config, char prefix) {
   const double hue = getDynamicHue(config, prefix);
-  return dsg_utils::getRgbFromHls(hue, config.luminance, config.saturation);
+  return Color::fromHLS(hue, config.luminance, config.saturation);
 }
 
 Color getEdgeColor(const DynamicLayerConfig& config, char prefix) {
   const double hue = getDynamicHue(config, prefix);
   const double saturation = config.saturation * config.edge_sl_ratio;
   const double luminance = config.luminance * config.edge_sl_ratio;
-  return dsg_utils::getRgbFromHls(hue, saturation, luminance);
+  return Color::fromHLS(hue, saturation, luminance);
 }
 
 void DynamicSceneGraphVisualizer::drawDynamicLayer(const std_msgs::Header& header,

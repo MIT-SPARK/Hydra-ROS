@@ -52,46 +52,12 @@ std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha) {
   return msg;
 }
 
-Color getRgbFromHls(double hue, double luminance, double saturation) {
-  // make sure we clip the inputs to the expected range
-  hue = std::clamp(hue, 0.0, 1.0);
-  luminance = std::clamp(luminance, 0.0, 1.0);
-  saturation = std::clamp(saturation, 0.0, 1.0);
-
-  cv::Mat hls_value(1, 1, CV_32FC3);
-  // hue is in degrees, not [0, 1]
-  hls_value.at<float>(0) = hue * 360.0;
-  hls_value.at<float>(1) = luminance;
-  hls_value.at<float>(2) = saturation;
-
-  cv::Mat bgr;
-  cv::cvtColor(hls_value, bgr, cv::COLOR_HLS2BGR);
-
-  Color color;
-  color.r = static_cast<uint8_t>(255 * bgr.at<float>(2));
-  color.g = static_cast<uint8_t>(255 * bgr.at<float>(1));
-  color.b = static_cast<uint8_t>(255 * bgr.at<float>(0));
-  return color;
-}
-
 Color interpolateColorMap(const ColormapConfig& config, double ratio) {
-  // override ratio input to be in [0, 1]
   ratio = std::clamp(ratio, 0.0, 1.0);
-
-  cv::Mat hls_value(1, 1, CV_32FC3);
-  // hue is in degrees, not [0, 1]
-  hls_value.at<float>(0) = lerp(config.min_hue, config.max_hue, ratio) * 360.0;
-  hls_value.at<float>(1) = lerp(config.min_luminance, config.max_luminance, ratio);
-  hls_value.at<float>(2) = lerp(config.min_saturation, config.max_saturation, ratio);
-
-  cv::Mat bgr;
-  cv::cvtColor(hls_value, bgr, cv::COLOR_HLS2BGR);
-
-  Color color;
-  color.r = static_cast<uint8_t>(255 * bgr.at<float>(2));
-  color.g = static_cast<uint8_t>(255 * bgr.at<float>(1));
-  color.b = static_cast<uint8_t>(255 * bgr.at<float>(0));
-  return color;
+  const float hue = lerp(config.min_hue, config.max_hue, ratio);
+  const float luminance = lerp(config.min_luminance, config.max_luminance, ratio);
+  const float saturation = lerp(config.min_saturation, config.max_saturation, ratio);
+  return Color::fromHLS(hue, luminance, saturation);
 }
 
 }  // namespace hydra::dsg_utils

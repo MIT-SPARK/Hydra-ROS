@@ -63,10 +63,10 @@ struct Reconstructor {
         map(config.map),
         integrator(std::make_unique<ProjectiveIntegrator>(config.integrator)) {}
 
-  void update(const Sensor& sensor, const InputData& data) const {
+  void update(const InputData& data) const {
     VLOG(5) << "processing data @ " << data.timestamp_ns;
     timing::ScopedTimer timer("update_tsdf", data.timestamp_ns, true, 1, false);
-    integrator->updateMap(sensor, data, map);
+    integrator->updateMap(data, map);
   }
 
   void reconstruct(const std::string& output_dir) {
