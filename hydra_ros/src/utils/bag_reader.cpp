@@ -44,7 +44,7 @@
 #include <hydra/common/global_info.h>
 #include <hydra/input/camera.h>
 #include <hydra/input/input_packet.h>
-#include <hydra/utils/conversion_utilities.h>
+#include <hydra/input/input_conversion.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <rosbag/bag.h>
 #include <rosbag/view.h>
