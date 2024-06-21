@@ -17,6 +17,7 @@
     <arg name="config_dir"/>
     <arg name="dataset_name"/>
     <arg name="semantic_map_path"/>
+    <arg name="semantic_label_remap_filepath" default=""/>
     <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
     <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
     <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
@@ -136,6 +137,7 @@
         <param name="exit_after_clock" value="$(eval arg('exit_mode') == 'CLOCK')"/>
         <param name="enable_frontend_output" value="$(arg enable_frontend_output)"/>
         <param name="semantic_colormap_file" value="$(arg semantic_map_path)"/>
+        <param name="semantic_label_remap_filepath" value="$(arg semantic_label_remap_filepath)"/>
         <param name="enable_lcd" value="$(arg enable_dsg_lcd)"/>
         <!-- logging -->
         <param name="log_path" value="$(arg dsg_path)"/>
