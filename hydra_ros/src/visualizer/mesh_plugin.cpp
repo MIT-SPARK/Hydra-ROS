@@ -34,43 +34,15 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/mesh_plugin.h"
 
+#include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
-#include <kimera_pgmo/utils/CommonFunctions.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
+#include <kimera_pgmo/KimeraPgmoMesh.h>
+#include <kimera_pgmo/utils/RosConversion.h>
 #include <spark_dsg/pgmo_mesh_traits.h>
 
+#include "hydra_ros/visualizer/mesh_color_adaptor.h"
+
 namespace hydra {
-
-struct ColoredLabelAdaptor {
-  ColoredLabelAdaptor(const Mesh& mesh, const SemanticColorMap& cmap)
-      : mesh(mesh), cmap(cmap) {}
-
-  const Mesh& mesh;
-  const SemanticColorMap& cmap;
-};
-
-Eigen::Vector3f pgmoGetVertex(const ColoredLabelAdaptor& mesh,
-                              size_t i,
-                              std::optional<kimera_pgmo::traits::Color>* color,
-                              std::optional<uint8_t>* alpha,
-                              std::optional<uint64_t>*,
-                              std::optional<uint32_t>*) {
-  CHECK(mesh.mesh.has_labels);
-  const auto c = mesh.cmap.getColorFromLabel(mesh.mesh.label(i));
-  *color = kimera_pgmo::traits::Color{{c.r, c.g, c.b}};
-  *alpha = c.a;
-  return mesh.mesh.pos(i);
-}
-
-size_t pgmoNumVertices(const ColoredLabelAdaptor& mesh) {
-  return pgmoNumVertices(mesh.mesh);
-}
-
-size_t pgmoNumFaces(const ColoredLabelAdaptor& mesh) { return pgmoNumFaces(mesh.mesh); }
-
-kimera_pgmo::traits::Face pgmoGetFace(const ColoredLabelAdaptor& mesh, size_t i) {
-  return pgmoGetFace(mesh.mesh, i);
-}
 
 MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
     : DsgVisualizerPlugin(nh, name), color_by_label_(false), need_redraw_(false) {
@@ -86,7 +58,7 @@ MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
   }
 
   // namespacing gives us a reasonable topic
-  mesh_pub_ = nh_.advertise<mesh_msgs::TriangleMeshStamped>("", 1, true);
+  mesh_pub_ = nh_.advertise<kimera_pgmo::KimeraPgmoMesh>("", 1, true);
   toggle_service_ =
       nh_.advertiseService("color_by_label", &MeshPlugin::handleService, this);
 }
@@ -101,28 +73,46 @@ void MeshPlugin::draw(const ConfigManager&,
     return;
   }
 
-  mesh_msgs::TriangleMeshStamped msg;
-  msg.header = header;
-
   const auto invalid_colormap = !colormap_ || !colormap_->isValid();
   if (color_by_label_ && invalid_colormap) {
     ROS_WARN_STREAM("Invalid colormap; defaulting to original vertex color");
   }
 
+  kimera_pgmo::KimeraPgmoMesh msg;
   if (color_by_label_ && !invalid_colormap) {
-    ColoredLabelAdaptor adaptor(*mesh, *colormap_);
-    kimera_pgmo::fillTriangleMeshMsg(adaptor, msg.mesh);
+    const MeshColorAdaptor adaptor(
+        *mesh, [this](const Mesh& mesh, size_t i) { return getColor(mesh, i); });
+    msg = kimera_pgmo::toMsg(adaptor);
   } else {
-    kimera_pgmo::fillTriangleMeshMsg(*mesh, msg.mesh);
+    msg = kimera_pgmo::toMsg(*mesh);
   }
-
+  msg.header = header;
+  msg.ns = getMsgNamespace();
   mesh_pub_.publish(msg);
 }
 
 void MeshPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
-  mesh_msgs::TriangleMeshStamped msg;
+  kimera_pgmo::KimeraPgmoMesh msg;
   msg.header = header;
+  msg.ns = getMsgNamespace();
   mesh_pub_.publish(msg);
+}
+
+std::string MeshPlugin::getMsgNamespace() const {
+  // TODO(lschmid): Hardcoded for now. Eventually read from scene graph or so.
+  return "robot0/dsg_mesh";
+}
+
+Color MeshPlugin::getColor(const Mesh& mesh, size_t i) const {
+  if (!mesh.has_labels) {
+    return Color::black();
+  }
+  const auto label = mesh.label(i);
+  if (label >= colormap_->getNumLabels()) {
+    // Return gray to differentiate unknown labels and not having labels.
+    return Color::gray(0.3);
+  }
+  return colormap_->getColorFromLabel(label);
 }
 
 bool MeshPlugin::hasChange() const { return need_redraw_; }

@@ -33,50 +33,40 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <std_srvs/SetBool.h>
 
-#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include <kimera_pgmo/MeshTraits.h>
+#include <spark_dsg/mesh.h>
 
 namespace hydra {
 
-class SemanticColorMap;
+/**
+ * @brief Utility class to color a mesh based on a coloring funtion for visualization.
+ */
+struct MeshColorAdaptor {
+  /**
+   * @brief Function to color a mesh. Return the color of the i-th vertex.
+   */
+  using ColoringFunction =
+      std::function<spark_dsg::Color(const spark_dsg::Mesh&, size_t)>;
+      
+  MeshColorAdaptor(const spark_dsg::Mesh& mesh, ColoringFunction coloring);
+  virtual ~MeshColorAdaptor() = default;
 
-class MeshPlugin : public DsgVisualizerPlugin {
- public:
-  using Labels = std::vector<uint32_t>;
-  using LabelsPtr = std::shared_ptr<Labels>;
-
-  MeshPlugin(const ros::NodeHandle& nh, const std::string& name);
-
-  virtual ~MeshPlugin();
-
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
-
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
-
-  bool hasChange() const override;
-
-  void clearChangeFlag() override;
-
- protected:
-  bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
-
-  std::string getMsgNamespace() const;
-
-  Color getColor(const Mesh&mesh, size_t i) const;
-
-  bool color_by_label_;
-  bool need_redraw_;
-  ros::Publisher mesh_pub_;
-  ros::ServiceServer toggle_service_;
-  std::unique_ptr<SemanticColorMap> colormap_;
-
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, MeshPlugin, ros::NodeHandle, std::string>(
-          "MeshPlugin");
+  const spark_dsg::Mesh& mesh;
+  const ColoringFunction coloring;
 };
+
+Eigen::Vector3f pgmoGetVertex(const MeshColorAdaptor& mesh_adaptor,
+                              size_t i,
+                              std::optional<kimera_pgmo::traits::Color>* color,
+                              std::optional<uint8_t>* alpha,
+                              std::optional<uint64_t>*,
+                              std::optional<uint32_t>*);
+
+size_t pgmoNumVertices(const MeshColorAdaptor& mesh_adaptor);
+
+size_t pgmoNumFaces(const MeshColorAdaptor& mesh_adaptor);
+
+kimera_pgmo::traits::Face pgmoGetFace(const MeshColorAdaptor& mesh_adaptor, size_t i);
 
 }  // namespace hydra

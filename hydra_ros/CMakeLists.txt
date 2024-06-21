@@ -81,6 +81,7 @@ add_library(
   src/utils/occupancy_publisher.cpp
   src/utils/pose_cache.cpp
   src/visualizer/basis_point_plugin.cpp
+  src/visualizer/mesh_color_adaptor.cpp
   src/visualizer/colormap_utilities.cpp
   src/visualizer/config_manager.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
