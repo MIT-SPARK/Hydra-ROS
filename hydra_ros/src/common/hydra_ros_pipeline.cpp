@@ -118,7 +118,8 @@ void HydraRosPipeline::initBackend() {
   }
 
   if (frontend->config.use_frontiers && frontend->config.frontier_places) {
-    auto frontiers_functor = std::make_shared<UpdateFrontiersFunctor>();
+    auto frontiers_functor =
+        std::make_shared<UpdateFrontiersFunctor>(backend->config.frontier_config);
     backend->setUpdateFunctor(DsgLayers::BUILDINGS + 1, frontiers_functor);
   }
 }
