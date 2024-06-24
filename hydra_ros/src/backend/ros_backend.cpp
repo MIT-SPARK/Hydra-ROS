@@ -35,15 +35,14 @@
 #include "hydra_ros/backend/ros_backend.h"
 
 #include <config_utilities/printing.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
 using kimera_pgmo::DeformationGraph;
 using kimera_pgmo::KimeraPgmoConfig;
-using kimera_pgmo::KimeraPgmoMesh;
-using mesh_msgs::TriangleMeshStamped;
+using kimera_pgmo_msgs::KimeraPgmoMesh;
 using pose_graph_tools_msgs::PoseGraph;
-using visualization_msgs::Marker;
 
 RosBackend::RosBackend(const Config& config,
                        const SharedDsgInfo::Ptr& dsg,
@@ -74,7 +73,8 @@ void RosBackend::inputCallback(const KimeraPgmoMesh::ConstPtr& mesh,
   have_new_mesh_ = true;
 
   auto input = std::make_shared<BackendInput>();
-  input->deformation_graph = deformation_graph;
+  input->deformation_graph = std::make_shared<pose_graph_tools::PoseGraph>(
+      pose_graph_tools::fromMsg(*deformation_graph));
   input->timestamp_ns = mesh->header.stamp.toNSec();
   input->pose_graphs = pose_graph_queue_;
   pose_graph_queue_.clear();
@@ -83,7 +83,8 @@ void RosBackend::inputCallback(const KimeraPgmoMesh::ConstPtr& mesh,
 }
 
 void RosBackend::poseGraphCallback(const PoseGraph::ConstPtr& msg) {
-  pose_graph_queue_.push_back(msg);
+  pose_graph_queue_.push_back(
+      std::make_shared<pose_graph_tools::PoseGraph>(pose_graph_tools::fromMsg(*msg)));
 }
 
 }  // namespace hydra

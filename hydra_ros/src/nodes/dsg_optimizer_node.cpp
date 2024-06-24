@@ -35,7 +35,8 @@
 #include <config_utilities/parsing/ros.h>
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/frontend_module.h>
-#include <kimera_pgmo/DeformationGraph.h>
+#include <kimera_pgmo/deformation_graph.h>
+#include <std_srvs/Empty.h>
 
 #include "hydra_ros/backend/ros_backend.h"
 #include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
@@ -84,7 +85,7 @@ struct DsgOptimizer {
     LOG(ERROR) << "Loaded backend state!";
 
     BackendInput input;
-    input.deformation_graph.reset(new pose_graph_tools_msgs::PoseGraph());
+    input.deformation_graph = std::make_shared<pose_graph_tools::PoseGraph>();
     backend->spinOnce(input, true);
 
     visualizer->setGraph(backend_dsg->graph);

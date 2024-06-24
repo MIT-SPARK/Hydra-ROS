@@ -9,6 +9,9 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 find_package(hydra REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
+find_package(gflags REQUIRED)
+# find_package(PkgConfig REQUIRED)
+# pkg_check_modules(gflags REQUIRED IMPORTED_TARGET gflags)
 find_package(
   catkin REQUIRED
   COMPONENTS cv_bridge
@@ -16,7 +19,8 @@ find_package(
              geometry_msgs
              hydra_msgs
              image_transport
-             kimera_pgmo
+             kimera_pgmo_ros
+             kimera_pgmo_msgs
              rosbag
              roscpp
              std_msgs
@@ -44,7 +48,8 @@ catkin_package(
   geometry_msgs
   hydra_msgs
   image_transport
-  kimera_pgmo
+  kimera_pgmo_ros
+  kimera_pgmo_msgs
   rosbag
   roscpp
   std_msgs
@@ -110,16 +115,13 @@ add_dependencies(
 )
 
 add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
-target_link_libraries(dsg_optimizer_node ${PROJECT_NAME})
+target_link_libraries(dsg_optimizer_node ${PROJECT_NAME} ${gflags_LIBRARIES})
 
 add_executable(hydra_ros_node src/nodes/hydra_node.cpp)
-target_link_libraries(hydra_ros_node ${PROJECT_NAME})
+target_link_libraries(hydra_ros_node ${PROJECT_NAME} ${gflags_LIBRARIES})
 
 add_executable(hydra_visualizer_node src/nodes/hydra_visualizer_node.cpp)
-target_link_libraries(hydra_visualizer_node ${PROJECT_NAME})
-
-add_executable(mesh_publisher_node src/nodes/mesh_publisher_node.cpp)
-target_link_libraries(mesh_publisher_node ${PROJECT_NAME})
+target_link_libraries(hydra_visualizer_node ${PROJECT_NAME} ${gflags_LIBRARIES})
 
 add_executable(rotate_tf_node src/nodes/rotate_tf_node.cpp)
 target_include_directories(rotate_tf_node PUBLIC ${catkin_INCLUDE_DIRS})
@@ -129,7 +131,7 @@ add_executable(scene_graph_logger_node src/nodes/scene_graph_logger_node.cpp)
 target_link_libraries(scene_graph_logger_node ${PROJECT_NAME})
 
 add_executable(reconstruct_mesh app/reconstruct_mesh.cpp)
-target_link_libraries(reconstruct_mesh ${PROJECT_NAME})
+target_link_libraries(reconstruct_mesh ${PROJECT_NAME} ${gflags_LIBRARIES})
 
 if(CATKIN_ENABLE_TESTING)
   add_subdirectory(tests)
@@ -140,7 +142,6 @@ install(
           dsg_optimizer_node
           hydra_ros_node
           hydra_visualizer_node
-          mesh_publisher_node
           rotate_tf_node
           scene_graph_logger_node
           reconstruct_mesh

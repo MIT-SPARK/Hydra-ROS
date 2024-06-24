@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
-#include <kimera_pgmo/MeshTraits.h>
+#include <kimera_pgmo/mesh_traits.h>
 #include <spark_dsg/mesh.h>
 
 namespace hydra {
@@ -48,7 +48,7 @@ struct MeshColorAdaptor {
    */
   using ColoringFunction =
       std::function<spark_dsg::Color(const spark_dsg::Mesh&, size_t)>;
-      
+
   MeshColorAdaptor(const spark_dsg::Mesh& mesh, ColoringFunction coloring);
   virtual ~MeshColorAdaptor() = default;
 
@@ -58,10 +58,7 @@ struct MeshColorAdaptor {
 
 Eigen::Vector3f pgmoGetVertex(const MeshColorAdaptor& mesh_adaptor,
                               size_t i,
-                              std::optional<kimera_pgmo::traits::Color>* color,
-                              std::optional<uint8_t>* alpha,
-                              std::optional<uint64_t>*,
-                              std::optional<uint32_t>*);
+                              kimera_pgmo::traits::VertexTraits* traits);
 
 size_t pgmoNumVertices(const MeshColorAdaptor& mesh_adaptor);
 

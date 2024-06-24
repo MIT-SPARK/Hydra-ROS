@@ -66,7 +66,7 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
   std::string getMsgNamespace() const;
 
-  Color getColor(const Mesh&mesh, size_t i) const;
+  Color getColor(const Mesh& mesh, size_t i) const;
 
   bool color_by_label_;
   bool need_redraw_;

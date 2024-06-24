@@ -35,10 +35,14 @@
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 
 #include <hydra/common/global_info.h>
+#include <kimera_pgmo_msgs/KimeraPgmoMeshDelta.h>
+#include <kimera_pgmo_ros/conversion/mesh_delta_conversion.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
-using kimera_pgmo::KimeraPgmoMeshDelta;
+using kimera_pgmo_msgs::KimeraPgmoMeshDelta;
 using pose_graph_tools_msgs::PoseGraph;
 
 RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
@@ -53,11 +57,14 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
                                 const DynamicSceneGraph& graph,
                                 const BackendInput& backend_input) const {
   if (backend_input.deformation_graph) {
-    mesh_graph_pub_.publish(*backend_input.deformation_graph);
+    auto msg = pose_graph_tools::toMsg(*backend_input.deformation_graph);
+    msg.header.stamp.fromNSec(timestamp_ns);
+    mesh_graph_pub_.publish(msg);
   }
 
   if (backend_input.mesh_update) {
-    mesh_update_pub_.publish(backend_input.mesh_update->toRosMsg(timestamp_ns));
+    mesh_update_pub_.publish(
+        kimera_pgmo::conversions::toRosMsg(*backend_input.mesh_update, timestamp_ns));
   }
 
   ros::Time stamp;

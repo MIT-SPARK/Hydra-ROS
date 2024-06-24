@@ -17,7 +17,8 @@
   <depend>hydra</depend>
   <depend>hydra_msgs</depend>
   <depend>image_transport</depend>
-  <depend>kimera_pgmo</depend>
+  <depend>kimera_pgmo_ros</depend>
+  <depend>kimera_pgmo_msgs</depend>
   <depend>rosbag</depend>
   <depend>roscpp</depend>
   <depend>std_msgs</depend>
@@ -31,6 +32,7 @@
   <exec_depend>image_proc</exec_depend>
   <exec_depend>depth_image_proc</exec_depend>
   <exec_depend>rviz</exec_depend>
+  <exec_depend>kimera_pgmo_rviz</exec_depend>
 
   <export>
   </export>

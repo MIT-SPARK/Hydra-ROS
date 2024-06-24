@@ -1,6 +1,6 @@
 #include "hydra_ros/visualizer/mesh_color_adaptor.h"
 
-#include <spark_dsg/pgmo_mesh_traits.h>
+#include <hydra/utils/pgmo_mesh_traits.h>
 
 namespace hydra {
 
@@ -10,13 +10,9 @@ MeshColorAdaptor::MeshColorAdaptor(const spark_dsg::Mesh& mesh,
 
 Eigen::Vector3f pgmoGetVertex(const MeshColorAdaptor& mesh_adaptor,
                               size_t i,
-                              std::optional<kimera_pgmo::traits::Color>* color,
-                              std::optional<uint8_t>* alpha,
-                              std::optional<uint64_t>*,
-                              std::optional<uint32_t>*) {
+                              kimera_pgmo::traits::VertexTraits* traits) {
   const auto c = mesh_adaptor.coloring(mesh_adaptor.mesh, i);
-  *color = kimera_pgmo::traits::Color{{c.r, c.g, c.b}};
-  *alpha = c.a;
+  traits->color = kimera_pgmo::traits::Color{{c.r, c.g, c.b, c.a}};
   return mesh_adaptor.mesh.pos(i);
 }
 

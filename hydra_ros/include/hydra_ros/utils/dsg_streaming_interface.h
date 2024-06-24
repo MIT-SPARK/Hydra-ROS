@@ -35,7 +35,7 @@
 #pragma once
 #include <hydra/common/dsg_types.h>
 #include <hydra_msgs/DsgUpdate.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
+#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
 #include <ros/ros.h>
 
 #include <optional>
@@ -84,7 +84,7 @@ class DsgReceiver {
  private:
   void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
 
-  void handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg);
+  void handleMesh(const kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr& msg);
 
   ros::NodeHandle nh_;
   ros::Subscriber sub_;

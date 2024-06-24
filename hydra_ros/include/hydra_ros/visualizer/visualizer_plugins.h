@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/utils/minimum_spanning_tree.h>
-#include <kimera_pgmo/DeformationGraph.h>
+#include <kimera_pgmo/deformation_graph.h>
 #include <visualization_msgs/Marker.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"

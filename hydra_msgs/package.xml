@@ -13,7 +13,6 @@
   <build_depend>message_generation</build_depend>
   <exec_depend>message_runtime</exec_depend>
   <depend>std_msgs</depend>
-  <depend>voxblox_msgs</depend>
 
   <export>
   </export>

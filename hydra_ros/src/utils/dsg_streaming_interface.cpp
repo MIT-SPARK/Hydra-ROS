@@ -37,10 +37,11 @@
 #include <glog/logging.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/utils/display_utilities.h>
+#include <hydra/utils/pgmo_mesh_traits.h>
 #include <hydra/utils/timing_utilities.h>
-#include <kimera_pgmo/utils/CommonFunctions.h>
+#include <kimera_pgmo/utils/common_functions.h>
+#include <kimera_pgmo_ros/conversion/ros_conversion.h>
 #include <spark_dsg/serialization/graph_binary_serialization.h>
-#include <spark_dsg/pgmo_mesh_traits.h>
 
 namespace hydra {
 
@@ -58,7 +59,7 @@ DsgSender::DsgSender(const ros::NodeHandle& nh,
       serialize_dsg_mesh_(serialize_dsg_mesh) {
   pub_ = nh_.advertise<hydra_msgs::DsgUpdate>("dsg", 1);
   if (publish_mesh_) {
-    mesh_pub_ = nh_.advertise<mesh_msgs::TriangleMeshStamped>("dsg_mesh", 1, false);
+    mesh_pub_ = nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("dsg_mesh", 1, false);
   }
 }
 
@@ -94,10 +95,9 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
 
   last_mesh_time_ns_ = timestamp_ns;
 
-  mesh_msgs::TriangleMeshStamped msg;
+  kimera_pgmo_msgs::KimeraPgmoMesh msg = kimera_pgmo::conversions::toMsg(*mesh);
   msg.header.stamp.fromNSec(timestamp_ns);
   msg.header.frame_id = frame_id_;
-  kimera_pgmo::fillTriangleMeshMsg(*mesh, msg.mesh);
   mesh_pub_.publish(msg);
 }
 
@@ -144,13 +144,16 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
   }
 }
 
-void DsgReceiver::handleMesh(const mesh_msgs::TriangleMeshStamped::ConstPtr& msg) {
+void DsgReceiver::handleMesh(const kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr& msg) {
+  if (!msg) {
+    return;
+  }
   timing::ScopedTimer timer("receive_mesh", msg->header.stamp.toNSec());
   if (!mesh_) {
     mesh_ = std::make_shared<Mesh>();
   }
 
-  kimera_pgmo::fillFromTriangleMeshMsg(msg->mesh, *mesh_);
+  kimera_pgmo::conversions::fromMsg(*msg, *mesh_);
 
   if (graph_) {
     graph_->setMesh(mesh_);

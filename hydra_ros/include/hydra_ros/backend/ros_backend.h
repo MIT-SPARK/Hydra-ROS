@@ -34,23 +34,22 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/backend/backend_module.h>
+#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
 
 namespace hydra {
-
-using kimera_pgmo::KimeraPgmoMesh;
-using pose_graph_tools_msgs::PoseGraph;
 
 class RosBackend : public BackendModule {
  public:
   using Policy =
-      message_filters::sync_policies::ApproximateTime<kimera_pgmo::KimeraPgmoMesh,
+      message_filters::sync_policies::ApproximateTime<kimera_pgmo_msgs::KimeraPgmoMesh,
                                                       pose_graph_tools_msgs::PoseGraph>;
   using Sync = message_filters::Synchronizer<Policy>;
   using PoseGraphSub = message_filters::Subscriber<pose_graph_tools_msgs::PoseGraph>;
-  using MeshSub = message_filters::Subscriber<kimera_pgmo::KimeraPgmoMesh>;
+  using MeshSub = message_filters::Subscriber<kimera_pgmo_msgs::KimeraPgmoMesh>;
 
   RosBackend(const Config& config,
              const SharedDsgInfo::Ptr& dsg,
@@ -62,7 +61,7 @@ class RosBackend : public BackendModule {
   std::string printInfo() const override;
 
   void inputCallback(
-      const kimera_pgmo::KimeraPgmoMesh::ConstPtr& mesh,
+      const kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr& mesh,
       const pose_graph_tools_msgs::PoseGraph::ConstPtr& deformation_graph);
 
   void poseGraphCallback(const pose_graph_tools_msgs::PoseGraph::ConstPtr& msg);
@@ -78,8 +77,8 @@ class RosBackend : public BackendModule {
 
  protected:
   ros::NodeHandle nh_;
-  std::list<pose_graph_tools_msgs::PoseGraph::ConstPtr> pose_graph_queue_;
-  kimera_pgmo::KimeraPgmoMesh::ConstPtr latest_mesh_msg_;
+  std::list<pose_graph_tools::PoseGraph::ConstPtr> pose_graph_queue_;
+  kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr latest_mesh_msg_;
 
   ros::Subscriber pose_graph_sub_;
   std::unique_ptr<PoseGraphSub> deformation_graph_sub_;

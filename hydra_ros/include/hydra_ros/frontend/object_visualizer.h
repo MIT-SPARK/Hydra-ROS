@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/mesh_segmenter.h>
-#include <kimera_pgmo/MeshDelta.h>
+#include <kimera_pgmo/mesh_delta.h>
 #include <ros/ros.h>
 #include <visualization_msgs/Marker.h>
 

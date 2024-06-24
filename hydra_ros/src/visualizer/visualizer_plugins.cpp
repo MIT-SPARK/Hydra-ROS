@@ -34,8 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/visualizer_plugins.h"
 
-#include <mesh_msgs/TriangleMesh.h>
-#include <mesh_msgs/TriangleMeshStamped.h>
+#include <glog/logging.h>
 #include <spark_dsg/color.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <visualization_msgs/Marker.h>

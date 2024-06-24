@@ -11,7 +11,6 @@
   <arg name="verbosity" default="0" doc="visualizer verbosity"/>
 
   <arg name="mesh_filepath" default=""/>
-  <arg name="start_mesh_publisher" value="$(eval 'false' if arg('mesh_filepath') == '' else 'true')"/>
 
   <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_params.xml"
            pass_all_args="true"/>
@@ -31,12 +30,6 @@
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
     <param name="scene_graph_filepath" value="$(arg scene_graph_path)"/>
     <param name="load_graph" value="true"/>
-  </node>
-
-  <node pkg="hydra_ros" type="mesh_publisher_node" name="mesh_publisher_node"
-        if="$(arg start_mesh_publisher)">
-      <param name="mesh_filepath" value="$(arg mesh_filepath)"/>
-      <param name="mesh_frame" value="$(arg visualizer_frame)"/>
   </node>
 
   <group if="$(arg publish_view_transforms)">

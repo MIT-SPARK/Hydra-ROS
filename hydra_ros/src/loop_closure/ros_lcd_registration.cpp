@@ -35,7 +35,7 @@
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
 
 #include <hydra/utils/timing_utilities.h>
-#include <kimera_pgmo/utils/CommonFunctions.h>
+#include <kimera_pgmo/utils/common_functions.h>
 #include <pose_graph_tools_msgs/LcdFrameRegistration.h>
 #include <ros/service.h>
 #include <tf2_eigen/tf2_eigen.h>

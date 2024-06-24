@@ -35,13 +35,16 @@
 #include "hydra_ros/backend/ros_backend_publisher.h"
 
 #include <hydra/common/global_info.h>
+#include <kimera_pgmo_ros/visualization_functions.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <pose_graph_tools_ros/conversions.h>
+#include <visualization_msgs/Marker.h>
 
 namespace hydra {
 
 using kimera_pgmo::DeformationGraph;
 using kimera_pgmo::KimeraPgmoConfig;
-using kimera_pgmo::KimeraPgmoMesh;
-using mesh_msgs::TriangleMeshStamped;
+using kimera_pgmo_msgs::KimeraPgmoMesh;
 using pose_graph_tools_msgs::PoseGraph;
 using visualization_msgs::Marker;
 
@@ -87,9 +90,8 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
     times.push_back(node->timestamp.value().count());
   }
 
-  const auto& pose_graph =
-      dgraph.getPoseGraph(id_timestamps, GlobalInfo::instance().getFrames().map);
-  pose_graph_pub_.publish(*pose_graph);
+  const auto& pose_graph = *dgraph.getPoseGraph(id_timestamps);
+  pose_graph_pub_.publish(pose_graph_tools::toMsg(pose_graph));
 }
 
 void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgraph,

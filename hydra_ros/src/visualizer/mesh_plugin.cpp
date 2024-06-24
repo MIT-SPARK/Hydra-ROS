@@ -36,9 +36,9 @@
 
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
-#include <kimera_pgmo/KimeraPgmoMesh.h>
-#include <kimera_pgmo/utils/RosConversion.h>
-#include <spark_dsg/pgmo_mesh_traits.h>
+#include <hydra/utils/pgmo_mesh_traits.h>
+#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
+#include <kimera_pgmo_ros/conversion/ros_conversion.h>
 
 #include "hydra_ros/visualizer/mesh_color_adaptor.h"
 
@@ -58,7 +58,7 @@ MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
   }
 
   // namespacing gives us a reasonable topic
-  mesh_pub_ = nh_.advertise<kimera_pgmo::KimeraPgmoMesh>("", 1, true);
+  mesh_pub_ = nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("", 1, true);
   toggle_service_ =
       nh_.advertiseService("color_by_label", &MeshPlugin::handleService, this);
 }
@@ -78,13 +78,13 @@ void MeshPlugin::draw(const ConfigManager&,
     ROS_WARN_STREAM("Invalid colormap; defaulting to original vertex color");
   }
 
-  kimera_pgmo::KimeraPgmoMesh msg;
+  kimera_pgmo_msgs::KimeraPgmoMesh msg;
   if (color_by_label_ && !invalid_colormap) {
     const MeshColorAdaptor adaptor(
         *mesh, [this](const Mesh& mesh, size_t i) { return getColor(mesh, i); });
-    msg = kimera_pgmo::toMsg(adaptor);
+    msg = kimera_pgmo::conversions::toMsg(adaptor);
   } else {
-    msg = kimera_pgmo::toMsg(*mesh);
+    msg = kimera_pgmo::conversions::toMsg(*mesh);
   }
   msg.header = header;
   msg.ns = getMsgNamespace();
@@ -92,7 +92,7 @@ void MeshPlugin::draw(const ConfigManager&,
 }
 
 void MeshPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
-  kimera_pgmo::KimeraPgmoMesh msg;
+  kimera_pgmo_msgs::KimeraPgmoMesh msg;
   msg.header = header;
   msg.ns = getMsgNamespace();
   mesh_pub_.publish(msg);

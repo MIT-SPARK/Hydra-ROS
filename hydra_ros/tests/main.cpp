@@ -44,7 +44,7 @@ auto main(int argc, char** argv) -> int {
   FLAGS_minloglevel = 1;
 
   ::testing::InitGoogleTest(&argc, argv);
-  //google::ParseCommandLineFlags(&argc, &argv, true);
+  // google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
 
   ros::init(argc, argv, "test_hydra_ros");

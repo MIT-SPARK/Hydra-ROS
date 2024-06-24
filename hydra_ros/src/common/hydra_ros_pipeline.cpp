@@ -46,6 +46,7 @@
 #include <hydra/frontend/frontend_module.h>
 #include <hydra/loop_closure/loop_closure_module.h>
 #include <hydra/reconstruction/reconstruction_module.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 #include <memory>
 
@@ -156,8 +157,8 @@ void HydraRosPipeline::initLCD() {
 void HydraRosPipeline::bowCallback(
     const pose_graph_tools_msgs::BowQueries::ConstPtr& msg) {
   for (const auto& query : msg->queries) {
-    shared_state_->visual_lcd_queue.push(pose_graph_tools_msgs::BowQuery::ConstPtr(
-        new pose_graph_tools_msgs::BowQuery(query)));
+    shared_state_->visual_lcd_queue.push(
+        std::make_shared<pose_graph_tools::BowQuery>(pose_graph_tools::fromMsg(query)));
   }
 }
 
