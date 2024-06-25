@@ -42,6 +42,7 @@
 
 #include "hydra_ros/visualizer/mesh_color_adaptor.h"
 
+
 namespace hydra {
 
 MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
@@ -54,6 +55,8 @@ MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
     colormap_ = SemanticColorMap::fromCsv(label_colormap);
     if (!colormap_) {
       ROS_WARN_STREAM("Unable to load colormap from " << label_colormap);
+    } else {
+      mesh_coloring_ = std::make_shared<SemanticMeshColoring>(*colormap_);
     }
   }
 
@@ -80,8 +83,7 @@ void MeshPlugin::draw(const ConfigManager&,
 
   kimera_pgmo_msgs::KimeraPgmoMesh msg;
   if (color_by_label_ && !invalid_colormap) {
-    const MeshColorAdaptor adaptor(
-        *mesh, [this](const Mesh& mesh, size_t i) { return getColor(mesh, i); });
+    const MeshColorAdaptor adaptor(*mesh, mesh_coloring_);
     msg = kimera_pgmo::conversions::toMsg(adaptor);
   } else {
     msg = kimera_pgmo::conversions::toMsg(*mesh);
@@ -101,18 +103,6 @@ void MeshPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&)
 std::string MeshPlugin::getMsgNamespace() const {
   // TODO(lschmid): Hardcoded for now. Eventually read from scene graph or so.
   return "robot0/dsg_mesh";
-}
-
-Color MeshPlugin::getColor(const Mesh& mesh, size_t i) const {
-  if (!mesh.has_labels) {
-    return Color::black();
-  }
-  const auto label = mesh.label(i);
-  if (label >= colormap_->getNumLabels()) {
-    // Return gray to differentiate unknown labels and not having labels.
-    return Color::gray(0.3);
-  }
-  return colormap_->getColorFromLabel(label);
 }
 
 bool MeshPlugin::hasChange() const { return need_redraw_; }

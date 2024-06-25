@@ -41,6 +41,7 @@
 namespace hydra {
 
 class SemanticColorMap;
+class MeshColoring;
 
 class MeshPlugin : public DsgVisualizerPlugin {
  public:
@@ -66,13 +67,12 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
   std::string getMsgNamespace() const;
 
-  Color getColor(const Mesh& mesh, size_t i) const;
-
   bool color_by_label_;
   bool need_redraw_;
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
   std::unique_ptr<SemanticColorMap> colormap_;
+  std::shared_ptr<const MeshColoring> mesh_coloring_;
 
   inline static const auto registration_ = config::
       Registration<DsgVisualizerPlugin, MeshPlugin, ros::NodeHandle, std::string>(
