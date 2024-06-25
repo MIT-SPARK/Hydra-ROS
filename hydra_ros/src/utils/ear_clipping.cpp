@@ -197,15 +197,14 @@ void TriangleIter::setView() {
   view_.v2 = polygon_->vertex(*niter);
 }
 
-Polygon::Polygon(const std::vector<Vertex>& vertices)
-    : active_(vertices.size()), vertices_(vertices) {
+Polygon::Polygon(const std::vector<Vertex>& vertices, bool is_ccw)
+    : is_ccw_(is_ccw), active_(vertices.size()), vertices_(vertices) {
   std::iota(active_.begin(), active_.end(), 0);
   if (vertices_.size() <= 1) {
     return;
   }
 
   filter();
-  is_ccw_ = isWindingOrderCCW();
   VLOG(10) << "counter clockwise: " << std::boolalpha << is_ccw_;
 }
 
@@ -220,11 +219,6 @@ void Polygon::filter() {
       ++iter;
     }
   }
-}
-
-bool Polygon::isWindingOrderCCW() const {
-  // TODO(nathan) convex hull implementation is ccw
-  return true;
 }
 
 Polygon Polygon::fromSceneGraph(const DynamicSceneGraph& graph,
@@ -339,6 +333,10 @@ TriangleIter Polygon::getFirstEar(const std::vector<bool>& ears) const {
 std::vector<std::array<size_t, 3>> Polygon::triangulate(bool use_first_ear) {
   if (vertices_.size() <= 2) {
     return {};
+  }
+
+  if (vertices_.size() == 3) {
+    return {{0, 1, 2}};
   }
 
   std::vector<bool> ears(vertices_.size(), false);

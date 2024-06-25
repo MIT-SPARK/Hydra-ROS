@@ -99,7 +99,7 @@ class TriangleIter {
 
 class Polygon {
  public:
-  explicit Polygon(const std::vector<Vertex>& vertices);
+  explicit Polygon(const std::vector<Vertex>& vertices, bool is_ccw = true);
 
   static Polygon fromSceneGraph(const DynamicSceneGraph& graph,
                                 const std::vector<NodeId>& vertex_nodes);
@@ -117,8 +117,6 @@ class Polygon {
   size_t size() const;
 
   bool isEar(const TriangleView& triangle) const;
-
-  bool isWindingOrderCCW() const;
 
   std::vector<std::array<size_t, 3>> triangulate(bool use_first_ear = false);
 

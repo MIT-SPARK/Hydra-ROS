@@ -38,16 +38,20 @@
 #include <ros/ros.h>
 
 auto main(int argc, char** argv) -> int {
+  ros::init(argc, argv, "test_hydra_ros");
+  ros::NodeHandle nh("~");
+  int verbosity = 0;
+  nh.getParam("verbosity", verbosity);
+  int minloglevel = 1;
+  nh.getParam("minloglevel", minloglevel);
+
   FLAGS_logtostderr = true;
   FLAGS_alsologtostderr = true;
   FLAGS_colorlogtostderr = true;
-  FLAGS_minloglevel = 1;
+  FLAGS_minloglevel = minloglevel;
+  FLAGS_v = verbosity;
 
   ::testing::InitGoogleTest(&argc, argv);
-  // google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
-
-  ros::init(argc, argv, "test_hydra_ros");
-
   return RUN_ALL_TESTS();
 }

@@ -42,7 +42,7 @@ namespace hydra {
 TEST(EarClipping, TriangleIter) {
   std::vector<Vertex> vertices;
   for (size_t i = 0; i < 5; ++i) {
-    vertices.push_back({Eigen::Vector2d::Zero(), i, static_cast<NodeId>(i)});
+    vertices.push_back({Eigen::Vector2d::Zero(), i});
   }
 
   Polygon polygon(vertices);
@@ -63,45 +63,45 @@ TEST(EarClipping, TriangleIter) {
 }
 
 TEST(EarClipping, IsConvex) {
-  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0, 0u};
-  Vertex v1{Eigen::Vector2d(1.0, 0.0), 1, 1u};
-  Vertex v2{Eigen::Vector2d(2.0, 1.0), 2, 2u};
+  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0u};
+  Vertex v1{Eigen::Vector2d(1.0, 0.0), 1u};
+  Vertex v2{Eigen::Vector2d(2.0, 1.0), 2u};
   TriangleView view{&v0, &v1, &v2};
   EXPECT_TRUE(view.isConvex(true));
   EXPECT_FALSE(view.isConvex(false));
 }
 
 TEST(EarClipping, IsConvexRotated) {
-  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0, 0u};
-  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1, 1u};
-  Vertex v2{Eigen::Vector2d(-1.0, 2.0), 2, 2u};
+  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0u};
+  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1u};
+  Vertex v2{Eigen::Vector2d(-1.0, 2.0), 2u};
   TriangleView view{&v0, &v1, &v2};
   EXPECT_TRUE(view.isConvex(true));
   EXPECT_FALSE(view.isConvex(false));
 }
 
 TEST(EarClipping, IsReflex) {
-  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0, 0u};
-  Vertex v1{Eigen::Vector2d(1.0, 0.0), 1, 1u};
-  Vertex v2{Eigen::Vector2d(2.0, -1.0), 2, 2u};
+  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0u};
+  Vertex v1{Eigen::Vector2d(1.0, 0.0), 1u};
+  Vertex v2{Eigen::Vector2d(2.0, -1.0), 2u};
   TriangleView view{&v0, &v1, &v2};
   EXPECT_FALSE(view.isConvex(true));
   EXPECT_TRUE(view.isConvex(false));
 }
 
 TEST(EarClipping, IsReflexRotated) {
-  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0, 0u};
-  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1, 1u};
-  Vertex v2{Eigen::Vector2d(1.0, 2.0), 2, 2u};
+  Vertex v0{Eigen::Vector2d(0.0, 0.0), 0u};
+  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1u};
+  Vertex v2{Eigen::Vector2d(1.0, 2.0), 2u};
   TriangleView view{&v0, &v1, &v2};
   EXPECT_FALSE(view.isConvex(true));
   EXPECT_TRUE(view.isConvex(false));
 }
 
 TEST(EarClipping, IsInside) {
-  Vertex v0{Eigen::Vector2d(-1.0, 0.0), 0, 0u};
-  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1, 1u};
-  Vertex v2{Eigen::Vector2d(1.0, 0.0), 2, 2u};
+  Vertex v0{Eigen::Vector2d(-1.0, 0.0), 0u};
+  Vertex v1{Eigen::Vector2d(0.0, 1.0), 1u};
+  Vertex v2{Eigen::Vector2d(1.0, 0.0), 2u};
   TriangleView view{&v0, &v1, &v2};
   EXPECT_TRUE(view.isInside(Eigen::Vector2d(0.0, 0.5)));
   EXPECT_FALSE(view.isInside(Eigen::Vector2d(0.5, -0.5)));
@@ -111,17 +111,17 @@ TEST(EarClipping, IsInside) {
 }
 
 TEST(EarClipping, TriangulateLine) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(-1.0, 0.0), 0, 0u},
-                               {Eigen::Vector2d(0.0, 1.0), 1, 1u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(-1.0, 0.0), 0u},
+                               {Eigen::Vector2d(0.0, 1.0), 1u}};
   Polygon polygon(vertices);
   auto faces = polygon.triangulate();
   EXPECT_TRUE(faces.empty());
 }
 
 TEST(EarClipping, TriangulateFace) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(-1.0, 0.0), 0, 0u},
-                               {Eigen::Vector2d(0.0, 1.0), 1, 1u},
-                               {Eigen::Vector2d(1.0, 0.0), 2, 1u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(-1.0, 0.0), 0u},
+                               {Eigen::Vector2d(0.0, 1.0), 1u},
+                               {Eigen::Vector2d(1.0, 0.0), 2u}};
 
   Polygon polygon(vertices);
   auto faces = polygon.triangulate();
@@ -130,22 +130,22 @@ TEST(EarClipping, TriangulateFace) {
 }
 
 TEST(EarClipping, TriangulateSquareCW) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0, 0u},
-                               {Eigen::Vector2d(0.0, 1.0), 1, 1u},
-                               {Eigen::Vector2d(1.0, 1.0), 2, 2u},
-                               {Eigen::Vector2d(1.0, 0.0), 3, 3u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0u},
+                               {Eigen::Vector2d(0.0, 1.0), 1u},
+                               {Eigen::Vector2d(1.0, 1.0), 2u},
+                               {Eigen::Vector2d(1.0, 0.0), 3u}};
 
-  Polygon polygon(vertices);
+  Polygon polygon(vertices, false);
   auto faces = polygon.triangulate();
   std::vector<std::array<size_t, 3>> expected{{3, 0, 1}, {3, 1, 2}};
   EXPECT_EQ(faces, expected);
 }
 
 TEST(EarClipping, TriangulateSquareCCW) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0, 0u},
-                               {Eigen::Vector2d(1.0, 0.0), 1, 1u},
-                               {Eigen::Vector2d(1.0, 1.0), 2, 2u},
-                               {Eigen::Vector2d(0.0, 1.0), 3, 3u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0u},
+                               {Eigen::Vector2d(1.0, 0.0), 1u},
+                               {Eigen::Vector2d(1.0, 1.0), 2u},
+                               {Eigen::Vector2d(0.0, 1.0), 3u}};
 
   Polygon polygon(vertices);
   auto faces = polygon.triangulate();
@@ -154,12 +154,12 @@ TEST(EarClipping, TriangulateSquareCCW) {
 }
 
 TEST(EarClipping, TriangulateHexagon) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0, 0u},
-                               {Eigen::Vector2d(1.0, 1.0), 1, 1u},
-                               {Eigen::Vector2d(1.0, 2.0), 2, 2u},
-                               {Eigen::Vector2d(0.0, 3.0), 3, 3u},
-                               {Eigen::Vector2d(-1.0, 2.0), 4, 4u},
-                               {Eigen::Vector2d(-1.0, 1.0), 5, 5u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(0.0, 0.0), 0u},
+                               {Eigen::Vector2d(1.0, 1.0), 1u},
+                               {Eigen::Vector2d(1.0, 2.0), 2u},
+                               {Eigen::Vector2d(0.0, 3.0), 3u},
+                               {Eigen::Vector2d(-1.0, 2.0), 4u},
+                               {Eigen::Vector2d(-1.0, 1.0), 5u}};
 
   Polygon polygon(vertices);
   auto faces = polygon.triangulate();
@@ -169,23 +169,23 @@ TEST(EarClipping, TriangulateHexagon) {
 }
 
 TEST(EarClipping, TriangulateBadCCWDetection) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(-15.45, 22.05), 0, 0u},
-                               {Eigen::Vector2d(-16.45, 22.05), 1, 1u},
-                               {Eigen::Vector2d(-17.45, 22.45), 2, 2u},
-                               {Eigen::Vector2d(-18.55, 23.15), 3, 3u},
-                               {Eigen::Vector2d(-19.15, 24.25), 4, 4u},
-                               {Eigen::Vector2d(-18.85, 25.15), 5, 5u},
-                               {Eigen::Vector2d(-17.65, 26.45), 6, 6u},
-                               {Eigen::Vector2d(-16.85, 27.55), 7, 7u},
-                               {Eigen::Vector2d(-16.05, 27.25), 8, 8u},
-                               {Eigen::Vector2d(-15.45, 26.25), 9, 9u},
-                               {Eigen::Vector2d(-15.45, 26.25), 10, 10u},
-                               {Eigen::Vector2d(-15.35, 25.65), 11, 11u},
-                               {Eigen::Vector2d(-15.35, 24.55), 12, 12u},
-                               {Eigen::Vector2d(-15.45, 23.15), 13, 13u},
-                               {Eigen::Vector2d(-15.55, 22.45), 14, 14u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(-15.45, 22.05), 0u},
+                               {Eigen::Vector2d(-16.45, 22.05), 1u},
+                               {Eigen::Vector2d(-17.45, 22.45), 2u},
+                               {Eigen::Vector2d(-18.55, 23.15), 3u},
+                               {Eigen::Vector2d(-19.15, 24.25), 4u},
+                               {Eigen::Vector2d(-18.85, 25.15), 5u},
+                               {Eigen::Vector2d(-17.65, 26.45), 6u},
+                               {Eigen::Vector2d(-16.85, 27.55), 7u},
+                               {Eigen::Vector2d(-16.05, 27.25), 8u},
+                               {Eigen::Vector2d(-15.45, 26.25), 9u},
+                               {Eigen::Vector2d(-15.45, 26.25), 10u},
+                               {Eigen::Vector2d(-15.35, 25.65), 11u},
+                               {Eigen::Vector2d(-15.35, 24.55), 12u},
+                               {Eigen::Vector2d(-15.45, 23.15), 13u},
+                               {Eigen::Vector2d(-15.55, 22.45), 14u}};
 
-  Polygon polygon(vertices);
+  Polygon polygon(vertices, false);
   auto faces = polygon.triangulate(true);
   std::vector<std::array<size_t, 3>> expected{{14, 0, 1},
                                               {14, 1, 2},
@@ -203,21 +203,21 @@ TEST(EarClipping, TriangulateBadCCWDetection) {
 }
 
 TEST(EarClipping, TriangulateMissingFaces) {
-  std::vector<Vertex> vertices{{Eigen::Vector2d(-18.15, 26.85), 0, 0u},
-                               {Eigen::Vector2d(-18.95, 25.95), 1, 1u},
-                               {Eigen::Vector2d(-19.05, 24.15), 2, 2u},
-                               {Eigen::Vector2d(-18.65, 23.25), 3, 3u},
-                               {Eigen::Vector2d(-17.45, 22.45), 4, 4u},
-                               {Eigen::Vector2d(-16.75, 21.95), 5, 5u},
-                               {Eigen::Vector2d(-15.45, 22.05), 6, 6u},
-                               {Eigen::Vector2d(-15.45, 22.05), 7, 7u},
-                               {Eigen::Vector2d(-15.35, 23.25), 8, 8u},
-                               {Eigen::Vector2d(-14.95, 24.45), 9, 9u},
-                               {Eigen::Vector2d(-15.45, 26.65), 10, 10u},
-                               {Eigen::Vector2d(-16.05, 27.25), 11, 11u},
-                               {Eigen::Vector2d(-16.05, 27.25), 12, 12u},
-                               {Eigen::Vector2d(-17.15, 27.55), 13, 13u},
-                               {Eigen::Vector2d(-17.65, 26.75), 14, 14u}};
+  std::vector<Vertex> vertices{{Eigen::Vector2d(-18.15, 26.85), 0u},
+                               {Eigen::Vector2d(-18.95, 25.95), 1u},
+                               {Eigen::Vector2d(-19.05, 24.15), 2u},
+                               {Eigen::Vector2d(-18.65, 23.25), 3u},
+                               {Eigen::Vector2d(-17.45, 22.45), 4u},
+                               {Eigen::Vector2d(-16.75, 21.95), 5u},
+                               {Eigen::Vector2d(-15.45, 22.05), 6u},
+                               {Eigen::Vector2d(-15.45, 22.05), 7u},
+                               {Eigen::Vector2d(-15.35, 23.25), 8u},
+                               {Eigen::Vector2d(-14.95, 24.45), 9u},
+                               {Eigen::Vector2d(-15.45, 26.65), 10u},
+                               {Eigen::Vector2d(-16.05, 27.25), 11u},
+                               {Eigen::Vector2d(-16.05, 27.25), 12u},
+                               {Eigen::Vector2d(-17.15, 27.55), 13u},
+                               {Eigen::Vector2d(-17.65, 26.75), 14u}};
 
   Polygon polygon(vertices);
   auto faces = polygon.triangulate(true);
