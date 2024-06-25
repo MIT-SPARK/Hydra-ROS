@@ -10,8 +10,6 @@ find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 find_package(hydra REQUIRED)
 find_package(PCL REQUIRED COMPONENTS common)
 find_package(gflags REQUIRED)
-# find_package(PkgConfig REQUIRED)
-# pkg_check_modules(gflags REQUIRED IMPORTED_TARGET gflags)
 find_package(
   catkin REQUIRED
   COMPONENTS cv_bridge
@@ -65,16 +63,16 @@ catkin_package(
 
 add_library(
   ${PROJECT_NAME}
+  src/hydra_ros_pipeline.cpp
   src/backend/ros_backend_publisher.cpp
   src/backend/ros_backend.cpp
-  src/common/hydra_ros_pipeline.cpp
-  src/common/ros_input_module.cpp
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
   src/input/image_receiver.cpp
   src/input/pointcloud_adaptor.cpp
   src/input/pointcloud_receiver.cpp
+  src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
   src/loop_closure/ros_lcd_registration.cpp
   src/reconstruction/reconstruction_visualizer.cpp

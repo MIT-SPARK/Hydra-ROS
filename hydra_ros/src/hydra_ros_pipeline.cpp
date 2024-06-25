@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/common/hydra_ros_pipeline.h"
+#include "hydra_ros/hydra_ros_pipeline.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>

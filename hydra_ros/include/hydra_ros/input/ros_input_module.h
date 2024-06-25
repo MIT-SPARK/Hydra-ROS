@@ -43,10 +43,18 @@ class RosInputModule : public InputModule {
  public:
   using OutputQueue = InputQueue<InputPacket::Ptr>;
   struct Config : InputModule::Config {
+    //! ros namespace for nodehandle
     std::string ns = "~";
-    bool publish_pointcloud = false;
+    //! clears all input packets from receivers when not initialized and tf lookup fails
+    bool clear_queue_on_fail = true;
+    //! Amount of time to wait between tf lookup attempts
     double tf_wait_duration_s = 0.1;
+    //! Buffer size in second for tf
     double tf_buffer_size_s = 30.0;
+    //! Number of lookup attempts before giving up
+    int tf_max_tries = 5;
+    //! Logging verbosity of tf lookup process
+    int tf_verbosity = 3;
   } const config;
 
   RosInputModule(const Config& config, const OutputQueue::Ptr& output_queue);
@@ -60,6 +68,7 @@ class RosInputModule : public InputModule {
 
  protected:
   ros::NodeHandle nh_;
+  bool have_first_pose_;
   std::unique_ptr<tf2_ros::Buffer> buffer_;
   std::unique_ptr<tf2_ros::TransformListener> tf_listener_;
 

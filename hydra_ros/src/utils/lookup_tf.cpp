@@ -74,9 +74,9 @@ PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
   const auto lookup_time = stamp.value_or(ros::Time());
   size_t attempt_number = 0;
   while (ros::ok()) {
-    VLOG(10) << "Attempting to lookup tf @ " << lookup_time.toNSec()
-             << " [ns]: " << attempt_number << " / "
-             << (max_tries ? std::to_string(max_tries.value()) : "n/a");
+    VLOG(verbosity) << "Attempting to lookup tf @ " << lookup_time.toNSec()
+                    << " [ns]: " << attempt_number << " / "
+                    << (max_tries ? std::to_string(max_tries.value()) : "n/a");
     if (max_tries && attempt_number >= *max_tries) {
       break;
     }

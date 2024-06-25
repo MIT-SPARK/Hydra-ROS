@@ -32,50 +32,43 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/common/ros_input_module.h"
+#pragma once
+#include <hydra/common/hydra_pipeline.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
+#include <ros/ros.h>
 
-#include <config_utilities/config.h>
-#include <config_utilities/printing.h>
-#include <config_utilities/validation.h>
-#include <hydra/common/global_info.h>
-
-#include "hydra_ros/utils/lookup_tf.h"
+#include "hydra_ros/input/ros_input_module.h"
 
 namespace hydra {
 
-void declare_config(RosInputModule::Config& conf) {
-  using namespace config;
-  name("RosInputModule::Config");
-  base<InputModule::Config>(conf);
-  field(conf.ns, "ns");
-  field(conf.tf_wait_duration_s, "tf_wait_duration_s");
-  field(conf.tf_buffer_size_s, "tf_buffer_size_s");
-}
+struct HydraRosConfig {
+  bool enable_frontend_output = true;
+  RosInputModule::Config input;
+};
 
-RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& queue)
-    : InputModule(config, queue), nh_(ros::NodeHandle(config.ns)) {
-  buffer_.reset(new tf2_ros::Buffer(ros::Duration(config.tf_buffer_size_s)));
-  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
-}
+void declare_config(HydraRosConfig& conf);
 
-RosInputModule::~RosInputModule() = default;
+class HydraRosPipeline : public HydraPipeline {
+ public:
+  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
 
-std::string RosInputModule::printInfo() const {
-  std::stringstream ss;
-  ss << config::toString(config);
-  return ss.str();
-}
+  virtual ~HydraRosPipeline();
 
-PoseStatus RosInputModule::getBodyPose(uint64_t timestamp_ns) {
-  ros::Time curr_ros_time;
-  curr_ros_time.fromNSec(timestamp_ns);
-  const auto pose_status = lookupTransform(*buffer_,
-                                           curr_ros_time,
-                                           GlobalInfo::instance().getFrames().odom,
-                                           GlobalInfo::instance().getFrames().robot,
-                                           5,  // max tries
-                                           config.tf_wait_duration_s);
-  return pose_status;
-}
+  void init() override;
+
+ protected:
+  void bowCallback(const pose_graph_tools_msgs::BowQueries::ConstPtr& msg);
+
+  virtual void initFrontend();
+  virtual void initBackend();
+  virtual void initReconstruction();
+  virtual void initLCD();
+
+ protected:
+  const HydraRosConfig config_;
+  ros::NodeHandle nh_;
+
+  ros::Subscriber bow_sub_;
+};
 
 }  // namespace hydra

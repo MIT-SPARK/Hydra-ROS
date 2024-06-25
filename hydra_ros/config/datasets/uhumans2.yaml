@@ -1,5 +1,7 @@
 ---
 type: RosInput
+tf_verbosity: 1
+clear_queue_on_fail: true
 receivers:
   - type: ImageReceiver
     sensor:
