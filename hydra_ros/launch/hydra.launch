@@ -36,6 +36,7 @@
     <arg name="sensor_frame" default="" doc="robot sensor frame (for looking up extrinsics)"/>
     <arg name="kimera_sensor_filepath" default="" doc="optional path to kimera camera file (for extrinsics)"/>
     <!-- pipeline configuration -->
+    <!-- TODO(nathan) rename this eventually -->
     <arg name="use_gt_frame" default="true"/>
     <arg name="external_optimizer" default="false"/>
     <arg name="use_oriented_bounding_boxes" default="false"/>
@@ -142,14 +143,14 @@
         <!-- logging -->
         <param name="log_path" value="$(arg dsg_path)"/>
         <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>
-        <!-- reconstruction params -->
-        <param name="reconstruction/pose_graphs/make_pose_graph" value="$(arg use_gt_frame)"/>
         <!-- frontend params -->
         <param name="frontend/objects/bounding_box_type" value="RAABB" if="$(arg use_oriented_bounding_boxes)"/>
         <param name="frontend/objects/bounding_box_type" value="AABB" unless="$(arg use_oriented_bounding_boxes)"/>
         <param name="frontend/validate_vertices" value="$(arg validate_vertices)"/>
         <param name="frontend/use_2d_places" value="$(arg use_2d_places)"/>
         <param name="frontend/enable_places" value="$(arg enable_places)"/>
+        <param name="frontend/pose_graph_tracker/type"
+               value="$(eval 'PoseGraphFromOdom' if arg('use_gt_frame') else 'RosPoseGraphs')"/>
         <!-- distributed params -->
         <param name="backend/pgmo/add_initial_prior" value="false" if="$(arg external_optimizer)"/>
         <!-- backend params-->

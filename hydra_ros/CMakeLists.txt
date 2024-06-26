@@ -75,8 +75,10 @@ add_library(
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
   src/loop_closure/ros_lcd_registration.cpp
+  src/odometry/ros_pose_graph_tracker.cpp
   src/reconstruction/reconstruction_visualizer.cpp
   src/utils/bag_reader.cpp
+  src/utils/bow_subscriber.cpp
   src/utils/dsg_streaming_interface.cpp
   src/utils/ear_clipping.cpp
   src/utils/lookup_tf.cpp

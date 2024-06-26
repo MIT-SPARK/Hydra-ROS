@@ -41,7 +41,7 @@
 namespace hydra {
 
 class SemanticColorMap;
-class MeshColoring;
+struct MeshColoring;
 
 class MeshPlugin : public DsgVisualizerPlugin {
  public:

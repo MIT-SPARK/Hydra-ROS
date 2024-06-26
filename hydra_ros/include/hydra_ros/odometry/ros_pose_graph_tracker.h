@@ -1,4 +1,16 @@
 /* -----------------------------------------------------------------------------
+ * Code in this file was originally adapted from Khronos, see:
+ *   @misc{schmid2024khronosunifiedapproachspatiotemporal,
+ *         title={Khronos: A Unified Approach for Spatio-Temporal Metric-Semantic
+ *                SLAM in Dynamic Environments},
+ *         author={Lukas Schmid and Marcus Abate and Yun Chang and Luca Carlone},
+ *         year={2024},
+ *         eprint={2402.13817},
+ *         archivePrefix={arXiv},
+ *         primaryClass={cs.RO},
+ *         url={https://arxiv.org/abs/2402.13817},
+ *  }
+ *
  * Copyright 2022 Massachusetts Institute of Technology.
  * All Rights Reserved
  *
@@ -32,41 +44,56 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/common/hydra_pipeline.h>
-#include <ros/ros.h>
 
-#include "hydra_ros/input/ros_input_module.h"
+#pragma once
+
+#include <config_utilities/factory.h>
+#include <hydra/odometry/pose_graph_tracker.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
+#include <ros/node_handle.h>
+#include <ros/subscriber.h>
+
+#include <mutex>
 
 namespace hydra {
 
-class BowSubscriber;
-
-struct HydraRosConfig {
-  bool enable_frontend_output = true;
-  RosInputModule::Config input;
-};
-
-void declare_config(HydraRosConfig& conf);
-
-class HydraRosPipeline : public HydraPipeline {
+/**
+ * @brief Odometry input that subscribes to pose graph
+ * messages from Kimera or other sources that follow its output types.
+ */
+class RosPoseGraphTracker : public PoseGraphTracker {
  public:
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
+  struct Config {
+    //! ROS namespace
+    std::string ns = "~";
+    //! Size of the odometry subscriber queue.
+    size_t queue_size = 1000;
+  } const config;
 
-  virtual ~HydraRosPipeline();
+  explicit RosPoseGraphTracker(const Config& config);
+  virtual ~RosPoseGraphTracker() = default;
 
-  void init() override;
+  PoseGraphPacket update(uint64_t timestamp,
+                         const Eigen::Isometry3d& world_T_body) override;
 
  protected:
-  virtual void initFrontend();
-  virtual void initBackend();
-  virtual void initReconstruction();
-  virtual void initLCD();
+  void odomCallback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
+  void priorCallback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
 
- protected:
-  const HydraRosConfig config_;
   ros::NodeHandle nh_;
-  std::unique_ptr<BowSubscriber> bow_sub_;
+  ros::Subscriber odom_sub_;
+  ros::Subscriber prior_sub_;
+
+  std::mutex mutex_;
+  std::vector<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
+  pose_graph_tools::PoseGraph::ConstPtr external_priors_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<PoseGraphTracker,
+                                     RosPoseGraphTracker,
+                                     RosPoseGraphTracker::Config>("RosPoseGraphs");
 };
+
+void declare_config(RosPoseGraphTracker::Config& config);
 
 }  // namespace hydra

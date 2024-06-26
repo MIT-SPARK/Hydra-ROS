@@ -33,40 +33,23 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/hydra_pipeline.h>
+#include <hydra/common/shared_module_state.h>
+#include <pose_graph_tools_msgs/BowQueries.h>
 #include <ros/ros.h>
-
-#include "hydra_ros/input/ros_input_module.h"
 
 namespace hydra {
 
-class BowSubscriber;
-
-struct HydraRosConfig {
-  bool enable_frontend_output = true;
-  RosInputModule::Config input;
-};
-
-void declare_config(HydraRosConfig& conf);
-
-class HydraRosPipeline : public HydraPipeline {
+class BowSubscriber {
  public:
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
-
-  virtual ~HydraRosPipeline();
-
-  void init() override;
+  BowSubscriber(const ros::NodeHandle& nh, const SharedModuleState::Ptr& state);
 
  protected:
-  virtual void initFrontend();
-  virtual void initBackend();
-  virtual void initReconstruction();
-  virtual void initLCD();
+  void callback(const pose_graph_tools_msgs::BowQueries& msg);
 
  protected:
-  const HydraRosConfig config_;
   ros::NodeHandle nh_;
-  std::unique_ptr<BowSubscriber> bow_sub_;
+  ros::Subscriber sub_;
+  SharedModuleState::Ptr state_;
 };
 
 }  // namespace hydra

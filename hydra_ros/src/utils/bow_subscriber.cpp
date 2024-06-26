@@ -32,41 +32,27 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/common/hydra_pipeline.h>
-#include <ros/ros.h>
+#include "hydra_ros/utils/bow_subscriber.h"
 
-#include "hydra_ros/input/ros_input_module.h"
+#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
-class BowSubscriber;
+using pose_graph_tools_msgs::BowQueries;
 
-struct HydraRosConfig {
-  bool enable_frontend_output = true;
-  RosInputModule::Config input;
-};
+BowSubscriber::BowSubscriber(const ros::NodeHandle& nh,
+                             const SharedModuleState::Ptr& state)
+    : nh_(nh), state_(state) {
+  if (state_->bow_queue) {
+    sub_ = nh_.subscribe("bow_vectors", 100, &BowSubscriber::callback, this);
+  }
+}
 
-void declare_config(HydraRosConfig& conf);
-
-class HydraRosPipeline : public HydraPipeline {
- public:
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
-
-  virtual ~HydraRosPipeline();
-
-  void init() override;
-
- protected:
-  virtual void initFrontend();
-  virtual void initBackend();
-  virtual void initReconstruction();
-  virtual void initLCD();
-
- protected:
-  const HydraRosConfig config_;
-  ros::NodeHandle nh_;
-  std::unique_ptr<BowSubscriber> bow_sub_;
-};
+void BowSubscriber::callback(const BowQueries& msg) {
+  for (const auto& query : msg.queries) {
+    state_->bow_queue->push(
+        std::make_shared<pose_graph_tools::BowQuery>(pose_graph_tools::fromMsg(query)));
+  }
+}
 
 }  // namespace hydra

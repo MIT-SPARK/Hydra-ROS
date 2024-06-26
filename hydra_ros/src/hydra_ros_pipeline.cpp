@@ -53,6 +53,7 @@
 #include "hydra_ros/backend/ros_backend_publisher.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
+#include "hydra_ros/utils/bow_subscriber.h"
 
 namespace hydra {
 
@@ -77,6 +78,7 @@ void HydraRosPipeline::init() {
   initReconstruction();
   if (pipeline_config.enable_lcd) {
     initLCD();
+    bow_sub_.reset(new BowSubscriber(nh_, shared_state_));
   }
 
   const auto reconstruction = getModule<ReconstructionModule>("reconstruction");
@@ -147,18 +149,9 @@ void HydraRosPipeline::initLCD() {
   auto lcd = std::make_shared<LoopClosureModule>(lcd_config, shared_state_);
   modules_["lcd"] = lcd;
 
-  bow_sub_ = nh_.subscribe("bow_vectors", 100, &HydraRosPipeline::bowCallback, this);
   if (lcd_config.detector.enable_agent_registration) {
     lcd->getDetector().setRegistrationSolver(0,
                                              std::make_unique<lcd::DsgAgentSolver>());
-  }
-}
-
-void HydraRosPipeline::bowCallback(
-    const pose_graph_tools_msgs::BowQueries::ConstPtr& msg) {
-  for (const auto& query : msg->queries) {
-    shared_state_->visual_lcd_queue.push(
-        std::make_shared<pose_graph_tools::BowQuery>(pose_graph_tools::fromMsg(query)));
   }
 }
 

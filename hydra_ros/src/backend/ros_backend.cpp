@@ -76,7 +76,9 @@ void RosBackend::inputCallback(const KimeraPgmoMesh::ConstPtr& mesh,
   input->deformation_graph = std::make_shared<pose_graph_tools::PoseGraph>(
       pose_graph_tools::fromMsg(*deformation_graph));
   input->timestamp_ns = mesh->header.stamp.toNSec();
-  input->pose_graphs = pose_graph_queue_;
+  for (const auto& graph : pose_graph_queue_) {
+    input->agent_updates.pose_graphs.push_back(graph);
+  }
   pose_graph_queue_.clear();
 
   state_->backend_queue.push(input);
