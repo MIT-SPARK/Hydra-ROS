@@ -117,11 +117,11 @@ Color colorFromTime(Mesh::Timestamp time, Mesh::Timestamp min, Mesh::Timestamp m
   if (time <= min) {
     return Color::ironbow(0);
   } else if (time >= max) {
-    return Color::ironbow(0.8);
+    return Color::ironbow(1);
   }
   const double normalized_time_stamp =
       static_cast<double>(time - min) / static_cast<double>(max - min);
-  return Color::ironbow(normalized_time_stamp * 0.8);
+  return Color::ironbow(normalized_time_stamp);
 }
 
 }  // namespace hydra

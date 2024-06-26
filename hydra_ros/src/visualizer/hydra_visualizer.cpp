@@ -65,8 +65,11 @@ HydraVisualizer::HydraVisualizer(const ros::NodeHandle& nh) : nh_(nh) {
   ROS_INFO_STREAM("Config: " << std::endl << config_);
 
   visualizer_.reset(new DsgVisualizer(nh_));
-  for (auto&& [name, plugin_type] : config_.plugins) {
-    visualizer_->addPlugin(config::create<DsgVisualizerPlugin>(plugin_type, nh_, name));
+  for (auto&& [name, config] : config_.plugins) {
+    auto plugin = config.create(nh_, name);
+    if (plugin) {
+      visualizer_->addPlugin(std::move(plugin));
+    } 
   }
 
   if (!config_.output_path.empty()) {

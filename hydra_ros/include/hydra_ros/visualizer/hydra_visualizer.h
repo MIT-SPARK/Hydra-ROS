@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
+#include <config_utilities/virtual_config.h>
 #include <ros/ros.h>
 #include <spark_dsg/zmq_interface.h>
 #include <std_srvs/Empty.h>
@@ -59,7 +60,8 @@ struct HydraVisualizerConfig {
   size_t zmq_num_threads = 2;
   size_t zmq_poll_time_ms = 10;
 
-  std::map<std::string, std::string> plugins{{"dsg_mesh", "MeshPlugin"}};
+  // Specify additional plugins that should be loaded <name, config>
+  std::map<std::string, config::VirtualConfig<DsgVisualizerPlugin>> plugins;
 };
 
 void declare_config(HydraVisualizerConfig& config);

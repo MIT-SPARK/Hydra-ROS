@@ -42,19 +42,21 @@ namespace hydra {
 
 class SemanticColorMap;
 
-struct RegionPluginConfig {
-  bool skip_unknown = true;
-  bool draw_labels = true;
-  double line_width = 0.1;
-  double line_alpha = 0.8;
-  double mesh_alpha = 0.6;
-  double label_scale = 0.7;
-  std::string region_colormap = "";
-};
-
 class RegionPlugin : public DsgVisualizerPlugin {
  public:
-  RegionPlugin(const ros::NodeHandle& nh, const std::string& name);
+  struct Config {
+    bool skip_unknown = true;
+    bool draw_labels = true;
+    double line_width = 0.1;
+    double line_alpha = 0.8;
+    double mesh_alpha = 0.6;
+    double label_scale = 0.7;
+    std::string region_colormap = "";
+  } const config;
+
+  RegionPlugin(const Config& config,
+               const ros::NodeHandle& nh,
+               const std::string& name);
 
   virtual ~RegionPlugin();
 
@@ -64,16 +66,19 @@ class RegionPlugin : public DsgVisualizerPlugin {
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 
-  const RegionPluginConfig config;
-
  protected:
   ros::Publisher pub_;
   std::unique_ptr<SemanticColorMap> colormap_;
   std::set<int> published_labels_;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, RegionPlugin, ros::NodeHandle, std::string>(
-          "RegionPlugin");
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DsgVisualizerPlugin,
+                                     RegionPlugin,
+                                     RegionPlugin::Config,
+                                     ros::NodeHandle,
+                                     std::string>("RegionPlugin");
 };
+
+void declare_config(RegionPlugin::Config& config);
 
 }  // namespace hydra

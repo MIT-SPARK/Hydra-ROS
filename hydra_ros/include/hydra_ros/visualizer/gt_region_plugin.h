@@ -43,22 +43,6 @@ namespace hydra {
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
-struct GtRegionPluginConfig {
-  std::string gt_regions_filepath = "";
-  bool skip_unknown = true;
-  bool draw_labels = false;
-  bool fill_polygons = true;
-  bool draw_polygon_boundaries = true;
-  bool draw_polygon_vertices = true;
-  double line_width = 0.05;
-  double line_alpha = 0.8;
-  double mesh_alpha = 0.6;
-  double label_scale = 0.7;
-  double label_offset = 0.0;
-  double z_offset = 0.1;
-  bool use_boundary_color = true;
-};
-
 struct Region {
   Eigen::MatrixXd points;
   Eigen::Vector3d centroid;
@@ -68,7 +52,25 @@ struct Region {
 
 class GtRegionPlugin : public DsgVisualizerPlugin {
  public:
-  GtRegionPlugin(const ros::NodeHandle& nh, const std::string& name);
+  struct Config {
+    std::string gt_regions_filepath = "";
+    bool skip_unknown = true;
+    bool draw_labels = false;
+    bool fill_polygons = true;
+    bool draw_polygon_boundaries = true;
+    bool draw_polygon_vertices = true;
+    double line_width = 0.05;
+    double line_alpha = 0.8;
+    double mesh_alpha = 0.6;
+    double label_scale = 0.7;
+    double label_offset = 0.0;
+    double z_offset = 0.1;
+    bool use_boundary_color = true;
+  } const config;
+
+  GtRegionPlugin(const Config& config,
+                 const ros::NodeHandle& nh,
+                 const std::string& name);
 
   virtual ~GtRegionPlugin();
 
@@ -77,8 +79,6 @@ class GtRegionPlugin : public DsgVisualizerPlugin {
             const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
-
-  const GtRegionPluginConfig config;
 
  protected:
   std::optional<size_t> getFillMarker(const std_msgs::Header& header,
@@ -101,9 +101,14 @@ class GtRegionPlugin : public DsgVisualizerPlugin {
   int boundary_index_ = -1;
   int vertex_index_ = -1;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, GtRegionPlugin, ros::NodeHandle, std::string>(
-          "GtRegionPlugin");
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DsgVisualizerPlugin,
+                                     GtRegionPlugin,
+                                     GtRegionPlugin::Config,
+                                     ros::NodeHandle,
+                                     std::string>("GtRegionPlugin");
 };
+
+void declare_config(GtRegionPlugin::Config& config);
 
 }  // namespace hydra

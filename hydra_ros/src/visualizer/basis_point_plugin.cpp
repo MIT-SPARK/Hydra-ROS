@@ -51,9 +51,9 @@ using dsg_utils::makeColorMsg;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
-void declare_config(BasisPointPluginConfig& config) {
+void declare_config(BasisPointPlugin::Config& config) {
   using namespace config;
-  name("BasisPluginConfig");
+  name("BasisPlugin::Config");
   field(config.show_voxblox_connections, "show_voxblox_connections");
   field(config.draw_basis_points, "draw_basis_points");
   field(config.places_use_sphere, "places_use_sphere");
@@ -117,9 +117,10 @@ std::vector<BasisPoint> getBasisPoints(const PlaceNodeAttributes& attrs,
   return to_return;
 }
 
-BasisPointPlugin::BasisPointPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name),
-      config(config::checkValid(config::fromRos<BasisPointPluginConfig>(nh_))) {
+BasisPointPlugin::BasisPointPlugin(const Config& config,
+                                   const ros::NodeHandle& nh,
+                                   const std::string& name)
+    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
   if (!config.label_colormap.empty()) {
     colormap_ = SemanticColorMap::fromCsv(config.label_colormap);
     if (!colormap_) {

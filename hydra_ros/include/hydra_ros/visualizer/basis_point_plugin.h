@@ -40,26 +40,27 @@
 
 namespace hydra {
 
-struct BasisPointPluginConfig {
-  bool show_voxblox_connections = false;
-  bool draw_basis_points = true;
-  bool places_use_sphere = false;
-  bool draw_places_labels = false;
-  double places_label_scale = 0.2;
-  double places_node_scale = 0.2;
-  double places_node_alpha = 0.8;
-  double places_edge_scale = 0.05;
-  double places_edge_alpha = 0.5;
-  double basis_point_scale = 0.1;
-  double basis_point_alpha = 0.8;
-  std::string label_colormap = "";
-};
-
 class SemanticColorMap;
 
 class BasisPointPlugin : public DsgVisualizerPlugin {
  public:
-  BasisPointPlugin(const ros::NodeHandle& nh, const std::string& name);
+  struct Config {
+    bool show_voxblox_connections = false;
+    bool draw_basis_points = true;
+    bool places_use_sphere = false;
+    bool draw_places_labels = false;
+    double places_label_scale = 0.2;
+    double places_node_scale = 0.2;
+    double places_node_alpha = 0.8;
+    double places_edge_scale = 0.05;
+    double places_edge_alpha = 0.5;
+    double basis_point_scale = 0.1;
+    double basis_point_alpha = 0.8;
+    std::string label_colormap = "";
+  } const config;
+  BasisPointPlugin(const Config& config,
+                   const ros::NodeHandle& nh,
+                   const std::string& name);
 
   virtual ~BasisPointPlugin() = default;
 
@@ -68,8 +69,6 @@ class BasisPointPlugin : public DsgVisualizerPlugin {
             const DynamicSceneGraph& graph) override;
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
-
-  const BasisPointPluginConfig config;
 
  protected:
   void drawNodes(const std_msgs::Header& header,
@@ -88,9 +87,14 @@ class BasisPointPlugin : public DsgVisualizerPlugin {
   mutable std::set<std::string> published_;
   std::unique_ptr<SemanticColorMap> colormap_;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, BasisPointPlugin, ros::NodeHandle, std::string>(
-          "BasisPointPlugin");
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DsgVisualizerPlugin,
+                                     BasisPointPlugin,
+                                     BasisPointPlugin::Config,
+                                     ros::NodeHandle,
+                                     std::string>("BasisPointPlugin");
 };
+
+void declare_config(BasisPointPlugin::Config& config);
 
 }  // namespace hydra

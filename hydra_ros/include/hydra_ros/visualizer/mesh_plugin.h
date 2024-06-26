@@ -48,7 +48,12 @@ class MeshPlugin : public DsgVisualizerPlugin {
   using Labels = std::vector<uint32_t>;
   using LabelsPtr = std::shared_ptr<Labels>;
 
-  MeshPlugin(const ros::NodeHandle& nh, const std::string& name);
+  struct Config {
+    std::string label_colormap = "";
+    bool color_by_label = false;
+  } const config;
+
+  MeshPlugin(const Config& config, const ros::NodeHandle& nh, const std::string& name);
 
   virtual ~MeshPlugin();
 
@@ -67,16 +72,21 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
   std::string getMsgNamespace() const;
 
-  bool color_by_label_;
-  bool need_redraw_;
+  bool color_by_label_ = false;
+  bool need_redraw_ = true;
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
   std::unique_ptr<SemanticColorMap> colormap_;
   std::shared_ptr<const MeshColoring> mesh_coloring_;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, MeshPlugin, ros::NodeHandle, std::string>(
-          "MeshPlugin");
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DsgVisualizerPlugin,
+                                     MeshPlugin,
+                                     MeshPlugin::Config,
+                                     ros::NodeHandle,
+                                     std::string>("MeshPlugin");
 };
+
+void declare_config(MeshPlugin::Config& config);
 
 }  // namespace hydra

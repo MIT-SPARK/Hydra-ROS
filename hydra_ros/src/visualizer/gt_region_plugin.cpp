@@ -52,9 +52,9 @@
 
 namespace hydra {
 
-void declare_config(GtRegionPluginConfig& config) {
+void declare_config(GtRegionPlugin::Config& config) {
   using namespace config;
-  name("GtRegionPluginConfig");
+  name("GtRegionPlugin::Config");
   field(config.gt_regions_filepath, "gt_regions_filepath");
   field(config.skip_unknown, "skip_unknown");
   field(config.draw_labels, "draw_labels");
@@ -70,9 +70,10 @@ void declare_config(GtRegionPluginConfig& config) {
   field(config.use_boundary_color, "use_boundary_color");
 }
 
-GtRegionPlugin::GtRegionPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name),
-      config(config::checkValid(config::fromRos<GtRegionPluginConfig>(nh_))) {
+GtRegionPlugin::GtRegionPlugin(const Config& config,
+                               const ros::NodeHandle& nh,
+                               const std::string& name)
+    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
   // namespacing gives us a reasonable topic
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 

@@ -35,9 +35,6 @@
 #include "hydra_ros/visualizer/footprint_plugin.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
-#include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <tf2_eigen/tf2_eigen.h>
@@ -61,9 +58,9 @@ struct LayerIdConversion {
   }
 };
 
-void declare_config(FootprintPluginConfig& config) {
+void declare_config(FootprintPlugin::Config& config) {
   using namespace config;
-  name("FootprintPluginConfig");
+  name("FootprintPlugin::Config");
   field(config.use_place_radius, "use_place_radius");
   field(config.draw_boundaries, "draw_boundaries");
   field(config.draw_boundary_vertices, "draw_boundary_vertices");
@@ -78,9 +75,10 @@ void declare_config(FootprintPluginConfig& config) {
   check(config.line_alpha, GT, 0.0, "line_alpha");
 }
 
-FootprintPlugin::FootprintPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name),
-      config(config::checkValid(config::fromRos<FootprintPluginConfig>(nh_))) {
+FootprintPlugin::FootprintPlugin(const Config& config,
+                                 const ros::NodeHandle& nh,
+                                 const std::string& name)
+    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
   // namespacing gives us a reasonable topic
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 }

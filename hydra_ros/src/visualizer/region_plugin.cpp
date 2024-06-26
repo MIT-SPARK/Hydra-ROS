@@ -36,8 +36,6 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
-#include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
@@ -50,9 +48,9 @@
 
 namespace hydra {
 
-void declare_config(RegionPluginConfig& config) {
+void declare_config(RegionPlugin::Config& config) {
   using namespace config;
-  name("RegionPluginConfig");
+  name("RegionPlugin::Config");
   field(config.skip_unknown, "skip_unknown");
   field(config.draw_labels, "draw_labels");
   field(config.line_width, "line_width");
@@ -63,9 +61,10 @@ void declare_config(RegionPluginConfig& config) {
   check(config.line_alpha, GT, 0.0, "line_alpha");
 }
 
-RegionPlugin::RegionPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name),
-      config(config::checkValid(config::fromRos<RegionPluginConfig>(nh_))) {
+RegionPlugin::RegionPlugin(const Config& config,
+                           const ros::NodeHandle& nh,
+                           const std::string& name)
+    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
   // namespacing gives us a reasonable topic
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 }
@@ -115,7 +114,7 @@ void RegionPlugin::draw(const ConfigManager&,
     if (config.skip_unknown && attrs.name == "unknown") {
       continue;
     }
-    auto color =dsg_utils::makeColorMsg(attrs.color);
+    auto color = dsg_utils::makeColorMsg(attrs.color);
     color.a = config.line_alpha;
 
     const double mean_z = getMeanChildHeight(graph, *node);

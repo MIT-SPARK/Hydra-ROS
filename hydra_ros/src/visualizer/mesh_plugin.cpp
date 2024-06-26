@@ -34,6 +34,8 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/mesh_plugin.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
 #include <hydra/utils/pgmo_mesh_traits.h>
@@ -42,28 +44,33 @@
 
 #include "hydra_ros/visualizer/mesh_color_adaptor.h"
 
-
 namespace hydra {
 
-MeshPlugin::MeshPlugin(const ros::NodeHandle& nh, const std::string& name)
-    : DsgVisualizerPlugin(nh, name), color_by_label_(false), need_redraw_(false) {
-  nh_.getParam("color_by_label", color_by_label_);
+void declare_config(MeshPlugin::Config& config) {
+  using namespace config;
+  name("MeshPlugin::Config");
+  field(config.label_colormap, "label_colormap");
+  field(config.color_by_label, "color_by_label");
+}
 
-  std::string label_colormap = "";
-  nh_.getParam("label_colormap", label_colormap);
-  if (!label_colormap.empty()) {
-    colormap_ = SemanticColorMap::fromCsv(label_colormap);
+MeshPlugin::MeshPlugin(const Config& config,
+                       const ros::NodeHandle& nh,
+                       const std::string& name)
+    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
+  if (!config.label_colormap.empty()) {
+    colormap_ = SemanticColorMap::fromCsv(config.label_colormap);
     if (!colormap_) {
-      ROS_WARN_STREAM("Unable to load colormap from " << label_colormap);
+      ROS_WARN_STREAM("Unable to load colormap from " << config.label_colormap);
     } else {
+      color_by_label_ = config.color_by_label;
+      toggle_service_ =
+          nh_.advertiseService("color_by_label", &MeshPlugin::handleService, this);
       mesh_coloring_ = std::make_shared<SemanticMeshColoring>(*colormap_);
     }
   }
 
   // namespacing gives us a reasonable topic
   mesh_pub_ = nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("", 1, true);
-  toggle_service_ =
-      nh_.advertiseService("color_by_label", &MeshPlugin::handleService, this);
 }
 
 MeshPlugin::~MeshPlugin() {}

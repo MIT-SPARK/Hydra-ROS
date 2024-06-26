@@ -42,21 +42,23 @@ namespace hydra {
 
 class SemanticColorMap;
 
-struct FootprintPluginConfig {
-  bool use_place_radius = false;
-  bool draw_boundaries = true;
-  bool draw_boundary_vertices = false;
-  double line_width = 0.1;
-  double line_alpha = 0.8;
-  double mesh_alpha = 0.6;
-  double footprint_radius = 0.5;
-  size_t num_samples = 100;
-  LayerId layer_id = DsgLayers::PLACES;
-};
-
 class FootprintPlugin : public DsgVisualizerPlugin {
  public:
-  FootprintPlugin(const ros::NodeHandle& nh, const std::string& name);
+  struct Config {
+    bool use_place_radius = false;
+    bool draw_boundaries = true;
+    bool draw_boundary_vertices = false;
+    double line_width = 0.1;
+    double line_alpha = 0.8;
+    double mesh_alpha = 0.6;
+    double footprint_radius = 0.5;
+    size_t num_samples = 100;
+    LayerId layer_id = DsgLayers::PLACES;
+  } const config;
+
+  FootprintPlugin(const Config& config,
+                  const ros::NodeHandle& nh,
+                  const std::string& name);
 
   virtual ~FootprintPlugin();
 
@@ -66,15 +68,18 @@ class FootprintPlugin : public DsgVisualizerPlugin {
 
   void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
 
-  const FootprintPluginConfig config;
-
  protected:
   ros::Publisher pub_;
   std::set<std::string> namespaces_;
 
-  inline static const auto registration_ = config::
-      Registration<DsgVisualizerPlugin, FootprintPlugin, ros::NodeHandle, std::string>(
-          "FootprintPlugin");
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<DsgVisualizerPlugin,
+                                     FootprintPlugin,
+                                     FootprintPlugin::Config,
+                                     ros::NodeHandle,
+                                     std::string>("FootprintPlugin");
 };
+
+void declare_config(FootprintPlugin::Config& config);
 
 }  // namespace hydra
