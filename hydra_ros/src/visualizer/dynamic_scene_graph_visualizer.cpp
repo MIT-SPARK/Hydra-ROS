@@ -497,7 +497,7 @@ Color getFrontierColor(const SceneGraphNode& node) {
   if (attrs.real_place) {
     return Color();
   } else {
-    if (attrs.predicted_place) {
+    if (attrs.is_predicted) {
       return Color(0, 0, 255);
     }
     if (attrs.active_frontier) {
