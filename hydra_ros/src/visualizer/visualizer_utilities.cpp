@@ -241,9 +241,10 @@ geometry_msgs::Point getPointFromMatrix(const Eigen::MatrixXf& matrix, int col) 
 }
 
 void fillCornersFromBbox(const BoundingBox& bbox, Eigen::MatrixXf& corners) {
+  const static std::array<size_t, 8> remapping{0, 1, 3, 2, 4, 5, 7, 6};
   const auto corner_array = bbox.corners();
   for (int i = 0; i < 8; ++i) {
-    corners.block<3, 1>(0, i) = corner_array[i];
+    corners.block<3, 1>(0, i) = corner_array[remapping[i]];
   }
 }
 
