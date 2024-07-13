@@ -44,6 +44,8 @@ namespace hydra {
 
 class RosBackend : public BackendModule {
  public:
+  struct Config : BackendModule::Config {};
+
   using Policy =
       message_filters::sync_policies::ApproximateTime<kimera_pgmo_msgs::KimeraPgmoMesh,
                                                       pose_graph_tools_msgs::PoseGraph>;
@@ -93,5 +95,7 @@ class RosBackend : public BackendModule {
                                      SharedModuleState::Ptr,
                                      LogSetup::Ptr>("RosBackend");
 };
+
+void declare_config(RosBackend::Config& config);
 
 }  // namespace hydra

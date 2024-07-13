@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/backend/ros_backend.h"
 
+#include <config_utilities/config.h>
 #include <config_utilities/printing.h>
 #include <pose_graph_tools_ros/conversions.h>
 
@@ -43,6 +44,12 @@ using kimera_pgmo::DeformationGraph;
 using kimera_pgmo::KimeraPgmoConfig;
 using kimera_pgmo_msgs::KimeraPgmoMesh;
 using pose_graph_tools_msgs::PoseGraph;
+
+void declare_config(RosBackend::Config& config) {
+  using namespace config;
+  name("RosBackend::Config");
+  base<BackendModule::Config>(config);
+}
 
 RosBackend::RosBackend(const Config& config,
                        const SharedDsgInfo::Ptr& dsg,

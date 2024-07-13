@@ -39,6 +39,7 @@
 #include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
 
+#include "hydra_ros/input/ros_sensors.h"
 #include "hydra_ros/utils/lookup_tf.h"
 
 namespace hydra {
@@ -55,8 +56,19 @@ void declare_config(RosInputModule::Config& config) {
   field(config.tf_verbosity, "tf_verbosity");
 }
 
+InputModule::Config RosInputModule::Config::remapSensors(
+    const ros::NodeHandle& nh) const {
+  InputModule::Config to_return = *this;
+  for (size_t i = 0; i < to_return.inputs.size(); ++i) {
+    ros::NodeHandle input_nh(nh, "input" + std::to_string(i));
+    to_return.inputs[i].sensor = input::loadSensor(nh, to_return.inputs[i].sensor);
+  }
+
+  return to_return;
+}
+
 RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& queue)
-    : InputModule(config, queue),
+    : InputModule(config.remapSensors(ros::NodeHandle(config.ns)), queue),
       config(config),
       nh_(ros::NodeHandle(config.ns)),
       have_first_pose_(false) {

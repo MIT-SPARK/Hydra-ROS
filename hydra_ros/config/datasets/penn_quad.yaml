@@ -1,7 +1,8 @@
 ---
 type: RosInput
-receivers:
-  - type: PointcloudReceiver
+inputs:
+  - receiver:
+      type: PointcloudReceiver
     sensor:
       type: camera_info
       min_range: $(arg sensor_min_range)

@@ -1,8 +1,9 @@
 ---
 type: RosInput
-receivers:
-  - type: ImageReceiver
-    queue_size: 30
+inputs:
+  - receiver:
+      type: ImageReceiver
+      queue_size: 30
     sensor:
       type: camera_info
       min_range: $(arg sensor_min_range)

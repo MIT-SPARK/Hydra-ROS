@@ -33,72 +33,77 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <glog/logging.h>
 #include <hydra/input/camera.h>
 #include <hydra/input/sensor.h>
 
-#include <filesystem>
+namespace ros {
+class NodeHandle;
+}
+
+namespace rosbag {
+class Bag;
+}
 
 namespace hydra {
 
-struct RosSensorExtrinsics : public SensorExtrinsics {
+template <typename B, typename D>
+struct NoInstantiation {
+  NoInstantiation(const std::string& name) {
+    config::internal::ConfigFactory<B>::template addEntry<typename D::Config>(name);
+    config::internal::ModuleMapBase<std::function<B*(const YAML::Node&)>>::addEntry(
+        name,
+        [name](const YAML::Node&) -> B* {
+          // TODO(nathan) assert failure in a way that doesn't bring this into a header
+          LOG(FATAL) << "Cannot directly instantiate objects of type '" << name << "'";
+          return nullptr;
+        },
+        config::internal::typeInfo<D>());
+  }
+};
+
+struct RosExtrinsics {
   struct Config {
     std::string sensor_frame = "";
-  };
-
-  explicit RosSensorExtrinsics(const Config& config);
+  } const config;
 
  private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<SensorExtrinsics, RosSensorExtrinsics, Config>(
-          "ros");
+  inline static const auto r_ = NoInstantiation<SensorExtrinsics, RosExtrinsics>("ros");
 };
 
-struct RosbagExtrinsics : public SensorExtrinsics {
-  struct Config {
-    std::string sensor_frame = "";
-    std::filesystem::path bag_path;
-  };
-
-  explicit RosbagExtrinsics(const Config& config);
+struct RosCamera {
+  struct Config : Sensor::Config {
+    std::string ns = "";
+  } const config;
 
  private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<SensorExtrinsics, RosbagExtrinsics, Config>(
-          "rosbag");
+  inline static const auto r_ = NoInstantiation<Sensor, RosCamera>("camera_info");
 };
 
-struct RosIntrinsicsRegistration {
-  explicit RosIntrinsicsRegistration(const std::string& name);
-};
-
-struct RosCameraIntrinsics {
+struct RosbagCamera {
   struct Config : Sensor::Config {
     std::string topic = "";
-  };
+  } const config;
 
-  static Camera::Config makeCameraConfig(const YAML::Node& data, const Config& config);
-
-  inline static const auto registration_ = RosIntrinsicsRegistration("camera_info");
+ private:
+  inline static const auto r_ =
+      NoInstantiation<Sensor, RosbagCamera>("rosbag_camera_info");
 };
 
-struct RosbagCameraIntrinsics {
-  struct Config : Sensor::Config {
-    std::string topic = "";
-    std::filesystem::path bag_path;
-  };
+void declare_config(RosExtrinsics::Config& config);
 
-  static Camera::Config makeCameraConfig(const YAML::Node& data, const Config& config);
+void declare_config(RosCamera::Config& config);
 
-  inline static const auto registration_ =
-      RosIntrinsicsRegistration("rosbag_camera_info");
-};
+void declare_config(RosbagCamera::Config& config);
 
-void declare_config(RosSensorExtrinsics::Config& config);
+namespace input {
 
-void declare_config(RosbagExtrinsics::Config& config);
+config::VirtualConfig<Sensor> loadSensor(const ros::NodeHandle& nh,
+                                         const config::VirtualConfig<Sensor>& sensor);
 
-void declare_config(RosCameraIntrinsics::Config& config);
+config::VirtualConfig<Sensor> loadSensor(const rosbag::Bag& bag,
+                                         const config::VirtualConfig<Sensor>& sensor);
 
-void declare_config(RosbagCameraIntrinsics::Config& config);
+}  // namespace input
 
 }  // namespace hydra

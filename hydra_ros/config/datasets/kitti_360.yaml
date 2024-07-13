@@ -1,7 +1,8 @@
 ---
 type: RosInput
-receivers:
-  - type: PointcloudReceiver
+inputs:
+  - receiver:
+      type: PointcloudReceiver
     sensor:
       type: lidar
       min_range: $(arg sensor_min_range)

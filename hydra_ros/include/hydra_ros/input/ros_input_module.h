@@ -55,6 +55,11 @@ class RosInputModule : public InputModule {
     int tf_max_tries = 5;
     //! Logging verbosity of tf lookup process
     int tf_verbosity = 3;
+
+    /**
+     * @brief Get config for base class
+     */
+    InputModule::Config remapSensors(const ros::NodeHandle& nh) const;
   } const config;
 
   RosInputModule(const Config& config, const OutputQueue::Ptr& output_queue);
