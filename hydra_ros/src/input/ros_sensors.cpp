@@ -57,6 +57,14 @@ struct CameraInfoFunctor {
   sensor_msgs::CameraInfo::ConstPtr msg;
 };
 
+struct TempCameraConfig : Camera::Config {};
+
+void declare_config(TempCameraConfig& config) {
+  using namespace config;
+  name("Sensor::Config");
+  base<Sensor::Config>(config);
+}
+
 void fillConfigFromInfo(const sensor_msgs::CameraInfo& msg,
                         Camera::Config& cam_config) {
   cam_config.width = msg.width;
@@ -204,7 +212,7 @@ VirtualSensor loadSensor(const ros::NodeHandle& nh, const VirtualSensor& sensor)
   }
 
   // get base class fields (all other derived fields will be overriden by ros)
-  auto config = config::fromYaml<Camera::Config>(contents);
+  Camera::Config config = config::fromYaml<TempCameraConfig>(contents);
   fillConfigFromInfo(*msg, config);
 
   VirtualSensor new_sensor(config);
@@ -226,7 +234,7 @@ VirtualSensor loadSensor(const rosbag::Bag& bag, const VirtualSensor& sensor) {
   }
 
   // get base class fields (all other derived fields will be overriden by ros)
-  auto config = config::fromYaml<Camera::Config>(contents);
+  Camera::Config config = config::fromYaml<TempCameraConfig>(contents);
   fillConfigFromInfo(*msg, config);
 
   VirtualSensor new_sensor(config);
