@@ -1,0 +1,35 @@
+<launch>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_0" args="0.0 0.0 0.0 0.0 0.0 0.0 1.0 body base_link"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_1" args="0.223 0.0 0.0805 0.0 0.0 0.0 1.0 body front_rail"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_2" args="0.2075 0.0 0.0805 0.0 0.0 0.0 1.0 body real_front_rail"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_3" args="-0.415 0.0 0.0 0.0 0.0 0.0 1.0 real_front_rail real_rear_rail"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_4" args="-0.223 0.0 0.0805 0.0 0.0 0.0 1.0 body rear_rail"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_5" args="-0.0 -0.0 -0.0 -0.0 -0.0 -0.0 1.0 body head"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_6" args="0.4154818874827982 0.03442995207591537 0.024958226798074634 0.14348178297348446 0.8143341301472546 -0.22610585284745696 0.514926252719929 head frontleft"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_7" args="0.07739258880319543 -0.00219322096964597 0.0035626689848365367 -0.007963220213417336 -0.010443326372265919 -0.0012814971345477386 0.9999129371216323 frontleft frontleft_fisheye"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_8" args="0.4155686521087025 -0.03982005103435515 0.024498984507302368 -0.15310468492611287 0.8131956748576482 0.22467287781907158 0.514581235393389 head frontright"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_9" args="0.07631713667562912 -0.002082897634689939 0.0041841172793369704 -0.008193648870526647 -0.011734621118426498 0.010138641582250047 0.9998461735348394 frontright frontright_fisheye"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_10" args="-0.16359724103585618 0.10925775885899632 0.03701393491759926 -0.7920306769094786 -0.004670746474996813 0.005270246057594366 0.6104406731764946 head left"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_11" args="0.07687469518012817 -0.002473336340220653 0.002628726052600883 -0.0025247382803597965 -0.0007799644776413083 0.0029694291434676527 0.9999920998900897 left left_fisheye"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_12" args="0.07679377383197548 -0.0022410479764286752 0.0023460429930285886 -0.007463404512764009 -0.003563268435091791 0.004371434065570056 0.9999562446804104 right right_fisheye"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_13" args="-0.16807471504216562 -0.10862304937513795 0.03660100873772294 0.7942074196970933 -0.003748787759081804 -0.00052320298499801 0.6076349622487658 head right"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_14" args="0.07710712255335893 -0.003058263133925646 0.0031920598259515993 -0.0045994443765589865 -0.010077740121870736 0.007694347264752319 0.9999090365056376 back back_fisheye"/>
+
+    <node pkg="tf2_ros" type="static_transform_publisher" name="bag_static_tf_15" args="-0.41715480303643315 -0.036345496039281965 0.008663693724741683 0.5633391066579551 0.5636672587590084 -0.4272402803027201 -0.4270761234250582 head back"/>
+
+</launch>

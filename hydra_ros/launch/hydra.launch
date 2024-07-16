@@ -4,97 +4,48 @@
     <arg name="robot_frame" doc="robot base frame (i.e., robot pose)"/>
     <arg name="odom_frame" default="odom" doc="robot map frame"/>
     <arg name="map_frame" default="map" doc="backend scene graph frame"/>
-    <!-- topic arguments -->
-    <arg name="pointcloud_topic" default="pointcloud"/>
-    <arg name="rgb_info_topic" default="rgb/camera_info"/>
-    <arg name="rgb_topic" default="rgb/image_raw"/>
-    <arg name="depth_topic" default="depth_registered/image_rect"/>
-    <arg name="label_topic" default="semantic/image_raw"/>
-    <arg name="enable_places" default="true"/>
-    <arg name="rgb_image_transport" default="raw"/>
-
-    <!-- parameter files -->
     <arg name="config_dir"/>
     <arg name="dataset_name"/>
-    <arg name="semantic_map_path"/>
-    <arg name="semantic_label_remap_filepath" default=""/>
-    <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
-    <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
-    <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
-    <arg name="frontend_config_path" default="$(arg config_dir)/frontend_config.yaml"/>
-    <arg name="backend_config_path" default="$(arg config_dir)/backend_config.yaml"/>
-    <arg name="param_overrides_file" default="$(find hydra_ros)/config/overrides.yaml"/>
-    <arg name="ros_params_file" default="$(find hydra_ros)/config/ros_params.yaml"/>
-    <!-- labelspace configuration -->
-    <arg name="labelspace_dir" default="$(find hydra)/config/label_spaces"/>
     <arg name="labelspace_name"/>
-    <arg name="labelspace_path" default="$(arg labelspace_dir)/$(arg labelspace_name)_label_space.yaml"/>
+    <arg name="use_gnn_descriptors" default="false"/>
 
     <!-- sensor configuration -->
     <arg name="sensor_min_range" default="0.1" doc="minimum sensor range in meters"/>
     <arg name="sensor_max_range" default="5.0" doc="maximum sensor range in meters"/>
-    <arg name="sensor_frame" default="" doc="robot sensor frame (for looking up extrinsics)"/>
-    <arg name="kimera_sensor_filepath" default="" doc="optional path to kimera camera file (for extrinsics)"/>
-    <!-- pipeline configuration -->
-    <!-- TODO(nathan) rename this eventually -->
-    <arg name="use_gt_frame" default="true"/>
-    <arg name="external_optimizer" default="false"/>
-    <arg name="use_oriented_bounding_boxes" default="false"/>
-    <arg name="exit_mode" default="NORMAL"/>
-    <arg name="optimize_on_lc" default="true"/>
-    <arg name="enable_merge_undos" default="false"/>
-    <arg name="enable_frontend_output" default="true"/>
-    <arg name="validate_vertices" default="false"/>
-    <arg name="use_2d_places" default="false"/>
-    <!-- LCD pipeline configuration -->
-    <arg name="enable_dsg_lcd" default="false"/>
-    <arg name="lcd_use_bow_vectors" default="true"/>
-    <arg name="use_gnn_descriptors" default="false"/>
-    <arg name="override_default_lcd" default="false"/>
-    <arg name="lcd_gnn_object_model" default="$(find hydra)/models/lcd/object_gnn.onnx"/>
-    <arg name="lcd_gnn_places_model" default="$(find hydra)/models/lcd/place_gnn.onnx"/>
-    <arg name="lcd_gnn_label_embeddings" default="" if="$(arg use_gnn_descriptors)"/>
-    <arg name="lcd_config_dir" default="$(arg config_dir)" if="$(arg override_default_lcd)"/>
-    <arg name="lcd_config_dir" default="$(find hydra)/config/default" unless="$(arg override_default_lcd)"/>
-    <arg name="lcd_config_path" default="$(arg lcd_config_dir)/gnn_lcd_config.yaml" if="$(arg use_gnn_descriptors)"/>
-    <arg name="lcd_config_path" default="$(arg lcd_config_dir)/lcd_config.yaml" unless="$(arg use_gnn_descriptors)"/>
-    <!-- zmq interface -->
-    <arg name="use_zmq_interface" default="true"/>
-    <arg name="zmq_ip" default="127.0.0.1"/>
-    <arg name="zmq_send_url" default="tcp://$(arg zmq_ip):8001"/>
-    <arg name="zmq_recv_url" default="tcp://$(arg zmq_ip):8002"/>
-    <arg name="zmq_publish_mesh" default="true"/>
-    <!-- misc visualization -->
-    <arg name="start_visualizer" default="true"/>
-    <arg name="start_pose_graph_viewer" default="false"/>
-    <arg name="visualize_objects" default="false"/>
-    <arg name="visualize_places" default="false"/>
-    <arg name="visualize_reconstruction" default="false"/>
+
+    <!-- parameter files -->
+    <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
+    <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
+    <arg name="frontend_config_path" default="$(arg config_dir)/frontend_config.yaml"/>
+    <arg name="backend_config_path" default="$(arg config_dir)/backend_config.yaml"/>
+    <arg name="ros_params_file" default="$(find hydra_ros)/config/ros_params.yaml"/>
     <arg name="mesh_segmenter_sinks" default="$(find hydra_ros)/config/mesh_segmenter_sinks.yaml"/>
     <arg name="gvd_places_sinks" default="$(find hydra_ros)/config/gvd_places_sinks.yaml"/>
     <arg name="reconstruction_sinks" default="$(find hydra_ros)/config/reconstruction_sinks.yaml"/>
+    <!-- labelspace configuration -->
+    <arg name="labelspace_dir" default="$(find hydra)/config/label_spaces"/>
+    <arg name="labelspace_path" default="$(arg labelspace_dir)/$(arg labelspace_name)_label_space.yaml"/>
+    <arg name="lcd_config_name" default="$(eval 'gnn_lcd_config.yaml' if arg('use_gnn_descriptors') else 'lcd_config.yaml')"/>
+    <arg name="lcd_config_path" default="$(find hydra)/config/default/$(arg lcd_config_name)"/>
 
-    <!-- logging output for hydra -->
-    <arg name="dsg_output_dir" default="$(find hydra)/output/"/>
-    <arg name="dsg_output_prefix" default="$(arg dataset_name)"/>
-    <arg name="log_timing_incrementally" default="false"/>
-    <arg name="dsg_path" default="$(arg dsg_output_dir)/$(arg dsg_output_prefix)"/>
-    <arg name="start_logger" default="false"/>
     <!-- log message controls -->
     <arg name="min_glog_level" default="0"/>
     <arg name="verbosity" default="0"/>
     <arg name="glog_to_file" default="false"/>
     <arg name="glog_dir" if="$(arg glog_to_file)"/>
-    <arg name="glog_file_args" value="--logtostderr=0 --log_dir=$(arg glog_dir)" if="$(arg glog_to_file)"/>
-    <arg name="glog_file_args" value="" unless="$(arg glog_to_file)"/>
-    <arg name="ros_output" value="screen" unless="$(arg glog_to_file)"/>
-    <arg name="ros_output" value="log" if="$(arg glog_to_file)"/>
+    <arg name="glog_file_args" value="$(eval '--logtostderr=0 --log_dir=' + arg('glog_dir') if arg('glog_to_file') else '')"/>
+
+    <arg name="ros_output" value="$(eval 'log' if arg('glog_to_file') else 'screen')" />
 
     <!-- development args -->
     <arg name="debug" default="false"/>
     <arg name="print_missing" default="false" doc="have config utilities print all missing parameters when parsing configs"/>
-    <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
-    <arg name="launch_prefix" value="" unless="$(arg debug)"/>
+    <arg name="launch_prefix" value="$(eval 'gdb -ex run --args' if arg('debug') else '')" />
+
+    <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
+    <include file="$(find hydra_ros)/launch/pipeline_config.launch" pass_all_args="true">
+        <arg name="pipeline_path" value="$(arg pipeline_path)"/>
+    </include>
 
     <node pkg="hydra_ros"
           type="hydra_ros_node"
@@ -106,23 +57,13 @@
         <env name="TERM" value="xterm-256color"/>
         <param name="print_missing" value="$(arg print_missing)"/>
 
-        <!-- kimera topic remappings -->
-        <remap from="~pose_graph" to="kimera_vio_ros/pose_graph_incremental"/>
-        <remap from="~agent_node_measurements" to="kimera_distributed/optimized_nodes"/>
-        <remap from="~bow_vectors" to="kimera_vio_ros/bow_query"/>
-        <remap from="frame_registration" to="kimera_vio_ros/kimera_vio_ros_node/register_lcd_frames"/>
-        <!-- sensor topic remappings -->
-        <remap from="~pointcloud" to="$(arg pointcloud_topic)"/>
-        <remap from="~rgb/image_raw" to="$(arg rgb_topic)"/>
-        <remap from="~rgb/image_raw/compressed" to="$(arg rgb_topic)/compressed"/>
-        <remap from="~rgb/camera_info" to="$(arg rgb_info_topic)"/>
-        <remap from="~depth_registered/image_rect" to="$(arg depth_topic)"/>
-        <remap from="~semantic/image_raw" to="$(arg label_topic)"/>
-        <!-- image transport -->
-        <param name="rgb/image_transport" value="$(arg rgb_image_transport)"/>
+        <!-- robot configuration -->
+        <param name="robot_id" value="$(arg robot_id)"/>
+        <param name="odom_frame" value="$(arg odom_frame)"/>
+        <param name="robot_frame" value="$(arg robot_frame)"/>
+        <param name="map_frame" value="$(arg map_frame)"/>
 
         <!-- parameter files -->
-        <rosparam file="$(arg pipeline_path)"/>
         <rosparam file="$(arg labelspace_path)"/>
         <rosparam file="$(arg input_config_path)" ns="input" subst_value="true"/>
         <rosparam file="$(arg reconstruction_config_path)" ns="reconstruction"/>
@@ -131,67 +72,10 @@
         <rosparam file="$(arg lcd_config_path)"/>
         <rosparam file="$(arg ros_params_file)"/>
 
-        <!-- robot configuration -->
-        <param name="robot_id" value="$(arg robot_id)"/>
-        <param name="odom_frame" value="$(arg odom_frame)"/>
-        <param name="robot_frame" value="$(arg robot_frame)"/>
-        <param name="map_frame" value="$(arg map_frame)"/>
-        <!-- pipeline configuration -->
-        <param name="exit_after_clock" value="$(eval arg('exit_mode') == 'CLOCK')"/>
-        <param name="enable_frontend_output" value="$(arg enable_frontend_output)"/>
-        <param name="semantic_colormap_file" value="$(arg semantic_map_path)"/>
-        <param name="semantic_label_remap_filepath" value="$(arg semantic_label_remap_filepath)"/>
-        <param name="enable_lcd" value="$(arg enable_dsg_lcd)"/>
-        <!-- logging -->
-        <param name="log_path" value="$(arg dsg_path)"/>
-        <param name="log_timing_incrementally" value="$(arg log_timing_incrementally)"/>
-        <!-- frontend params -->
-        <param name="frontend/objects/bounding_box_type" value="RAABB" if="$(arg use_oriented_bounding_boxes)"/>
-        <param name="frontend/objects/bounding_box_type" value="AABB" unless="$(arg use_oriented_bounding_boxes)"/>
-        <param name="frontend/validate_vertices" value="$(arg validate_vertices)"/>
-        <param name="frontend/use_2d_places" value="$(arg use_2d_places)"/>
-        <param name="frontend/enable_places" value="$(arg enable_places)"/>
-        <param name="frontend/pose_graph_tracker/type"
-               value="$(eval 'PoseGraphFromOdom' if arg('use_gt_frame') else 'RosPoseGraphs')"/>
-        <!-- distributed params -->
-        <param name="backend/pgmo/add_initial_prior" value="false" if="$(arg external_optimizer)"/>
-        <!-- backend params-->
-        <param name="backend/dsg/optimize_on_lc" value="$(arg optimize_on_lc)"/>
-        <param name="backend/dsg/enable_merge_undos" value="$(arg enable_merge_undos)"/>
-        <param name="backend/dsg/use_zmq_interface" value="$(arg use_zmq_interface)"/>
-        <param name="backend/dsg/zmq_send_url" value="$(arg zmq_send_url)"/>
-        <param name="backend/dsg/zmq_recv_url" value="$(arg zmq_recv_url)"/>
-        <param name="backend/zmq_publish_mesh" value="$(arg zmq_publish_mesh)"/>
-
-        <!-- LCD params -->
-        <param name="lcd_use_bow_vectors" value="$(arg lcd_use_bow_vectors)"/>
-        <param name="lcd/use_gnn_descriptors" value="$(arg use_gnn_descriptors)"/>
-        <param name="lcd/gnn_lcd/object_model_path" value="$(arg lcd_gnn_object_model)"/>
-        <param name="lcd/gnn_lcd/places_model_path" value="$(arg lcd_gnn_places_model)"/>
-        <param name="lcd/gnn_lcd/label_embeddings_file" value="$(arg lcd_gnn_label_embeddings)"
-               if="$(arg use_gnn_descriptors)"/>
         <!-- visualization -->
         <rosparam file="$(arg mesh_segmenter_sinks)" ns="frontend/objects"/>
         <rosparam file="$(arg gvd_places_sinks)" ns="frontend/freespace_places"/>
         <rosparam file="$(arg reconstruction_sinks)" ns="reconstruction"/>
     </node>
-
-    <rosparam file="$(arg param_overrides_file)" ns="hydra_ros_node"/>
-
-    <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch"
-             pass_all_args="true"
-             if="$(arg start_visualizer)">
-        <arg name="visualizer_frame" default="$(arg map_frame)"/>
-    </include>
-
-    <include file="$(find pose_graph_tools_ros)/launch/posegraph_view.launch" if="$(arg start_pose_graph_viewer)">
-        <arg name="frame_id" value="$(arg world_frame)" />
-        <arg name="graph_topic" value="pose_graph" />
-        <arg name="ns" value="hydra_ros_node/backend"/>
-    </include>
-
-    <include if="$(arg start_logger)" file="$(find hydra_ros)/launch/utils/scene_graph_logger.launch" pass_all_args="true">
-        <arg name="output_path" value="$(arg dsg_path)"/>
-    </include>
 
 </launch>
