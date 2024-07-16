@@ -92,6 +92,7 @@
 
     <!-- development args -->
     <arg name="debug" default="false"/>
+    <arg name="print_missing" default="false" doc="have config utilities print all missing parameters when parsing configs"/>
     <arg name="launch_prefix" value="gdb -ex run --args" if="$(arg debug)"/>
     <arg name="launch_prefix" value="" unless="$(arg debug)"/>
 
@@ -103,6 +104,7 @@
           required="true"
           output="$(arg ros_output)">
         <env name="TERM" value="xterm-256color"/>
+        <param name="print_missing" value="$(arg print_missing)"/>
 
         <!-- kimera topic remappings -->
         <remap from="~pose_graph" to="kimera_vio_ros/pose_graph_incremental"/>

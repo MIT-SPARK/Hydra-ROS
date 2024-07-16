@@ -43,6 +43,7 @@
 
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "hydra_node");
+  ros::NodeHandle nh("~");
 
   FLAGS_minloglevel = 3;
   FLAGS_logtostderr = 1;
@@ -54,8 +55,8 @@ int main(int argc, char* argv[]) {
   config::Settings().setLogger("glog");
   config::Settings().print_width = 100;
   config::Settings().print_indent = 45;
+  config::Settings().print_missing = nh.param<bool>("print_missing", false);
 
-  ros::NodeHandle nh("~");
   const int robot_id = nh.param<int>("robot_id", 0);
   hydra::HydraRosPipeline hydra(nh, robot_id);
   hydra.init();
