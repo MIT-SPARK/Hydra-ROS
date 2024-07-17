@@ -12,6 +12,7 @@
   <arg name="color_mesh_by_label" default="true"/>
 
   <arg name="viz_debug" default="false"/>
+  <arg name="viz_roslog_destination" default="log"/>
   <arg name="viz_launch_prefix" value="gdb -ex run --args" if="$(arg viz_debug)"/>
   <arg name="viz_launch_prefix" value="" unless="$(arg viz_debug)"/>
 
@@ -26,7 +27,7 @@
 
   <node pkg="hydra_ros" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
         launch-prefix="$(arg viz_launch_prefix)"
-        output="$(eval 'screen' if arg('viz_debug') else 'log')"
+        output="$(eval 'screen' if arg('viz_debug') else arg('viz_roslog_destination'))"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
     <param name="scene_graph_filepath" value=""/>
