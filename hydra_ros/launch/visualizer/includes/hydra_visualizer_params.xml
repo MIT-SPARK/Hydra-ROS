@@ -23,8 +23,8 @@
     <rosparam file="$(arg viz_config_path)/buildings_layer.yaml" ns="config/layer5"/>
     <rosparam file="$(arg viz_config_path)/agent_layer.yaml" ns="config/dynamic_layer/2"/>
     <param name="config/color_places_by_distance" value="$(arg color_places_by_distance)"/>
-    <param name="$(arg mesh_namespace)/label_colormap" value="$(arg semantic_map_path)"/>
-    <param name="$(arg mesh_namespace)/color_by_label" value="$(arg color_mesh_by_label)"/>
+    <param name="plugins/$(arg mesh_namespace)/label_colormap" value="$(arg semantic_map_path)"/>
+    <param name="plugins/$(arg mesh_namespace)/color_by_label" value="$(arg color_mesh_by_label)"/>
     <param name="plugins/$(arg mesh_namespace)/type" value="MeshPlugin"/>
     <param name="plugins/gt_regions/gt_regions_filepath" value="$(arg gt_regions_path)"/>
     <rosparam file="$(arg viz_plugins_path)"/>
