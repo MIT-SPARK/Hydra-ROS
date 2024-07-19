@@ -33,61 +33,23 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <sensor_msgs/Image.h>
-
-#include "hydra_ros/input/ros_data_receiver.h"
+#include <hydra/input/data_receiver.h>
+#include <ros/ros.h>
 
 namespace hydra {
 
-struct ImageSubscriber {
-  ImageSubscriber();
-
-  ImageSubscriber(const ros::NodeHandle& nh,
-                  const std::string& camera_name,
-                  const std::string& image_name = "image_raw",
-                  uint32_t queue_size = 1);
-
-  std::shared_ptr<image_transport::ImageTransport> transport;
-  std::shared_ptr<image_transport::SubscriberFilter> sub;
-};
-
-class ImageReceiver : public RosDataReceiver {
+class RosDataReceiver : public DataReceiver {
  public:
-  using SyncPolicy = message_filters::sync_policies::
-      ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image>;
-  using Synchronizer = message_filters::Synchronizer<SyncPolicy>;
-
-  struct Config : RosDataReceiver::Config {
+  struct Config : DataReceiver::Config {
+    std::string ns;
+    size_t queue_size = 10;
   } const config;
 
-  ImageReceiver(const Config& config, size_t sensor_id);
-  virtual ~ImageReceiver() = default;
+  RosDataReceiver(const Config& config, size_t sensor_id);
+  virtual ~RosDataReceiver() = default;
 
  protected:
-  bool initImpl() override;
-
- private:
-  void callback(const sensor_msgs::Image::ConstPtr& color,
-                const sensor_msgs::Image::ConstPtr& depth,
-                const sensor_msgs::Image::ConstPtr& labels);
-
-  ImageSubscriber color_sub_;
-  ImageSubscriber depth_sub_;
-  ImageSubscriber label_sub_;
-  std::unique_ptr<Synchronizer> synchronizer_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<DataReceiver,
-                                     ImageReceiver,
-                                     ImageReceiver::Config,
-                                     size_t>("ImageReceiver");
+  ros::NodeHandle nh_;
 };
-
-void declare_config(ImageReceiver::Config& config);
 
 }  // namespace hydra

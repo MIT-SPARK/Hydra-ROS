@@ -72,6 +72,7 @@ add_library(
   src/input/image_receiver.cpp
   src/input/pointcloud_adaptor.cpp
   src/input/pointcloud_receiver.cpp
+  src/input/ros_data_receiver.cpp
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
   src/loop_closure/ros_lcd_registration.cpp

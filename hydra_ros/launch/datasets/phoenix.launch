@@ -70,7 +70,6 @@
         <arg name="rgb_image_transport" value="compressed" if="$(arg use_compressed_transport)"/>
         <arg name="rgb_image_transport" value="raw" unless="$(arg use_compressed_transport)"/>
         <arg name="depth_topic" default="depth_registered/image_rect"/>
-        <arg name="use_2d_places" value="true"/>
     </include>
 
 </launch>

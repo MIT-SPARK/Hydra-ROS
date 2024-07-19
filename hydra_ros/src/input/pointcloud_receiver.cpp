@@ -1,20 +1,23 @@
 #include "hydra_ros/input/pointcloud_receiver.h"
 
 #include <glog/logging.h>
-#include <hydra/common/common.h>
 #include <hydra/common/global_info.h>
 
 #include "hydra_ros/input/pointcloud_adaptor.h"
 
 namespace hydra {
 
-PointcloudReceiver::PointcloudReceiver(const Config& config, size_t sensor_id)
-    : DataReceiver(config, sensor_id), nh_(config.ns) {}
+void declare_config(PointcloudReceiver::Config& config) {
+  using namespace config;
+  name("PointcloudReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
 
-PointcloudReceiver::~PointcloudReceiver() {}
+PointcloudReceiver::PointcloudReceiver(const Config& config, size_t sensor_id)
+    : RosDataReceiver(config, sensor_id), config(config) {}
 
 bool PointcloudReceiver::initImpl() {
-  cloud_sub_ = nh_.subscribe(
+  sub_ = nh_.subscribe(
       "pointcloud", config.queue_size, &PointcloudReceiver::callback, this);
   return true;
 }

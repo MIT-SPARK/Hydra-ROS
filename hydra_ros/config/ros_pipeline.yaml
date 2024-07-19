@@ -7,7 +7,6 @@ log_timing_incrementally: $(arg log_timing_incrementally)
 enable_frontend_output: $(arg enable_frontend_output)
 frontend:
   type: FrontendModule
-  use_2d_places: $(arg use_2d_places)
   enable_places: $(arg enable_places)
   objects:
     bounding_box_type: $(arg bounding_box_type)

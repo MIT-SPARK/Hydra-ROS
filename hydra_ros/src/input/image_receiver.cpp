@@ -43,33 +43,36 @@ namespace hydra {
 using image_transport::ImageTransport;
 using image_transport::SubscriberFilter;
 
-image_transport::TransportHints getHintsWithNamespace(const ros::NodeHandle& nh,
-                                                      const std::string& ns) {
-  return image_transport::TransportHints(
-      "raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
+std::string showImageDim(const sensor_msgs::Image::ConstPtr& image) {
+  std::stringstream ss;
+  ss << "[" << image->width << ", " << image->height << "]";
+  return ss.str();
+}
+
+image_transport::TransportHints getHints(const ros::NodeHandle& nh,
+                                         const std::string& ns) {
+  namespace it = image_transport;
+  return it::TransportHints("raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
 }
 
 void declare_config(ImageReceiver::Config& config) {
   using namespace config;
   name("ImageReceiver::Config");
-  base<DataReceiver::Config>(config);
-  field(config.ns, "ns");
-  field(config.queue_size, "queue_size");
+  base<RosDataReceiver::Config>(config);
 }
 
 ImageSubscriber::ImageSubscriber() {}
 
 ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
-                                 const std::string& camera_name,
-                                 const std::string& image_name,
+                                 const std::string& cam_name,
+                                 const std::string& img_name,
                                  uint32_t queue_size)
-    : transport(std::make_shared<ImageTransport>(ros::NodeHandle(nh, camera_name))),
+    : transport(std::make_shared<ImageTransport>(ros::NodeHandle(nh, cam_name))),
       sub(std::make_shared<SubscriberFilter>(
-          *transport, image_name, queue_size, getHintsWithNamespace(nh, camera_name))) {
-}
+          *transport, img_name, queue_size, getHints(nh, cam_name))) {}
 
 ImageReceiver::ImageReceiver(const Config& config, size_t sensor_id)
-    : DataReceiver(config, sensor_id), config(config), nh_(config.ns) {}
+    : RosDataReceiver(config, sensor_id), config(config) {}
 
 bool ImageReceiver::initImpl() {
   // TODO(nathan) subscribe to image subsets
@@ -82,14 +85,6 @@ bool ImageReceiver::initImpl() {
                                        *label_sub_.sub));
   synchronizer_->registerCallback(&ImageReceiver::callback, this);
   return true;
-}
-
-ImageReceiver::~ImageReceiver() {}
-
-std::string showImageDim(const sensor_msgs::Image::ConstPtr& image) {
-  std::stringstream ss;
-  ss << "[" << image->width << ", " << image->height << "]";
-  return ss.str();
 }
 
 void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
@@ -111,7 +106,8 @@ void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
     return;
   }
 
-  auto packet = std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_id_);
+  auto packet =
+      std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_id_);
   try {
     const auto cv_depth = cv_bridge::toCvShare(depth);
     packet->depth = cv_depth->image.clone();

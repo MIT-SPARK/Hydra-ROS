@@ -10,7 +10,6 @@
 
     <!-- Frontend configuration -->
     <arg name="enable_frontend_output" default="true"/>
-    <arg name="use_2d_places" default="false"/>
     <arg name="enable_places" default="true"/>
     <arg name="bounding_box_type" default="AABB"/>
     <arg name="use_gt_frame" default="true"/>
@@ -32,7 +31,6 @@
     <arg name="lcd_gnn_object_model" default="$(find hydra)/models/lcd/object_gnn.onnx"/>
     <arg name="lcd_gnn_places_model" default="$(find hydra)/models/lcd/place_gnn.onnx"/>
     <arg name="lcd_gnn_label_embeddings" default="''"/>
-
 
     <rosparam file="$(arg pipeline_path)" subst_value="true" ns="$(arg hydra_ros_ns)"/>
 </launch>

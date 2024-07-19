@@ -43,8 +43,6 @@ class RosInputModule : public InputModule {
  public:
   using OutputQueue = InputQueue<InputPacket::Ptr>;
   struct Config : InputModule::Config {
-    //! ros namespace for nodehandle
-    std::string ns = "~";
     //! clears all input packets from receivers when not initialized and tf lookup fails
     bool clear_queue_on_fail = true;
     //! Amount of time to wait between tf lookup attempts
@@ -59,7 +57,7 @@ class RosInputModule : public InputModule {
     /**
      * @brief Get config for base class
      */
-    InputModule::Config remapSensors(const ros::NodeHandle& nh) const;
+    InputModule::Config remapSensors() const;
   } const config;
 
   RosInputModule(const Config& config, const OutputQueue::Ptr& output_queue);

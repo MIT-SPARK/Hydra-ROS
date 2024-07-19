@@ -107,7 +107,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // non-ros should always be the same
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(ros::NodeHandle("~"), sensor);
+    const auto result = input::loadSensor(sensor, 0);
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "lidar");
     const auto expected_yaml = getExportedConfig(config);
@@ -120,7 +120,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(ros::NodeHandle("~"), sensor);
+    const auto result = input::loadSensor(sensor, 0);
     EXPECT_FALSE(result);
   }
 
@@ -129,7 +129,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(ros::NodeHandle("~"), sensor);
+    const auto result = input::loadSensor(sensor, 0);
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "lidar");
 
@@ -149,7 +149,7 @@ TEST_F(RosSensors, Camera) {
 
   {  // should be able to parse intrinsics and extrinsics separately
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(ros::NodeHandle("~"), sensor);
+    const auto result = input::loadSensor(sensor, 0);
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "camera");
 
@@ -165,7 +165,7 @@ TEST_F(RosSensors, Camera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(ros::NodeHandle("~"), sensor);
+    const auto result = input::loadSensor(sensor, 0);
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "camera");
 

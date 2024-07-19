@@ -6,7 +6,6 @@ exit_after_clock: false
 frontend:
   type: FrontendModule
   enable_places: true
-  use_2d_places: true
   objects:
     bounding_box_type: AABB
   pose_graph_tracker:

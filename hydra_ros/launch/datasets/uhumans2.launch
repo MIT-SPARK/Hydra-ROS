@@ -8,8 +8,6 @@
     <arg name="use_gt_semantics" default="true" doc="use simulator-provider semantics"/>
     <arg name="use_static_tfs" default="true" doc="publish static tfs from file"/>
     <arg name="color_mesh_by_label" default="false" doc="display mesh colored by semantic label"/>
-    <arg name="use_oriented_bounding_boxes" default="false"/>
-    <arg name="use_2d_places" default="true"/>
     <arg name="use_single_channel_label_image" default="false"/>
 
     <arg name="robot_frame" default="$(eval 'base_link_gt' if arg('use_gt_frame') else 'base_link_kimera')" doc="robot body tf frame"/>
@@ -29,7 +27,6 @@
     <arg name="label_topic" default="semantic_inference/semantic/image_raw" unless="$(arg use_gt_semantics)"/>
     <arg name="label_topic" default="$(eval '/tesse/seg_cam/converted/image_raw' if arg('use_single_channel_label_image') else '/tesse/seg_cam/rgb/image_raw')"
                             if="$(arg use_gt_semantics)"/>
-
     <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
     <include file="$(find hydra_ros)/launch/static_tfs/uhumans2_static_tfs.xml" if="$(arg use_static_tfs)"/>
@@ -45,9 +42,10 @@
     </group>
 
     <group>
-        <remap from="hydra_ros_node/depth_registered/image_rect" to="$(arg depth_topic)"/>
-        <remap from="hydra_ros_node/rgb/image_raw" to="$(arg rgb_topic)"/>
-        <remap from="hydra_ros_node/semantic/image_raw" to="$(arg label_topic)"/>
+        <remap from="hydra_ros_node/input0/depth_registered/image_rect" to="$(arg depth_topic)"/>
+        <remap from="hydra_ros_node/input0/rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="hydra_ros_node/input0/rgb/camera_info" to="$(arg rgb_info_topic)"/>
+        <remap from="hydra_ros_node/input0/semantic/image_raw" to="$(arg label_topic)"/>
         <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
             <arg name="dataset_name" default="uhumans2"/>
         </include>
@@ -61,6 +59,5 @@
             <arg name="rviz_file" default="uhumans2.rviz"/>
         </include>
     </group>
-
 
 </launch>

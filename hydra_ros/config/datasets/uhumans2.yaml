@@ -9,6 +9,5 @@ inputs:
       type: camera_info
       min_range: $(arg sensor_min_range)
       max_range: $(arg sensor_max_range)
-      ns: /tesse/left_cam
       extrinsics:
         type: ros

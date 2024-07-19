@@ -48,7 +48,6 @@ void declare_config(RosInputModule::Config& config) {
   using namespace config;
   name("RosInputModule::Config");
   base<InputModule::Config>(config);
-  field(config.ns, "ns");
   field(config.clear_queue_on_fail, "clear_queue_on_fail");
   field(config.tf_wait_duration_s, "tf_wait_duration_s");
   field(config.tf_buffer_size_s, "tf_buffer_size_s");
@@ -56,21 +55,19 @@ void declare_config(RosInputModule::Config& config) {
   field(config.tf_verbosity, "tf_verbosity");
 }
 
-InputModule::Config RosInputModule::Config::remapSensors(
-    const ros::NodeHandle& nh) const {
+InputModule::Config RosInputModule::Config::remapSensors() const {
   InputModule::Config to_return = *this;
   for (size_t i = 0; i < to_return.inputs.size(); ++i) {
-    ros::NodeHandle input_nh(nh, "input" + std::to_string(i));
-    to_return.inputs[i].sensor = input::loadSensor(nh, to_return.inputs[i].sensor);
+    to_return.inputs[i].sensor = input::loadSensor(to_return.inputs[i].sensor, i);
   }
 
   return to_return;
 }
 
 RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& queue)
-    : InputModule(config.remapSensors(ros::NodeHandle(config.ns)), queue),
+    : InputModule(config.remapSensors(), queue),
       config(config),
-      nh_(ros::NodeHandle(config.ns)),
+      nh_(""),
       have_first_pose_(false) {
   buffer_.reset(new tf2_ros::Buffer(ros::Duration(config.tf_buffer_size_s)));
   tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));

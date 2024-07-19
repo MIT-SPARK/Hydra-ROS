@@ -32,62 +32,27 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <config_utilities/factory.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <sensor_msgs/Image.h>
-
 #include "hydra_ros/input/ros_data_receiver.h"
+
+#include <config_utilities/config.h>
 
 namespace hydra {
 
-struct ImageSubscriber {
-  ImageSubscriber();
+inline std::string getNamespace(const std::string& ns, size_t sensor_id) {
+  return ns.empty() ? std::string("~/input") + std::to_string(sensor_id) : ns;
+}
 
-  ImageSubscriber(const ros::NodeHandle& nh,
-                  const std::string& camera_name,
-                  const std::string& image_name = "image_raw",
-                  uint32_t queue_size = 1);
+void declare_config(RosDataReceiver::Config& config) {
+  using namespace config;
+  name("RosDataReceiver::Config");
+  base<DataReceiver::Config>(config);
+  field(config.ns, "ns");
+  field(config.queue_size, "queue_size");
+}
 
-  std::shared_ptr<image_transport::ImageTransport> transport;
-  std::shared_ptr<image_transport::SubscriberFilter> sub;
-};
-
-class ImageReceiver : public RosDataReceiver {
- public:
-  using SyncPolicy = message_filters::sync_policies::
-      ApproximateTime<sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::Image>;
-  using Synchronizer = message_filters::Synchronizer<SyncPolicy>;
-
-  struct Config : RosDataReceiver::Config {
-  } const config;
-
-  ImageReceiver(const Config& config, size_t sensor_id);
-  virtual ~ImageReceiver() = default;
-
- protected:
-  bool initImpl() override;
-
- private:
-  void callback(const sensor_msgs::Image::ConstPtr& color,
-                const sensor_msgs::Image::ConstPtr& depth,
-                const sensor_msgs::Image::ConstPtr& labels);
-
-  ImageSubscriber color_sub_;
-  ImageSubscriber depth_sub_;
-  ImageSubscriber label_sub_;
-  std::unique_ptr<Synchronizer> synchronizer_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<DataReceiver,
-                                     ImageReceiver,
-                                     ImageReceiver::Config,
-                                     size_t>("ImageReceiver");
-};
-
-void declare_config(ImageReceiver::Config& config);
+RosDataReceiver::RosDataReceiver(const Config& config, size_t sensor_id)
+    : DataReceiver(config, sensor_id),
+      config(config),
+      nh_(getNamespace(config.ns, sensor_id)) {}
 
 }  // namespace hydra

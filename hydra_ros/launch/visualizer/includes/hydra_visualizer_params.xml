@@ -11,7 +11,6 @@
   <arg name="color_mesh_by_label" default="false"/>
   <arg name="mesh_namespace" default="dsg_mesh"/>
   <arg name="gt_regions_path" default=""/>
-  <arg name="use_2d_places" default="false"/>
 
   <group ns="$(arg visualizer_ns)">
     <param name="visualizer_frame" value="$(arg visualizer_frame)"/>

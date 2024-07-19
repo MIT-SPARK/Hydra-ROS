@@ -197,7 +197,7 @@ VirtualSensor loadExtrinsics(const VirtualSensor& sensor,
   return config::fromYaml<VirtualSensor>(base_contents);
 }
 
-VirtualSensor loadSensor(const ros::NodeHandle& nh, const VirtualSensor& sensor) {
+VirtualSensor loadSensor(const VirtualSensor& sensor, size_t sensor_index) {
   if (!sensor || sensor.getType() != "camera_info") {
     return loadExtrinsics(sensor);
   }
@@ -205,7 +205,9 @@ VirtualSensor loadSensor(const ros::NodeHandle& nh, const VirtualSensor& sensor)
   const auto contents = config::toYaml(sensor);
   const auto derived = config::fromYaml<RosCamera::Config>(contents);
 
-  const auto ns = derived.ns.empty() ? nh.getNamespace() : derived.ns;
+  const auto ns = derived.ns.empty()
+                      ? std::string("~/input") + std::to_string(sensor_index) + std::string("/rgb")
+                      : derived.ns;
   const auto msg = getCameraInfo(ns);
   if (!msg) {
     return {};
