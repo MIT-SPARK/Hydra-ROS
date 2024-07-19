@@ -66,8 +66,8 @@ inline void fillPoseWithIdentity(geometry_msgs::Pose& pose) {
 }  // namespace
 
 Color getDistanceColor(const VisualizerConfig& config,
-                           const ColormapConfig& colors,
-                           double distance) {
+                       const ColormapConfig& colors,
+                       double distance) {
   if (config.places_colormap_max_distance <= config.places_colormap_min_distance) {
     // TODO(nathan) consider warning
     return Color();
@@ -659,8 +659,7 @@ MarkerArray makeDynamicGraphEdgeMarkers(
     if (layer_markers.count(source.layer) == 0) {
       layer_markers[source.layer] = makeNewEdgeList(
           header, configs.at(source.layer), ns_prefix, source.layer, target.layer);
-      layer_markers[source.layer].color =
-          makeColorMsg(Color(), config.edge_alpha);
+      layer_markers[source.layer].color = makeColorMsg(Color(), config.edge_alpha);
       // make sure we always draw at least one edge
       num_since_last_insertion[source.layer] = num_between_insertions;
     }
@@ -825,10 +824,8 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
       marker.colors.push_back(makeColorMsg(attrs.color, config.interlayer_edge_alpha));
       marker.colors.push_back(makeColorMsg(attrs.color, config.interlayer_edge_alpha));
     } else {
-      marker.colors.push_back(
-          makeColorMsg(Color(), config.interlayer_edge_alpha));
-      marker.colors.push_back(
-          makeColorMsg(Color(), config.interlayer_edge_alpha));
+      marker.colors.push_back(makeColorMsg(Color(), config.interlayer_edge_alpha));
+      marker.colors.push_back(makeColorMsg(Color(), config.interlayer_edge_alpha));
     }
 
     size_t i = 0;
@@ -858,10 +855,8 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
         marker.colors.push_back(
             makeColorMsg(attrs.color, config.interlayer_edge_alpha));
       } else {
-        marker.colors.push_back(
-            makeColorMsg(Color(), config.interlayer_edge_alpha));
-        marker.colors.push_back(
-            makeColorMsg(Color(), config.interlayer_edge_alpha));
+        marker.colors.push_back(makeColorMsg(Color(), config.interlayer_edge_alpha));
+        marker.colors.push_back(makeColorMsg(Color(), config.interlayer_edge_alpha));
       }
     }
   }
@@ -1126,12 +1121,12 @@ Marker makeDynamicEdgeMarkers(const std_msgs::Header& header,
 
   for (const auto& id_edge_pair : layer.edges()) {
     geometry_msgs::Point source;
-    tf2::convert(layer.getPosition(id_edge_pair.second.source), source);
+    tf2::convert(getNodePosition(layer, id_edge_pair.second.source), source);
     source.z += getZOffset(config.z_offset_scale, visualizer_config);
     marker.points.push_back(source);
 
     geometry_msgs::Point target;
-    tf2::convert(layer.getPosition(id_edge_pair.second.target), target);
+    tf2::convert(getNodePosition(layer, id_edge_pair.second.target), target);
     target.z += getZOffset(config.z_offset_scale, visualizer_config);
     marker.points.push_back(target);
   }
@@ -1156,7 +1151,8 @@ Marker makeDynamicLabelMarker(const std_msgs::Header& header,
   marker.scale.z = config.label_scale;
   marker.color = makeColorMsg(Color());
 
-  Eigen::Vector3d latest_position = layer.getPositionByIndex(layer.numNodes() - 1);
+  Eigen::Vector3d latest_position =
+      layer.getNodeByIndex(layer.numNodes() - 1).attributes().position;
   fillPoseWithIdentity(marker.pose);
   tf2::convert(latest_position, marker.pose.position);
   marker.pose.position.z +=

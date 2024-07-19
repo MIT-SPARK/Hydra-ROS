@@ -37,6 +37,7 @@
 #include <glog/logging.h>
 #include <hydra/utils/nearest_neighbor_utilities.h>
 #include <spark_dsg/bounding_box_extraction.h>
+#include <spark_dsg/graph_utilities.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/utils/ear_clipping.h"
@@ -47,7 +48,7 @@ double getMeanChildHeight(const DynamicSceneGraph& graph,
                           const SceneGraphNode& parent) {
   double total = 0.0;
   for (const auto& child : parent.children()) {
-    total += graph.getPosition(child).z();
+    total += getNodePosition(graph, child).z();
   }
   return total / static_cast<double>(parent.children().size());
 }
@@ -70,7 +71,7 @@ double getMeanNeighborHeight(const SceneGraphLayer& graph,
                                   neighborhood_size,
                                   false,
                                   [&](NodeId neighbor_id, size_t, double) {
-                                    total += graph.getPosition(neighbor_id).z();
+                                    total += getNodePosition(graph, neighbor_id).z();
                                   });
   } else {
     std::deque<NodeId> frontier{node.id};
@@ -85,7 +86,7 @@ double getMeanNeighborHeight(const SceneGraphLayer& graph,
         },
         [](const auto&) { return true; },
         [&](const SceneGraphLayer&, NodeId other) {
-          total += graph.getPosition(other).z();
+          total += getNodePosition(graph, other).z();
           ++num_found;
         });
   }
@@ -119,7 +120,7 @@ struct NodeAdaptor : public ::spark_dsg::bounding_box::PointAdaptor {
       throw std::runtime_error("invalid graph!");
     }
 
-    return graph->getPosition(nodes.at(index)).cast<float>();
+    return getNodePosition(*graph, nodes.at(index)).cast<float>();
   }
 
   const DynamicSceneGraph* graph;
@@ -135,7 +136,7 @@ Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
   Eigen::MatrixXd hull_points(3, hull_indices.size());
   size_t i = 0;
   for (const auto idx : hull_indices) {
-    hull_points.col(i) = graph.getPosition(children.at(idx));
+    hull_points.col(i) = getNodePosition(graph, children.at(idx));
     ++i;
   }
 

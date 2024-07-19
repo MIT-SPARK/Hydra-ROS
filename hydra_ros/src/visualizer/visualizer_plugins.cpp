@@ -179,11 +179,11 @@ Marker makeMstEdges(const PMGraphPluginConfig& config,
   fillPoseWithIdentity(edges);
 
   for (const auto& edge : mst_info.edges) {
-    Eigen::Vector3d start_pos = layer.getPosition(edge.source);
+    Eigen::Vector3d start_pos = getNodePosition(layer, edge.source);
     geometry_msgs::Point source;
     tf2::convert(start_pos, source);
 
-    Eigen::Vector3d end_pos = layer.getPosition(edge.target);
+    Eigen::Vector3d end_pos = getNodePosition(layer, edge.target);
     geometry_msgs::Point target;
     tf2::convert(end_pos, target);
 
