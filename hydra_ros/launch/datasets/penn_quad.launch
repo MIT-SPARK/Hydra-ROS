@@ -13,8 +13,6 @@
     <arg name="sensor_frame" default="camera_color_frame"/>
     <arg name="use_compressed_transport" default="false"/>
     <arg name="run_data_source" default="true"/>
-    <arg name="start_rviz" default="true"/>
-    <arg name="rviz_file" default="penn_quad.rviz"/>
     <arg name="use_image_interface" default="false"/>
     <arg name="load_static_tfs" default="false"/>
 
@@ -53,11 +51,26 @@
         <arg name="config_dir" default="$(find hydra)/config/phoenix"/>
         <arg name="kimera_sensor_filepath"
              value="$(find hydra_vio_configs)/config/robots/penn/LeftCameraParams.yaml"/>
-        <arg name="rviz_file" default="phoenix.rviz"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
         <arg name="rgb_image_transport" value="raw"/>
         <arg name="depth_topic" default="/camera/depth/image_rect_raw"/>
         <arg name="use_outdoor_places" value="false"/>
     </include>
 
+    <!-- visualizer for converting dsg to visualization markers -->
+    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
+    <group if="$(arg start_visualizer)">
+        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
+            <arg name="visualizer_frame" default="$(arg map_frame)"/>
+        </include>
+    </group>
+
+    <!-- rviz -->
+    <arg name="start_rviz" default="true" doc="start rviz"/>
+    <group if="$(arg start_rviz)">
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_rviz.launch">
+            <arg name="rviz_file" default="penn_quad.rviz"/>
+        </include>
+    </group>
 </launch>

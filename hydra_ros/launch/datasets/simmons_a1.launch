@@ -49,10 +49,25 @@
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="dataset_name" default="simmons_a1"/>
-        <arg name="rviz_file" default="a1.rviz"/>
         <arg name="rgb_image_transport" value="$(eval 'compressed' arg('use_compressed_transport') else 'raw')"/>
         <arg name="depth_topic" default="$(arg robot_name)/depth_registered/image_rect"/>
         <arg name="kimera_sensor_filepath" default="$(find hydra_vio_configs)/config/robots/a1_center_external/LeftCameraParams.yaml"/>
     </include>
 
+    <!-- visualizer for converting dsg to visualization markers -->
+    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
+    <group if="$(arg start_visualizer)">
+        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
+            <arg name="visualizer_frame" default="map"/>
+        </include>
+    </group>
+
+    <!-- rviz -->
+    <arg name="start_rviz" default="true" doc="start rviz"/>
+    <group if="$(arg start_rviz)">
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_rviz.launch">
+            <arg name="rviz_file" default="a1.rviz"/>
+        </include>
+    </group>
 </launch>

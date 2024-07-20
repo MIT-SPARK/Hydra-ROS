@@ -1,40 +1,34 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
-  <arg name="visualizer_ns" default="hydra_dsg_visualizer" doc="visualizer namespace to use"/>
-  <arg name="start_rviz" default="true" doc="automatically start rviz"/>
-  <arg name="viz_use_zmq" default="false" doc="use zmq to receive scene graphs"/>
-  <arg name="viz_zmq_ip" default="127.0.0.1" doc="zmq IP to listen on"/>
-  <arg name="viz_zmq_port" default="8001" doc="zmq port to listen on"/>
-  <arg name="viz_zmq_url" default="tcp://$(arg viz_zmq_ip):$(arg viz_zmq_port)"
-       doc="full zmq url to listen on, including protocol"/>
+  <arg name="visualizer_use_zmq" default="false" doc="use zmq to receive scene graphs"/>
+  <arg name="visualizer_zmq_ip" default="127.0.0.1" doc="zmq IP to listen on"/>
+  <arg name="visualizer_zmq_port" default="8001" doc="zmq port to listen on"/>
+  <arg name="visualizer_zmq_url" default="tcp://$(arg visualizer_zmq_ip):$(arg visualizer_zmq_port)" doc="full zmq url"/>
 
-  <arg name="rviz_file" default="hydra_streaming_visualizer.rviz"/>
+  <arg name="visualizer_frame" default="map"/>
+  <arg name="semantic_map_path" default="''"/>
   <arg name="color_mesh_by_label" default="true"/>
-
-  <arg name="viz_debug" default="false"/>
-  <arg name="viz_roslog_destination" default="log"/>
-  <arg name="viz_launch_prefix" value="gdb -ex run --args" if="$(arg viz_debug)"/>
-  <arg name="viz_launch_prefix" value="" unless="$(arg viz_debug)"/>
+  <arg name="gt_regions_filepath" default="''"/>
+  <arg name="visualizer_config_path" default="$(find hydra_ros)/config/visualizer_config.yaml"/>
+  <arg name="visualizer_plugins_path" default="$(find hydra_ros)/config/visualizer_plugins.yaml"/>
 
   <arg name="verbosity" default="0"/>
+  <arg name="visualizer_debug" default="false"/>
+  <arg name="visualizer_roslog_destination" default="log"/>
+  <arg name="visualizer_launch_prefix" value="$(eval 'gdb -ex run --args' if arg('visualizer_debug') else '')"/>
 
-  <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_params.xml"
-           pass_all_args="true"/>
-
-  <include file="$(find hydra_ros)/launch/visualizer/includes/hydra_visualizer_rviz.xml"
-           pass_all_args="true"
-           if="$(arg start_rviz)"/>
-
-  <node pkg="hydra_ros" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
-        launch-prefix="$(arg viz_launch_prefix)"
-        output="$(eval 'screen' if arg('viz_debug') else arg('viz_roslog_destination'))"
+  <node pkg="hydra_ros" type="hydra_visualizer_node" name="hydra_dsg_visualizer"
+        launch-prefix="$(arg visualizer_launch_prefix)"
+        output="$(eval 'screen' if arg('visualizer_debug') else arg('visualizer_roslog_destination'))"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
     <param name="scene_graph_filepath" value=""/>
     <param name="output_path" value=""/>
     <param name="load_graph" value="false"/>
-    <param name="use_zmq" value="$(arg viz_use_zmq)"/>
-    <param name="zmq_url" value="$(arg viz_zmq_url)"/>
+    <param name="use_zmq" value="$(arg visualizer_use_zmq)"/>
+    <param name="zmq_url" value="$(arg visualizer_zmq_url)"/>
+    <param name="visualizer_frame" value="$(arg visualizer_frame)"/>
+    <rosparam file="$(arg visualizer_config_path)" ns="config"/>
+    <rosparam file="$(arg visualizer_plugins_path)" subst_value="true"/>
   </node>
-
 </launch>

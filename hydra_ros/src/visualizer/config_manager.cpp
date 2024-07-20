@@ -128,7 +128,7 @@ const LayerConfig* ConfigManager::getLayerConfig(LayerId layer) const {
 const DynamicLayerConfig& ConfigManager::getDynamicLayerConfig(LayerId layer) const {
   auto iter = dynamic_layer_configs_.find(layer);
   if (iter == dynamic_layer_configs_.end()) {
-    const std::string ns = "config/dynamic_layer/" + std::to_string(layer);
+    const std::string ns = "config/dynamic_layer/layer" + std::to_string(layer);
     iter = dynamic_layer_configs_
                .emplace(layer,
                         std::make_shared<ConfigWrapper<DynamicLayerConfig>>(nh_, ns))

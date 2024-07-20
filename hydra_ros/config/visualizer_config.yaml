@@ -1,0 +1,166 @@
+---
+# general options
+layer_z_step: 5.5  # unit separation between layers
+# ratio of where the split from a single edge to the multiple edges to the mesh occurs.
+# 0 -> at the height of the mesh
+# 1 -> at the height of the object layer
+mesh_edge_break_ratio: 0.5
+# whether or not to apply offsets to each of the layers
+collapse_layers: false
+# minimum distance to clip to for places colormap
+places_colormap_min_distance: 0.0
+# maximum distance to clip to for places colormap
+places_colormap_max_distance: 3.0
+places_colormap:
+  min_hue: 0.0
+  max_hue: 0.5
+  min_saturation: 0.9
+  max_saturation: 0.8
+  min_luminance: 0.6
+  max_luminance: 0.85
+layer2:
+  # generic
+  z_offset_scale: 2.0
+  visualize: true
+  # node
+  marker_scale: 0.40
+  marker_color_mode: 0  # default
+  marker_alpha: 0.6
+  use_sphere_marker: false
+  use_label: false
+  use_collapsed_label: true
+  label_height: 0.5
+  label_scale: 0.45
+  use_bounding_box: true
+  bounding_box_alpha: 0.9
+  bbox_wireframe_scale: 0.05
+  bbox_wireframe_edge_scale: 0.05
+  collapse_bounding_box: true
+  # edge
+  use_edge_source: true
+  interlayer_edge_scale: 0.05
+  interlayer_edge_alpha: 0.3
+  interlayer_edge_use_color: true
+  interlayer_edge_insertion_skip: 10
+  intralayer_edge_scale: 0.03
+  intralayer_edge_alpha: 0.6
+  intralayer_edge_use_color: false
+  intralayer_edge_insertion_skip: 0
+layer3:
+  # general
+  z_offset_scale: 3.0
+  visualize: true
+  # nodes
+  marker_scale: 0.2
+  marker_color_mode: 2  # parent
+  marker_alpha: 0.9
+  use_sphere_marker: true
+  use_label: false
+  use_collapsed_label: false
+  use_bounding_box: false
+  # edges
+  use_edge_source: false
+  interlayer_edge_scale: 0.08
+  interlayer_edge_alpha: 0.4
+  interlayer_edge_use_color: true
+  interlayer_edge_insertion_skip: 0
+  intralayer_edge_scale: 0.01
+  intralayer_edge_alpha: 0.5
+  intralayer_edge_use_color: false
+  intralayer_edge_insertion_skip: 0
+layer4:
+  # general
+  z_offset_scale: 4.2
+  visualize: true
+  # nodes
+  marker_scale: 0.6
+  marker_color_mode: 0  # default
+  marker_alpha: 0.8
+  use_sphere_marker: false
+  use_label: true
+  use_collapsed_label: false
+  label_height: 1.25
+  label_scale: 1.0
+  use_bounding_box: false
+  # edges
+  use_edge_source: true
+  interlayer_edge_scale: 0.08
+  interlayer_edge_alpha: 0.4
+  interlayer_edge_use_color: true
+  interlayer_edge_insertion_skip: 3
+  intralayer_edge_scale: 0.1
+  intralayer_edge_alpha: 0.2
+  intralayer_edge_use_color: false
+  intralayer_edge_insertion_skip: 0
+layer5:
+  # general
+  z_offset_scale: 5.5
+  visualize: true
+  # nodes
+  marker_scale: 1.0
+  marker_color_mode: 0  # default
+  marker_alpha: 1.0
+  use_sphere_marker: false
+  use_label: true
+  use_collapsed_label: false
+  label_height: 1.5
+  label_scale: 1.25
+  use_bounding_box: false
+  # edges
+  use_edge_source: false
+  interlayer_edge_scale: 0.10
+  interlayer_edge_alpha: 0.5
+  interlayer_edge_use_color: false
+  interlayer_edge_insertion_skip: 0
+  intralayer_edge_scale: 0.05
+  intralayer_edge_alpha: 1.0
+  intralayer_edge_use_color: false
+  intralayer_edge_insertion_skip: 0
+layer20:
+  # general
+  z_offset_scale: 3.0
+  visualize: true
+  # nodes
+  marker_scale: 0.2
+  marker_color_mode: 0  # default
+  marker_alpha: 0.9
+  use_sphere_marker: true
+  use_label: false
+  label_height: 1.0
+  label_scale: 0.5
+  use_bounding_box: false
+  bounding_box_alpha: 0.5
+  collapse_bounding_box: false
+  draw_boundaries: true
+  collapse_boundary: false
+  boundary_wireframe_scale: 0.1
+  boundary_use_node_color: true
+  boundary_alpha: 1.0
+  # edges
+  use_edge_source: false
+  interlayer_edge_scale: 0.08
+  interlayer_edge_alpha: 0.4
+  interlayer_edge_use_color: true
+  interlayer_edge_insertion_skip: 0
+  intralayer_edge_scale: 0.01
+  intralayer_edge_alpha: 0.5
+  intralayer_edge_use_color: false
+  intralayer_edge_insertion_skip: 0
+dynamic_layers:
+  layer2:
+    visualize: true
+    num_colors: 5
+    saturation: 0.9
+    luminance: 0.7
+    edge_sl_ratio: 0.6
+    node_scale: 0.2
+    node_alpha: 0.9
+    node_use_sphere: true
+    edge_scale: 0.05
+    edge_alpha: 0.9
+    label_height: 0.9
+    label_scale: 0.8
+    color_offset: 3
+    interlayer_edge_insertion_skip: 10
+    visualize_interlayer_edges: false
+    z_offset_scale: 0.0

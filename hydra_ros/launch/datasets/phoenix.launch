@@ -65,11 +65,26 @@
         <arg name="kimera_sensor_filepath"
              value="$(find hydra_vio_configs)/config/robots/$(arg robot_name)/LeftCameraParams.yaml"
              unless="$(arg use_lidar_pointcloud)"/>
-        <arg name="rviz_file" default="phoenix.rviz"/>
         <arg name="use_oriented_bounding_boxes" default="true"/>
         <arg name="rgb_image_transport" value="compressed" if="$(arg use_compressed_transport)"/>
         <arg name="rgb_image_transport" value="raw" unless="$(arg use_compressed_transport)"/>
         <arg name="depth_topic" default="depth_registered/image_rect"/>
     </include>
 
+    <!-- visualizer for converting dsg to visualization markers -->
+    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
+    <group if="$(arg start_visualizer)">
+        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
+            <arg name="visualizer_frame" default="$(arg map_frame)"/>
+        </include>
+    </group>
+
+    <!-- rviz -->
+    <arg name="start_rviz" default="true" doc="start rviz"/>
+    <group if="$(arg start_rviz)">
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_rviz.launch">
+            <arg name="rviz_file" default="phoenix.rviz"/>
+        </include>
+    </group>
 </launch>

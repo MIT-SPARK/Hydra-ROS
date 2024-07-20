@@ -1,7 +1,6 @@
 <launch>
     <arg name="sim_time_required" default="false"/>
     <param name="use_sim_time" value="$(arg sim_time_required)"/>
-    <arg name="start_visualizer" default="true"/>
 
     <arg name="config_dir" default="$(find hydra)/config/spot"/>
     <arg name="use_gt_frame" default="true" doc="use simulator-provided tf frame"/>
@@ -67,14 +66,20 @@
         </include>
     </group>
 
-    <!-- Hydra Visualizer -->
+    <!-- visualizer for converting dsg to visualization markers -->
+    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
     <group if="$(arg start_visualizer)">
         <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
-        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch"
-                 pass_all_args="true">
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
             <arg name="visualizer_frame" default="map"/>
-            <arg name="rviz_file" default="uhumans2.rviz"/>
         </include>
     </group>
 
+    <!-- rviz -->
+    <arg name="start_rviz" default="true" doc="start rviz"/>
+    <group if="$(arg start_rviz)">
+        <include file="$(find hydra_ros)/launch/visualizer/hydra_rviz.launch">
+            <arg name="rviz_file" default="uhumans2.rviz"/>
+        </include>
+    </group>
 </launch>

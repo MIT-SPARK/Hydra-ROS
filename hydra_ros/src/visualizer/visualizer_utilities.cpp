@@ -842,9 +842,6 @@ Marker makeMeshEdgesMarker(const std_msgs::Header& header,
       Eigen::Vector3d vertex_pos = mesh->pos(midx).cast<double>();
       geometry_msgs::Point vertex;
       tf2::convert(vertex_pos, vertex);
-      if (!visualizer_config.collapse_layers) {
-        vertex.z += visualizer_config.mesh_layer_offset;
-      }
 
       marker.points.push_back(center_point);
       marker.points.push_back(vertex);
