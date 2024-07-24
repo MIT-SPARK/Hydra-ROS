@@ -34,13 +34,20 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/colormap_utilities.h"
 
-#include <algorithm>
-#include <opencv2/imgproc.hpp>
+namespace hydra::visualizer {
 
-namespace hydra::dsg_utils {
+using spark_dsg::Color;
 
-inline double lerp(double min, double max, double ratio) {
-  return (max - min) * ratio + min;
+Color interpolateColorMap(const hydra_ros::ColormapConfig& config,
+                          double value,
+                          double min,
+                          double max) {
+  const auto temperature = std::clamp((value - min) / (max - min), 0.0, 1.0);
+  std::vector<Color> colors{
+      Color::fromHLS(config.min_hue, config.min_luminance, config.min_saturation),
+      Color::fromHLS(config.max_hue, config.max_luminance, config.max_saturation),
+  };
+  return Color::spectrum(temperature, colors);
 }
 
 std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha) {
@@ -52,12 +59,4 @@ std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha) {
   return msg;
 }
 
-Color interpolateColorMap(const ColormapConfig& config, double ratio) {
-  ratio = std::clamp(ratio, 0.0, 1.0);
-  const float hue = lerp(config.min_hue, config.max_hue, ratio);
-  const float luminance = lerp(config.min_luminance, config.max_luminance, ratio);
-  const float saturation = lerp(config.min_saturation, config.max_saturation, ratio);
-  return Color::fromHLS(hue, luminance, saturation);
-}
-
-}  // namespace hydra::dsg_utils
+}  // namespace hydra::visualizer

@@ -41,16 +41,17 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <tf2_eigen/tf2_eigen.h>
-#include <visualization_msgs/MarkerArray.h>
 #include <yaml-cpp/yaml.h>
 
 #include <filesystem>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
 #include "hydra_ros/visualizer/polygon_utilities.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
+
+using visualization_msgs::Marker;
+using visualization_msgs::MarkerArray;
 
 void declare_config(GtRegionPlugin::Config& config) {
   using namespace config;
@@ -73,10 +74,10 @@ void declare_config(GtRegionPlugin::Config& config) {
 GtRegionPlugin::GtRegionPlugin(const Config& config,
                                const ros::NodeHandle& nh,
                                const std::string& name)
-    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
-  // namespacing gives us a reasonable topic
-  pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
-
+    : DsgVisualizerPlugin(nh, name),
+      config(config::checkValid(config)),
+      published_(false),
+      pub_(nh_.advertise<MarkerArray>("", 1, true)) {
   std::filesystem::path region_path(config.gt_regions_filepath);
   if (!std::filesystem::exists(region_path)) {
     LOG_IF(INFO, !config.gt_regions_filepath.empty())
@@ -127,96 +128,87 @@ GtRegionPlugin::GtRegionPlugin(const Config& config,
   }
 }
 
-GtRegionPlugin::~GtRegionPlugin() {}
+size_t getTotalMarkers(const GtRegionPlugin::Config& config) {
+  size_t total = 0;
+  total += config.fill_polygons ? 1 : 0;
+  total += config.draw_polygon_boundaries ? 1 : 0;
+  total += config.draw_polygon_vertices ? 1 : 0;
+  return total;
+}
 
-std::optional<size_t> GtRegionPlugin::getFillMarker(const std_msgs::Header& header,
-                                                    MarkerArray& msg) {
+Marker* setupFillMarker(const GtRegionPlugin::Config& config,
+                        const std_msgs::Header& header,
+                        MarkerArray& msg) {
   if (!config.fill_polygons) {
-    return std::nullopt;
+    return nullptr;
   }
 
-  if (fill_index_ < 0) {
-    fill_index_ = msg.markers.size();
-    auto& marker = msg.markers.emplace_back();
-    marker.header = header;
-    marker.ns = "gt_region_polygon_fill";
-    marker.id = 0;
-    marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.orientation.w = 1.0;
-    marker.color.a = config.mesh_alpha;
-    marker.scale.x = 1.0;
-    marker.scale.y = 1.0;
-    marker.scale.z = 1.0;
-    published_labels_[marker.ns] = marker.id;
-  }
-
-  return fill_index_;
+  auto& marker = msg.markers[0];
+  marker.header = header;
+  marker.ns = "gt_region_polygon_fill";
+  marker.id = 0;
+  marker.type = Marker::TRIANGLE_LIST;
+  marker.action = Marker::ADD;
+  marker.pose.orientation.w = 1.0;
+  marker.color.a = config.mesh_alpha;
+  marker.scale.x = 1.0;
+  marker.scale.y = 1.0;
+  marker.scale.z = 1.0;
+  return &marker;
 }
 
-std::optional<size_t> GtRegionPlugin::getBoundaryMarker(const std_msgs::Header& header,
-                                                        MarkerArray& msg) {
+Marker* setupBoundaryMarker(const GtRegionPlugin::Config& config,
+                            const std_msgs::Header& header,
+                            MarkerArray& msg) {
   if (!config.draw_polygon_boundaries) {
-    return std::nullopt;
+    return nullptr;
   }
 
-  if (boundary_index_ < 0) {
-    boundary_index_ = msg.markers.size();
-    auto& marker = msg.markers.emplace_back();
-    marker.header = header;
-    marker.ns = "gt_region_polygon_boundaries";
-    marker.id = 0;
-    marker.type = visualization_msgs::Marker::LINE_LIST;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.orientation.w = 1.0;
-    marker.scale.x = config.line_width;
-    published_labels_[marker.ns] = marker.id;
-  }
-
-  return boundary_index_;
+  const auto index = config.fill_polygons ? 0 : 1;
+  auto& marker = msg.markers[index];
+  marker.header = header;
+  marker.ns = "gt_region_polygon_boundaries";
+  marker.id = 0;
+  marker.type = Marker::LINE_LIST;
+  marker.action = Marker::ADD;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = config.line_width;
+  return &marker;
 }
 
-std::optional<size_t> GtRegionPlugin::getVertexMarker(const std_msgs::Header& header,
-                                                      MarkerArray& msg) {
+Marker* setupVertexMarker(const GtRegionPlugin::Config& config,
+                          const std_msgs::Header& header,
+                          MarkerArray& msg) {
   if (!config.draw_polygon_vertices) {
-    return std::nullopt;
+    return nullptr;
   }
 
-  if (vertex_index_ < 0) {
-    vertex_index_ = msg.markers.size();
-    auto& marker = msg.markers.emplace_back();
-    marker.header = header;
-    marker.ns = "gt_region_polygon_vertices";
-    marker.id = 0;
-    marker.type = visualization_msgs::Marker::SPHERE_LIST;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.orientation.w = 1.0;
-    marker.scale.x = config.line_width;
-    marker.scale.y = config.line_width;
-    marker.scale.z = config.line_width;
-    published_labels_[marker.ns] = marker.id;
-  }
-
-  return vertex_index_;
+  auto& marker = msg.markers[getTotalMarkers(config) - 1];
+  marker.header = header;
+  marker.ns = "gt_region_polygon_vertices";
+  marker.id = 0;
+  marker.type = Marker::SPHERE_LIST;
+  marker.action = Marker::ADD;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = config.line_width;
+  marker.scale.y = config.line_width;
+  marker.scale.z = config.line_width;
+  return &marker;
 }
 
-void GtRegionPlugin::addLabelMarker(const std_msgs::Header& header,
-                                    const Region& region,
-                                    MarkerArray& msg) {
+void addLabelMarker(const GtRegionPlugin::Config& config,
+                    const std_msgs::Header& header,
+                    const Region& region,
+                    MarkerArray& msg) {
   const std::string ns = "gt_region_labels";
-  auto iter = published_labels_.find(ns);
-  if (iter == published_labels_.end()) {
-    iter = published_labels_.emplace(ns, 0).first;
-  } else {
-    iter->second++;
-  }
 
+  size_t index = msg.markers.size();
   auto& marker = msg.markers.emplace_back();
   marker.header = header;
-  marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  marker.type = Marker::TEXT_VIEW_FACING;
   marker.ns = ns;
-  marker.id = iter->second;
-  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = index;
+  marker.action = Marker::ADD;
   marker.text = region.name;
   marker.scale.z = config.label_scale;
   marker.color.a = 1.0;
@@ -225,29 +217,26 @@ void GtRegionPlugin::addLabelMarker(const std_msgs::Header& header,
   marker.pose.position.z += config.label_offset;
 }
 
-void GtRegionPlugin::draw(const ConfigManager&,
-                          const std_msgs::Header& header,
-                          const DynamicSceneGraph&) {
-  if (!published_labels_.empty()) {
+void GtRegionPlugin::draw(const std_msgs::Header& header,
+                          const spark_dsg::DynamicSceneGraph&) {
+  if (published_) {
     return;
   }
 
-  fill_index_ = -1;
-  boundary_index_ = -1;
-  vertex_index_ = -1;
-  visualization_msgs::MarkerArray msg;
+  MarkerArray markers;
+  markers.markers.resize(getTotalMarkers(config));
+  auto fill_marker = setupFillMarker(config, header, markers);
+  auto boundary_marker = setupBoundaryMarker(config, header, markers);
+  auto vertex_marker = setupVertexMarker(config, header, markers);
 
   for (const auto& region : regions_) {
-    auto f_index = getFillMarker(header, msg);
-    if (f_index) {
+    if (fill_marker) {
       auto color = region.color;
       color.a = config.mesh_alpha;
-      makeFilledPolygon(region.points, color, msg.markers.at(*f_index));
+      makeFilledPolygon(region.points, color, *fill_marker);
     }
 
-    auto b_index = getBoundaryMarker(header, msg);
-    auto v_index = getVertexMarker(header, msg);
-    if (b_index) {
+    if (boundary_marker) {
       auto color = region.color;
       color.a = config.line_alpha;
       if (!config.use_boundary_color) {
@@ -256,31 +245,33 @@ void GtRegionPlugin::draw(const ConfigManager&,
         color.b = 0.0;
       }
 
-      makePolygonBoundary(region.points,
-                          color,
-                          msg.markers.at(*b_index),
-                          std::nullopt,
-                          v_index ? &msg.markers.at(*v_index) : nullptr);
+      makePolygonBoundary(
+          region.points, color, *boundary_marker, std::nullopt, vertex_marker);
     }
 
     if (config.draw_labels) {
-      addLabelMarker(header, region, msg);
+      addLabelMarker(config, header, region, markers);
     }
   }
 
-  pub_.publish(msg);
+  MarkerArray msg;
+  tracker_.add(markers, msg);
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
+  }
+  published_ = true;
 }
 
-void GtRegionPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
-  visualization_msgs::MarkerArray msg;
-  for (auto&& [ns, max_id] : published_labels_) {
-    for (size_t i = 0; i <= max_id; ++i) {
-      msg.markers.push_back(makeDeleteMarker(header, i, ns));
-    }
+void GtRegionPlugin::reset(const std_msgs::Header& header,
+                           const spark_dsg::DynamicSceneGraph&) {
+  MarkerArray msg;
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
   }
 
-  published_labels_.clear();
-  pub_.publish(msg);
+  published_ = false;
 }
 
 }  // namespace hydra

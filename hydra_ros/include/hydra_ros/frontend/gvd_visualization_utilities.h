@@ -36,32 +36,15 @@
 #include <hydra/places/compression_graph_extractor.h>
 #include <hydra/places/gvd_graph.h>
 #include <hydra/places/gvd_voxel.h>
-#include <hydra_ros/GvdVisualizerConfig.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
-#include "hydra_ros/visualizer/visualizer_types.h"
+#include "hydra_ros/ColormapConfig.h"
+#include "hydra_ros/GvdVisualizerConfig.h"
 
 namespace hydra {
 
-using hydra_ros::GvdVisualizerConfig;
 using CompressedNodeMap = std::unordered_map<uint64_t, places::CompressedNode>;
-
-class MarkerGroupPub {
- public:
-  using MarkerCallback = std::function<bool(visualization_msgs::Marker& marker)>;
-  using ArrayCallback = std::function<bool(visualization_msgs::MarkerArray& marker)>;
-
-  explicit MarkerGroupPub(const ros::NodeHandle& nh);
-
-  void publish(const std::string& name, const MarkerCallback& marker) const;
-
-  void publish(const std::string& name, const ArrayCallback& marker) const;
-
- private:
-  mutable ros::NodeHandle nh_;
-  mutable std::map<std::string, ros::Publisher> pubs_;
-};
 
 enum class GvdVisualizationMode : int {
   DEFAULT = hydra_ros::GvdVisualizer_DEFAULT,
@@ -71,53 +54,55 @@ enum class GvdVisualizationMode : int {
 
 GvdVisualizationMode getModeFromString(const std::string& mode);
 
-visualization_msgs::Marker makeGvdMarker(const GvdVisualizerConfig& config,
-                                         const ColormapConfig& colors,
-                                         const places::GvdLayer& layer);
+visualization_msgs::Marker makeEsdfMarker(const hydra_ros::GvdVisualizerConfig& config,
+                                          const hydra_ros::ColormapConfig& colors,
+                                          const places::GvdLayer& layer,
+                                          const std::string& ns);
+
+visualization_msgs::Marker makeGvdMarker(const hydra_ros::GvdVisualizerConfig& config,
+                                         const hydra_ros::ColormapConfig& colors,
+                                         const places::GvdLayer& layer,
+                                         const std::string& ns);
 
 visualization_msgs::Marker makeSurfaceVoxelMarker(
-    const GvdVisualizerConfig& config,
-    const ColormapConfig& colors,
-    const places::GvdLayer& layer);
+    const hydra_ros::GvdVisualizerConfig& config,
+    const hydra_ros::ColormapConfig& colors,
+    const places::GvdLayer& layer,
+    const std::string& ns);
 
-visualization_msgs::Marker makeErrorMarker(const GvdVisualizerConfig& config,
-                                           const ColormapConfig& colors,
+visualization_msgs::Marker makeErrorMarker(const hydra_ros::GvdVisualizerConfig& config,
+                                           const hydra_ros::ColormapConfig& colors,
                                            const places::GvdLayer& lhs,
                                            const places::GvdLayer& rhs,
                                            double threshold);
 
-visualization_msgs::Marker makeEsdfMarker(
-    const GvdVisualizerConfig& config,
-    const ColormapConfig& colors,
-    const places::GvdLayer& layer);
+visualization_msgs::Marker makeBlocksMarker(const TsdfLayer& layer,
+                                            double scale,
+                                            const std::string& ns);
 
-visualization_msgs::Marker makeBlocksMarker(
-    const TsdfLayer& layer, double scale);
+visualization_msgs::Marker makeBlocksMarker(const places::GvdLayer& layer,
+                                            double scale,
+                                            const std::string& ns);
 
-visualization_msgs::Marker makeBlocksMarker(
-    const places::GvdLayer& layer, double scale);
-
-visualization_msgs::Marker makeMeshBlocksMarker(const MeshLayer& layer,
-                                                double scale);
-
-visualization_msgs::MarkerArray makeGvdGraphMarkers(const places::GvdGraph& graph,
-                                                    const GvdVisualizerConfig& config,
-                                                    const ColormapConfig& colors,
-                                                    const std::string& ns,
-                                                    size_t marker_id = 0);
+visualization_msgs::MarkerArray makeGvdGraphMarkers(
+    const places::GvdGraph& graph,
+    const hydra_ros::GvdVisualizerConfig& config,
+    const hydra_ros::ColormapConfig& colors,
+    const std::string& ns,
+    size_t marker_id = 0);
 
 visualization_msgs::MarkerArray showGvdClusters(
     const places::GvdGraph& graph,
     const CompressedNodeMap& clusters,
     const std::unordered_map<uint64_t, uint64_t>& remapping,
-    const GvdVisualizerConfig& config,
-    const ColormapConfig& colors,
+    const hydra_ros::GvdVisualizerConfig& config,
+    const hydra_ros::ColormapConfig& colors,
     const std::string& ns,
     size_t marker_id = 0);
 
 visualization_msgs::MarkerArray makePlaceSpheres(const std_msgs::Header& header,
                                                  const SceneGraphLayer& layer,
                                                  const std::string& ns,
-                                                 double alpha = 0.1);
+                                                 double alpha);
 
 }  // namespace hydra

@@ -32,83 +32,97 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <ros/ros.h>
-#include <spark_dsg/dynamic_scene_graph.h>
-#include <visualization_msgs/MarkerArray.h>
-
-#include <string>
-#include <vector>
-
 #include "hydra_ros/visualizer/marker_tracker.h"
-#include "hydra_ros/visualizer/visualizer_types.h"
 
 namespace hydra {
-
-class DsgVisualizerPlugin;
 
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
-class DynamicSceneGraphVisualizer {
- public:
-  struct Config {
-    std::string visualizer_frame = "map";
-  } const config;
+namespace {
 
-  explicit DynamicSceneGraphVisualizer(const ros::NodeHandle& nh);
+inline Marker makeDeleteMarker(const std_msgs::Header& header,
+                               size_t id,
+                               const std::string& ns) {
+  Marker marker;
+  marker.header = header;
+  marker.action = Marker::DELETE;
+  marker.id = id;
+  marker.ns = ns;
+  return marker;
+}
 
-  virtual ~DynamicSceneGraphVisualizer() = default;
+inline bool isValid(const Marker& marker) {
+  if (marker.type != Marker::LINE_STRIP && marker.type != Marker::LINE_LIST &&
+      marker.type != Marker::SPHERE_LIST && marker.type != Marker::POINTS &&
+      marker.type != Marker::TRIANGLE_LIST) {
+    return true;
+  }
 
-  void reset();
+  return !marker.points.empty();
+}
 
-  bool redraw();
+}  // namespace
 
-  void start(bool periodic_redraw = false);
+void MarkerTracker::add(const Marker& marker, MarkerArray& msg) {
+  if (!isValid(marker)) {
+    remove(marker.header, marker.ns, marker.id, msg);
+    return;
+  }
 
-  void setGraph(const spark_dsg::DynamicSceneGraph::Ptr& scene_graph,
-                bool need_reset = true);
+  msg.markers.push_back(marker);
 
-  bool graphIsSet() const;
+  auto iter = published_markers_.find(marker.ns);
+  if (iter == published_markers_.end()) {
+    iter = published_markers_.emplace(marker.ns, std::set<size_t>()).first;
+  }
 
-  spark_dsg::DynamicSceneGraph::Ptr getGraph();
+  iter->second.insert(marker.id);
+}
 
-  void addPlugin(const std::shared_ptr<DsgVisualizerPlugin>& plugin);
+void MarkerTracker::add(const MarkerArray& markers, MarkerArray& msg) {
+  for (const auto& marker : markers.markers) {
+    add(marker, msg);
+  }
+}
 
-  void clearPlugins();
+void MarkerTracker::remove(const std_msgs::Header& header,
+                           const std::string& ns,
+                           size_t marker_id,
+                           MarkerArray& msg) {
+  auto iter = published_markers_.find(ns);
+  if (iter == published_markers_.end()) {
+    return;
+  }
 
-  void setNeedRedraw();
+  Marker delete_marker = makeDeleteMarker(header, marker_id, ns);
+  msg.markers.push_back(delete_marker);
 
-  void setGraphUpdated();
+  iter->second.erase(marker_id);
+  if (iter->second.empty()) {
+    published_markers_.erase(iter);
+  }
+}
 
- protected:
-  void displayLoop(const ros::WallTimerEvent&);
+void MarkerTracker::clearPrevious(const std_msgs::Header& header, MarkerArray& msg) {
+  std::map<std::string, std::set<size_t>> previous = published_markers_;
+  for (const auto& marker : msg.markers) {
+    auto iter = previous.find(marker.ns);
+    if (iter == previous.end()) {
+      continue;
+    }
 
-  virtual void redrawImpl(const std_msgs::Header& header);
+    iter->second.erase(marker.id);
+    if (iter->second.empty()) {
+      previous.erase(iter);
+    }
+  }
 
-  virtual void drawLayer(const std_msgs::Header& header,
-                         const visualizer::StaticLayerInfo& info,
-                         const spark_dsg::SceneGraphLayer& layer,
-                         MarkerArray& msg);
-
-  virtual void drawDynamicLayer(const std_msgs::Header& header,
-                                const visualizer::DynamicLayerInfo& info,
-                                const spark_dsg::DynamicSceneGraphLayer& layer,
-                                MarkerArray& msg);
-
- protected:
-  ros::NodeHandle nh_;
-  ros::WallTimer visualizer_loop_timer_;
-
-  bool need_redraw_;
-  bool periodic_redraw_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
-
-  ros::Publisher pub_;
-  MarkerTracker tracker_;
-  std::list<std::shared_ptr<DsgVisualizerPlugin>> plugins_;
-};
-
-void declare_config(DynamicSceneGraphVisualizer::Config& config);
+  for (auto& [ns, prev_ids] : previous) {
+    for (const auto id : prev_ids) {
+      remove(header, ns, id, msg);
+    }
+  }
+}
 
 }  // namespace hydra

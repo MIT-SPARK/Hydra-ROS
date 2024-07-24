@@ -34,56 +34,139 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/visualizer/config_manager.h"
 
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/parsing/yaml.h>
 #include <dynamic_reconfigure/server.h>
 #include <glog/logging.h>
 
-namespace hydra {
+namespace hydra::visualizer {
 
-ConfigManager::ConfigManager(const ros::NodeHandle& nh) : nh_(nh) {}
+using hydra_ros::ColormapConfig;
+using hydra_ros::DynamicLayerVisualizerConfig;
+using hydra_ros::LayerVisualizerConfig;
+using hydra_ros::VisualizerConfig;
+using spark_dsg::Color;
+using spark_dsg::DynamicSceneGraph;
+using spark_dsg::LayerId;
+using spark_dsg::SceneGraphNode;
+
+const std::string& getColorMode(const hydra_ros::LayerVisualizerConfig& config) {
+  return config.marker_color_mode;
+}
+
+const std::string& getColorMode(const hydra_ros::DynamicLayerVisualizerConfig& config) {
+  return config.node_color_mode;
+}
+
+ColorManager::ColorManager(const ros::NodeHandle& nh)
+    : has_change_(false), nh_(nh, "color_settings") {
+  // NOTE(nathan) this is ugly but probably the easiest way to parse the current
+  // settings from ros
+  std::stringstream ss;
+  ss << config::internal::rosToYaml(nh_);
+  curr_contents_ = ss.str();
+  sub_ = nh_.subscribe("", 1, &ColorManager::callback, this);
+}
+
+ColorManager::ColorFunc ColorManager::get(const DynamicSceneGraph& graph) const {
+  if (!adaptor_) {
+    return DefaultNodeColorFunction();
+  }
+
+  adaptor_->setGraph(graph);
+  return [this, &graph](const SceneGraphNode& node) {
+    return adaptor_->getColor(graph, node);
+  };
+}
+
+void ColorManager::set(const std::string& mode) {
+  if (mode_ != mode) {
+    mode_ = mode;
+    setAdaptor();
+  }
+}
+
+void ColorManager::setAdaptor() {
+  has_change_ = true;
+  try {
+    auto node = YAML::Load(curr_contents_);
+    node["type"] = mode_;
+    VLOG(5) << "Attempting creation from " << node;
+    adaptor_ = config::createFromYaml<GraphColorAdaptor>(node);
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "Failed to parse adaptor settings from: " << curr_contents_;
+    adaptor_.reset();
+  }
+}
+
+bool ColorManager::hasChange() const { return has_change_; }
+
+void ColorManager::clearChangeFlag() { has_change_ = false; }
+
+void ColorManager::callback(const std_msgs::String& msg) {
+  curr_contents_ = msg.data;
+  setAdaptor();
+}
+
+ConfigManager::ConfigManager() : nh_("~") {}
 
 ConfigManager::~ConfigManager() {
   visualizer_config_.reset();
-  layer_configs_.clear();
-  dynamic_layer_configs_.clear();
-  colormaps_.clear();
+  colors_.clear();
+  layers_.clear();
+  dynamic_layers_.clear();
+}
+
+ConfigManager& ConfigManager::instance() {
+  if (!s_instance_) {
+    s_instance_.reset(new ConfigManager());
+  }
+
+  return *s_instance_;
+}
+
+void ConfigManager::init(const ros::NodeHandle& nh) {
+  instance().nh_ = nh;
+  reset();
 }
 
 void ConfigManager::reset() {
-  visualizer_config_ = std::make_shared<ConfigWrapper<VisualizerConfig>>(nh_, "config");
-  layer_configs_.clear();
-  dynamic_layer_configs_.clear();
-  colormaps_.clear();
+  auto& curr = instance();
+  curr.visualizer_config_.reset();
+  curr.colors_.clear();
+  curr.layers_.clear();
+  curr.dynamic_layers_.clear();
 }
 
 void ConfigManager::reset(const DynamicSceneGraph& graph) {
   reset();
+
+  // initialize the global config
+  instance().getVisualizerConfig();
+
   for (const auto layer : graph.layer_ids) {
-    const auto ns = "config/layer" + std::to_string(layer);
-    layer_configs_.emplace(layer,
-                           std::make_shared<ConfigWrapper<LayerConfig>>(nh_, ns));
+    // this initializes the underlying config even if we don't use the return
+    instance().getLayerConfig(layer);
   }
 
-  for (const auto& id_layer_pair : graph.dynamicLayers()) {
-    const auto ns = "config/dynamic_layers/" + std::to_string(id_layer_pair.first);
-    dynamic_layer_configs_.emplace(
-        id_layer_pair.first,
-        std::make_shared<ConfigWrapper<DynamicLayerConfig>>(nh_, ns));
+  for (const auto& [layer_id, layers] : graph.dynamicLayers()) {
+    // this initializes the underlying config even if we don't use the return
+    instance().getDynamicLayerConfig(layer_id);
   }
 }
 
 bool ConfigManager::hasChange() const {
   bool has_changed = visualizer_config_->hasChange();
-
-  for (const auto& id_config_pair : layer_configs_) {
-    has_changed |= id_config_pair.second->hasChange();
-  }
-
-  for (const auto& id_config_pair : dynamic_layer_configs_) {
-    has_changed |= id_config_pair.second->hasChange();
-  }
-
-  for (const auto& name_config_pair : colormaps_) {
+  for (const auto& name_config_pair : colors_) {
     has_changed |= name_config_pair.second->hasChange();
+  }
+
+  for (const auto& id_config_pair : layers_) {
+    has_changed |= id_config_pair.second.hasChange();
+  }
+
+  for (const auto& id_config_pair : dynamic_layers_) {
+    has_changed |= id_config_pair.second.hasChange();
   }
 
   return has_changed;
@@ -91,15 +174,15 @@ bool ConfigManager::hasChange() const {
 
 void ConfigManager::clearChangeFlags() {
   visualizer_config_->clearChangeFlag();
-  for (auto& id_config_pair : layer_configs_) {
-    id_config_pair.second->clearChangeFlag();
+  for (auto& id_config_pair : layers_) {
+    id_config_pair.second.clearChangeFlag();
   }
 
-  for (auto& id_config_pair : dynamic_layer_configs_) {
-    id_config_pair.second->clearChangeFlag();
+  for (auto& id_config_pair : dynamic_layers_) {
+    id_config_pair.second.clearChangeFlag();
   }
 
-  for (auto& name_config_pair : colormaps_) {
+  for (auto& name_config_pair : colors_) {
     name_config_pair.second->clearChangeFlag();
   }
 }
@@ -113,41 +196,35 @@ const VisualizerConfig& ConfigManager::getVisualizerConfig() const {
   return visualizer_config_->get();
 }
 
-const LayerConfig* ConfigManager::getLayerConfig(LayerId layer) const {
-  auto iter = layer_configs_.find(layer);
-  if (iter == layer_configs_.end()) {
-    const auto ns = "config/layer" + std::to_string(layer);
-    iter = layer_configs_
-               .emplace(layer, std::make_shared<ConfigWrapper<LayerConfig>>(nh_, ns))
-               .first;
+const ColormapConfig& ConfigManager::getColormapConfig(const std::string& name) const {
+  auto iter = colors_.find(name);
+  if (iter == colors_.end()) {
+    const std::string ns = "config/colors/" + name;
+    auto wrapper = std::make_shared<ConfigWrapper<ColormapConfig>>(nh_, ns);
+    iter = colors_.emplace(name, wrapper).first;
   }
 
-  return &(iter->second->get());
+  return iter->second->get();
+}
+
+const StaticLayerConfig& ConfigManager::getLayerConfig(LayerId layer) const {
+  auto iter = layers_.find(layer);
+  if (iter == layers_.end()) {
+    const auto ns = "config/layer" + std::to_string(layer);
+    iter = layers_.emplace(layer, StaticLayerConfig(nh_, ns)).first;
+  }
+
+  return iter->second;
 }
 
 const DynamicLayerConfig& ConfigManager::getDynamicLayerConfig(LayerId layer) const {
-  auto iter = dynamic_layer_configs_.find(layer);
-  if (iter == dynamic_layer_configs_.end()) {
+  auto iter = dynamic_layers_.find(layer);
+  if (iter == dynamic_layers_.end()) {
     const std::string ns = "config/dynamic_layer/layer" + std::to_string(layer);
-    iter = dynamic_layer_configs_
-               .emplace(layer,
-                        std::make_shared<ConfigWrapper<DynamicLayerConfig>>(nh_, ns))
-               .first;
+    iter = dynamic_layers_.emplace(layer, DynamicLayerConfig(nh_, ns)).first;
   }
 
-  return iter->second->get();
+  return iter->second;
 }
 
-const ColormapConfig& ConfigManager::getColormapConfig(const std::string& name) const {
-  auto iter = colormaps_.find(name);
-  if (iter == colormaps_.end()) {
-    const std::string ns = "config/" + name;
-    iter = colormaps_
-               .emplace(name, std::make_shared<ConfigWrapper<ColormapConfig>>(nh_, ns))
-               .first;
-  }
-
-  return iter->second->get();
-}
-
-}  // namespace hydra
+}  // namespace hydra::visualizer

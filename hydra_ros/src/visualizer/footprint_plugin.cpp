@@ -37,24 +37,31 @@
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
+#include <spark_dsg/node_attributes.h>
 #include <tf2_eigen/tf2_eigen.h>
-#include <visualization_msgs/MarkerArray.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
 #include "hydra_ros/visualizer/polygon_utilities.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
 
+using spark_dsg::DsgLayers;
+using spark_dsg::DynamicSceneGraph;
+using spark_dsg::LayerId;
+using spark_dsg::PlaceNodeAttributes;
+using spark_dsg::SemanticNodeAttributes;
+using visualization_msgs::Marker;
+using visualization_msgs::MarkerArray;
+
 struct LayerIdConversion {
   static std::string toIntermediate(const LayerId& layer_id, std::string&) {
-    return spark_dsg::DsgLayers::LayerIdToString(layer_id);
+    return DsgLayers::LayerIdToString(layer_id);
   }
 
   static void fromIntermediate(const std::string& layer_name,
                                LayerId& layer_id,
                                std::string&) {
-    layer_id = spark_dsg::DsgLayers::StringToLayerId(layer_name);
+    layer_id = DsgLayers::StringToLayerId(layer_name);
   }
 };
 
@@ -80,51 +87,50 @@ FootprintPlugin::FootprintPlugin(const Config& config,
                                  const std::string& name)
     : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
   // namespacing gives us a reasonable topic
-  pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
+  pub_ = nh_.advertise<MarkerArray>("", 1, true);
 }
 
 FootprintPlugin::~FootprintPlugin() {}
 
-void FootprintPlugin::draw(const ConfigManager&,
-                           const std_msgs::Header& header,
+void FootprintPlugin::draw(const std_msgs::Header& header,
                            const DynamicSceneGraph& graph) {
-  visualization_msgs::MarkerArray msg;
-  msg.markers.resize(config.draw_boundaries ? (config.draw_boundary_vertices ? 3 : 2)
-                                            : 1);
+  MarkerArray markers;
+  markers.markers.resize(
+      config.draw_boundaries ? (config.draw_boundary_vertices ? 3 : 2) : 1);
 
   std::string ns = "layer_" + std::to_string(config.layer_id) + "_footprints";
-  msg.markers[0].header = header;
-  msg.markers[0].ns = ns + "_polygons";
-  msg.markers[0].id = 0;
-  msg.markers[0].type = visualization_msgs::Marker::TRIANGLE_LIST;
-  msg.markers[0].action = visualization_msgs::Marker::ADD;
-  msg.markers[0].pose.orientation.w = 1.0;
-  msg.markers[0].color.a = config.mesh_alpha;
-  msg.markers[0].scale.x = 1.0;
-  msg.markers[0].scale.y = 1.0;
-  msg.markers[0].scale.z = 1.0;
+  markers.markers[0].header = header;
+  markers.markers[0].ns = ns + "_polygons";
+  markers.markers[0].id = 0;
+  markers.markers[0].type = Marker::TRIANGLE_LIST;
+  markers.markers[0].action = Marker::ADD;
+  markers.markers[0].pose.orientation.w = 1.0;
+  markers.markers[0].color.a = config.mesh_alpha;
+  markers.markers[0].scale.x = 1.0;
+  markers.markers[0].scale.y = 1.0;
+  markers.markers[0].scale.z = 1.0;
 
   if (config.draw_boundaries) {
-    msg.markers[1].header = header;
-    msg.markers[1].ns = ns + "_boundaries";
-    msg.markers[1].id = 0;
-    msg.markers[1].type = visualization_msgs::Marker::LINE_LIST;
-    msg.markers[1].action = visualization_msgs::Marker::ADD;
-    msg.markers[1].pose.orientation.w = 1.0;
-    msg.markers[1].scale.x = config.line_width;
-    msg.markers[1].scale.y = 0.0;
-    msg.markers[1].scale.z = 0.0;
+    markers.markers[1].header = header;
+    markers.markers[1].ns = ns + "_boundaries";
+    markers.markers[1].id = 0;
+    markers.markers[1].type = Marker::LINE_LIST;
+    markers.markers[1].action = Marker::ADD;
+    markers.markers[1].pose.orientation.w = 1.0;
+    markers.markers[1].scale.x = config.line_width;
+    markers.markers[1].scale.y = 0.0;
+    markers.markers[1].scale.z = 0.0;
 
     if (config.draw_boundary_vertices) {
-      msg.markers[2].header = header;
-      msg.markers[2].ns = ns + "_vertices";
-      msg.markers[2].id = 0;
-      msg.markers[2].type = visualization_msgs::Marker::SPHERE_LIST;
-      msg.markers[2].action = visualization_msgs::Marker::ADD;
-      msg.markers[2].pose.orientation.w = 1.0;
-      msg.markers[2].scale.x = config.line_width;
-      msg.markers[2].scale.y = config.line_width;
-      msg.markers[2].scale.z = config.line_width;
+      markers.markers[2].header = header;
+      markers.markers[2].ns = ns + "_vertices";
+      markers.markers[2].id = 0;
+      markers.markers[2].type = Marker::SPHERE_LIST;
+      markers.markers[2].action = Marker::ADD;
+      markers.markers[2].pose.orientation.w = 1.0;
+      markers.markers[2].scale.x = config.line_width;
+      markers.markers[2].scale.y = config.line_width;
+      markers.markers[2].scale.z = config.line_width;
     }
   }
 
@@ -133,7 +139,7 @@ void FootprintPlugin::draw(const ConfigManager&,
     const auto mean_z = getMeanNeighborHeight(layer, *node);
     const auto& attrs = node->attributes<SemanticNodeAttributes>();
 
-    auto color = dsg_utils::makeColorMsg(attrs.color);
+    auto color = visualizer::makeColorMsg(attrs.color);
     color.a = config.line_alpha;
 
     double radius = config.footprint_radius;
@@ -145,29 +151,31 @@ void FootprintPlugin::draw(const ConfigManager&,
 
     auto mesh_color = color;
     mesh_color.a = config.mesh_alpha;
-    makeFilledPolygon(footprint, mesh_color, msg.markers[0], mean_z);
+    makeFilledPolygon(footprint, mesh_color, markers.markers[0], mean_z);
     if (config.draw_boundaries) {
-      makePolygonBoundary(footprint,
-                          color,
-                          msg.markers[1],
-                          mean_z,
-                          config.draw_boundary_vertices ? &msg.markers[2] : nullptr);
+      makePolygonBoundary(
+          footprint,
+          color,
+          markers.markers[1],
+          mean_z,
+          config.draw_boundary_vertices ? &markers.markers[2] : nullptr);
     }
   }
 
-  for (const auto& marker : msg.markers) {
-    namespaces_.insert(marker.ns);
+  MarkerArray msg;
+  tracker_.add(markers, msg);
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
   }
-
-  pub_.publish(msg);
 }
 
 void FootprintPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
-  visualization_msgs::MarkerArray msg;
-  for (const auto& ns : namespaces_) {
-    msg.markers.push_back(makeDeleteMarker(header, 0, ns));
+  MarkerArray msg;
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
   }
-  namespaces_.clear();
 
   pub_.publish(msg);
 }

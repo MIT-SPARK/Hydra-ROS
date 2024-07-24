@@ -37,6 +37,7 @@
 #include <std_srvs/SetBool.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/marker_tracker.h"
 
 namespace hydra {
 
@@ -58,18 +59,18 @@ class RegionPlugin : public DsgVisualizerPlugin {
                const ros::NodeHandle& nh,
                const std::string& name);
 
-  virtual ~RegionPlugin();
+  virtual ~RegionPlugin() = default;
 
-  void draw(const ConfigManager&,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  void draw(const std_msgs::Header& header,
+            const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header,
+             const spark_dsg::DynamicSceneGraph& graph) override;
 
  protected:
   ros::Publisher pub_;
+  MarkerTracker tracker_;
   std::unique_ptr<SemanticColorMap> colormap_;
-  std::set<int> published_labels_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<DsgVisualizerPlugin,

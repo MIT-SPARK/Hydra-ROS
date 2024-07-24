@@ -40,9 +40,9 @@
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/compression_graph_extractor.h>
-#include <hydra/utils/timing_utilities.h>
 
-#include "hydra_ros/visualizer/gvd_visualization_utilities.h"
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
+#include "hydra_ros/visualizer/colormap_utilities.h"
 #include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
@@ -52,7 +52,6 @@ using places::GraphExtractorInterface;
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
-using timing::ScopedTimer;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
@@ -60,28 +59,19 @@ void declare_config(PlacesVisualizer::Config& config) {
   using namespace config;
   name("PlacesVisualizerConfig");
   field(config.ns, "ns");
-  field(config.place_marker_ns, "place_marker_ns");
-  field(config.show_block_outlines, "show_block_outlines");
-  field(config.use_gvd_block_outlines, "use_gvd_block_outlines");
-  field(config.outline_scale, "outline_scale");
 }
 
 PlacesVisualizer::PlacesVisualizer(const Config& config)
-    : config_(config),
+    : config(config),
       nh_(config.ns),
-      previous_spheres_(0),
-      published_gvd_graph_(false) {
-  pubs_.reset(new MarkerGroupPub(nh_));
-  config_.graph.layer_z_step = 0;
-
-  setupConfigServers();
-}
-
-PlacesVisualizer::~PlacesVisualizer() {}
+      pubs_(nh_),
+      colormap_(nh_, "colormap"),
+      gvd_config_(nh_, "gvd"),
+      layer_config_(nh_, "graph") {}
 
 std::string PlacesVisualizer::printInfo() const {
   std::stringstream ss;
-  ss << std::endl << config::toString(config_);
+  ss << std::endl << config::toString(config);
   return ss.str();
 }
 
@@ -89,314 +79,92 @@ void PlacesVisualizer::call(uint64_t timestamp_ns,
                             const Eigen::Isometry3f&,
                             const GvdLayer& gvd,
                             const GraphExtractorInterface* extractor) const {
-  ScopedTimer timer("topology/topology_visualizer", timestamp_ns);
-
   std_msgs::Header header;
   header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
   visualizeGvd(header, gvd);
-
   if (extractor) {
-    visualizeGraph(header, extractor->getGraph());
-    visualizeGvdGraph(header, extractor->getGvdGraph());
+    visualizeExtractor(header, *extractor);
   }
-
-  if (config_.show_block_outlines) {
-    visualizeBlocks(header, gvd);
-  }
-
-  const auto compression = dynamic_cast<const CompressionGraphExtractor*>(extractor);
-  if (!compression) {
-    return;
-  }
-
-  MarkerArray markers;
-  pubs_->publish("gvd_cluster_viz", [&](MarkerArray& markers) {
-    const std::string ns = "gvd_cluster_graph";
-    if (compression->getGvdGraph().empty() && published_gvd_clusters_) {
-      published_gvd_graph_ = false;
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_nodes"));
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_edges"));
-      return true;
-    }
-
-    markers = showGvdClusters(compression->getGvdGraph(),
-                              compression->getCompressedNodeInfo(),
-                              compression->getCompressedRemapping(),
-                              config_.gvd,
-                              config_.colormap,
-                              ns);
-
-    if (markers.markers.empty()) {
-      return false;
-    }
-
-    markers.markers.at(0).header = header;
-    markers.markers.at(1).header = header;
-    published_gvd_clusters_ = true;
-    return true;
-  });
-}
-
-void PlacesVisualizer::visualizeError(uint64_t timestamp_ns,
-                                      const GvdLayer& lhs,
-                                      const GvdLayer& rhs,
-                                      double threshold) {
-  pubs_->publish("error_viz", [&](Marker& msg) {
-    msg = makeErrorMarker(config_.gvd, config_.colormap, lhs, rhs, threshold);
-    msg.header.frame_id = GlobalInfo::instance().getFrames().map;
-    msg.header.stamp.fromNSec(timestamp_ns);
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "no voxels with error above threshold";
-      return false;
-    }
-  });
-}
-
-void PlacesVisualizer::visualizeGraph(const std_msgs::Header& header,
-                                      const SceneGraphLayer& graph) const {
-  if (graph.nodes().empty()) {
-    LOG(INFO) << "visualizing empty graph!";
-    return;
-  }
-
-  pubs_->publish("graph_viz", [&](MarkerArray& markers) {
-    const std::string node_ns = config_.place_marker_ns + "_nodes";
-    Marker node_marker = makeCentroidMarkers(
-        header,
-        config_.graph_layer,
-        graph,
-        config_.graph,
-        node_ns,
-        [&](const SceneGraphNode& node) {
-          return getDistanceColor(config_.graph,
-                                  config_.colormap,
-                                  node.attributes<PlaceNodeAttributes>().distance);
-        });
-    markers.markers.push_back(node_marker);
-
-    if (!graph.edges().empty()) {
-      Marker edge_marker = makeLayerEdgeMarkers(header,
-                                                config_.graph_layer,
-                                                graph,
-                                                config_.graph,
-                                                Color(),
-                                                config_.place_marker_ns + "_edges");
-      markers.markers.push_back(edge_marker);
-    }
-
-    return true;
-  });
-
-  publishFreespace(header, graph);
-  publishGraphLabels(header, graph);
-}
-
-void PlacesVisualizer::visualizeGvdGraph(const std_msgs::Header& header,
-                                         const GvdGraph& graph) const {
-  pubs_->publish("gvd_graph_viz", [&](MarkerArray& markers) {
-    const std::string ns = config_.place_marker_ns + "_gvd_graph";
-    if (graph.empty() && published_gvd_graph_) {
-      published_gvd_graph_ = false;
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_nodes"));
-      markers.markers.push_back(makeDeleteMarker(header, 0, ns + "_edges"));
-      return true;
-    }
-
-    markers = makeGvdGraphMarkers(graph, config_.gvd, config_.colormap, ns);
-    if (markers.markers.empty()) {
-      return false;
-    }
-
-    markers.markers.at(0).header = header;
-    markers.markers.at(1).header = header;
-    published_gvd_graph_ = true;
-    return true;
-  });
 }
 
 void PlacesVisualizer::visualizeGvd(const std_msgs::Header& header,
                                     const GvdLayer& gvd) const {
-  pubs_->publish("esdf_viz", [&](Marker& msg) {
-    msg = makeEsdfMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty ESDF slice";
-      return false;
-    }
+  pubs_.publish("esdf_viz", header, [&]() -> Marker {
+    return makeEsdfMarker(gvd_config_.get(), colormap_.get(), gvd, "esdf");
   });
 
-  pubs_->publish("gvd_viz", [&](Marker& msg) {
-    msg = makeGvdMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty GVD slice";
-      return false;
-    }
+  pubs_.publish("gvd_viz", header, [&]() -> Marker {
+    return makeGvdMarker(gvd_config_.get(), colormap_.get(), gvd, "gvd");
   });
 
-  pubs_->publish("surface_viz", [&](Marker& msg) {
-    msg = makeSurfaceVoxelMarker(config_.gvd, config_.colormap, gvd);
-    msg.header = header;
-    msg.ns = "gvd_visualizer";
+  pubs_.publish("surface_viz", header, [&]() -> Marker {
+    return makeSurfaceVoxelMarker(gvd_config_.get(), colormap_.get(), gvd, "surface");
+  });
 
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty surface slice";
-      return false;
-    }
+  pubs_.publish("voxel_block_viz", header, [&]() -> Marker {
+    return makeBlocksMarker(gvd, gvd_config_.get().block_outline_scale, "blocks");
   });
 }
 
-void PlacesVisualizer::visualizeBlocks(const std_msgs::Header& header,
-                                       const GvdLayer& gvd) const {
-  pubs_->publish("voxel_block_viz", [&](Marker& msg) {
-    msg = makeBlocksMarker(gvd, config_.outline_scale);
-    msg.header = header;
-    msg.ns = "topology_server_blocks";
-    return true;
-  });
-}
+void PlacesVisualizer::visualizeExtractor(
+    const std_msgs::Header& header, const GraphExtractorInterface& extractor) const {
+  const auto& graph = extractor.getGraph();
+  pubs_.publish("graph_viz", header, [&]() -> MarkerArray {
+    const auto d_min = gvd_config_.get().gvd_min_distance;
+    const auto d_max = gvd_config_.get().gvd_max_distance;
+    const auto& cmap = colormap_.get();
 
-void PlacesVisualizer::publishFreespace(const std_msgs::Header& header,
-                                        const SceneGraphLayer& graph) const {
-  const std::string label_ns = config_.place_marker_ns + "_freespace";
+    visualizer::StaticLayerInfo info{hydra_ros::VisualizerConfig(),
+                                     layer_config_.get()};
+    info.graph.collapse_layers = true;
+    info.graph.layer_z_step = 0.0;
+    info.node_color = [&](const SceneGraphNode& node) {
+      const auto dist = node.attributes<PlaceNodeAttributes>().distance;
+      return visualizer::interpolateColorMap(cmap, dist, d_min, d_max);
+    };
+    info.edge_color = [&](const auto&, const auto&, const auto& edge, bool) {
+      const auto dist = edge.attributes().weight;
+      return visualizer::interpolateColorMap(cmap, dist, d_min, d_max);
+    };
 
-  MarkerArray spheres = makePlaceSpheres(header, graph, label_ns, 0.15);
-
-  MarkerArray delete_markers;
-  for (size_t id = 0; id < previous_spheres_; ++id) {
-    Marker delete_label;
-    delete_label.action = Marker::DELETE;
-    delete_label.id = id;
-    delete_label.ns = label_ns;
-    delete_markers.markers.push_back(delete_label);
-  }
-  previous_spheres_ = spheres.markers.size();
-
-  // there's not really a clean way to delay computation on either of these markers, so
-  // we just assign the messages in the callbacks
-  pubs_->publish("freespace_viz", [&](MarkerArray& msg) {
-    msg = delete_markers;
-    return true;
-  });
-  pubs_->publish("freespace_viz", [&](MarkerArray& msg) {
-    msg = spheres;
-    return true;
-  });
-
-  pubs_->publish("freespace_graph_viz", [&](MarkerArray& markers) {
-    const std::string node_ns = config_.place_marker_ns + "_freespace_nodes";
-    auto freespace_conf = config_.graph_layer;
-    freespace_conf.use_sphere_marker = false;
-    freespace_conf.marker_scale = 0.08;
-    freespace_conf.marker_alpha = 0.5;
-    Marker node_marker = makeCentroidMarkers(
-        header, freespace_conf, graph, config_.graph, node_ns, [](const auto&) {
-          return Color();
-        });
-    markers.markers.push_back(node_marker);
-
-    if (!graph.edges().empty()) {
-      Marker edge_marker =
-          makeLayerEdgeMarkers(header,
-                               config_.graph_layer,
-                               graph,
-                               config_.graph,
-                               Color(),
-                               config_.place_marker_ns + "_freespace_edges");
-      markers.markers.push_back(edge_marker);
+    MarkerArray msg;
+    msg.markers.push_back(makeLayerNodeMarkers(header, info, graph, "places_nodes"));
+    msg.markers.push_back(makeLayerEdgeMarkers(header, info, graph, "places_edges"));
+    if (info.layer.use_label) {
+      const auto labels = makeLayerLabelMarkers(header, info, graph, "place_labels");
+      msg.markers.insert(
+          msg.markers.end(), labels.markers.begin(), labels.markers.end());
     }
 
-    return true;
+    return msg;
   });
-}
 
-void PlacesVisualizer::publishGraphLabels(const std_msgs::Header& header,
-                                          const SceneGraphLayer& graph) const {
-  if (!config_.graph_layer.use_label) {
+  pubs_.publish("freespace_viz", header, [&]() -> MarkerArray {
+    // TODO(nathan) maybe add graph back
+    return makePlaceSpheres(
+        header, graph, "freespace", gvd_config_.get().freespace_sphere_alpha);
+  });
+
+  pubs_.publish("gvd_graph_viz", header, [&]() -> MarkerArray {
+    return makeGvdGraphMarkers(
+        extractor.getGvdGraph(), gvd_config_.get(), colormap_.get(), "gvd_graph");
+  });
+
+  const auto compression = dynamic_cast<const CompressionGraphExtractor*>(&extractor);
+  if (!compression) {
     return;
   }
 
-  const std::string label_ns = config_.place_marker_ns + "_labels";
-
-  MarkerArray labels;
-  for (const auto& id_node_pair : graph.nodes()) {
-    const SceneGraphNode& node = *id_node_pair.second;
-    Marker label =
-        makeTextMarker(header, config_.graph_layer, node, config_.graph, label_ns);
-    labels.markers.push_back(label);
-  }
-
-  std::set<int> current_ids;
-  for (const auto& label : labels.markers) {
-    current_ids.insert(label.id);
-  }
-
-  std::set<int> ids_to_delete;
-  for (auto previous : previous_labels_) {
-    if (!current_ids.count(previous)) {
-      ids_to_delete.insert(previous);
-    }
-  }
-  previous_labels_ = current_ids;
-
-  MarkerArray delete_markers;
-  for (auto to_delete : ids_to_delete) {
-    Marker delete_label;
-    delete_label.action = Marker::DELETE;
-    delete_label.id = to_delete;
-    delete_label.ns = label_ns;
-    delete_markers.markers.push_back(delete_label);
-  }
-
-  // there's not really a clean way to delay computation on either of these markers, so
-  // we just assign the messages in the callbacks
-  pubs_->publish("graph_label_viz", [&](MarkerArray& msg) {
-    msg = delete_markers;
-    return true;
+  pubs_.publish("gvd_cluster_viz", header, [&]() -> MarkerArray {
+    return showGvdClusters(compression->getGvdGraph(),
+                           compression->getCompressedNodeInfo(),
+                           compression->getCompressedRemapping(),
+                           gvd_config_.get(),
+                           colormap_.get(),
+                           "gvd_cluster_graph");
   });
-  pubs_->publish("graph_label_viz", [&](MarkerArray& msg) {
-    msg = labels;
-    return true;
-  });
-}
-
-void PlacesVisualizer::graphConfigCb(LayerConfig& config, uint32_t) {
-  config_.graph_layer = config;
-}
-
-void PlacesVisualizer::colormapCb(ColormapConfig& config, uint32_t) {
-  config_.colormap = config;
-}
-
-void PlacesVisualizer::gvdConfigCb(GvdVisualizerConfig& config, uint32_t) {
-  config_.gvd = config;
-  config_.graph.places_colormap_min_distance = config.gvd_min_distance;
-  config_.graph.places_colormap_max_distance = config.gvd_max_distance;
-}
-
-void PlacesVisualizer::setupConfigServers() {
-  startRqtServer("gvd_visualizer", gvd_config_server_, &PlacesVisualizer::gvdConfigCb);
-
-  startRqtServer(
-      "graph_visualizer", graph_config_server_, &PlacesVisualizer::graphConfigCb);
-
-  startRqtServer(
-      "visualizer_colormap", colormap_server_, &PlacesVisualizer::colormapCb);
 }
 
 }  // namespace hydra

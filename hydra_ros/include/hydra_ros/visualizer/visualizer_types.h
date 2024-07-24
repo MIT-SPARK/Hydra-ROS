@@ -33,31 +33,70 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
-#include <hydra_ros/ColormapConfig.h>
-#include <hydra_ros/DynamicLayerVisualizerConfig.h>
-#include <hydra_ros/LayerVisualizerConfig.h>
-#include <hydra_ros/VisualizerConfig.h>
+#include <spark_dsg/color.h>
+#include <spark_dsg/dynamic_scene_graph.h>
+#include <std_msgs/ColorRGBA.h>
 
-namespace hydra {
+#include "hydra_ros/DynamicLayerVisualizerConfig.h"
+#include "hydra_ros/LayerVisualizerConfig.h"
+#include "hydra_ros/VisualizerConfig.h"
 
-using LayerConfig = hydra_ros::LayerVisualizerConfig;
-using DynamicLayerConfig = hydra_ros::DynamicLayerVisualizerConfig;
-using VisualizerConfig = hydra_ros::VisualizerConfig;
-using ColormapConfig = hydra_ros::ColormapConfig;
+namespace hydra::visualizer {
 
-inline double getZOffset(double z_offset_scale,
-                         const VisualizerConfig& visualizer_config) {
-  if (visualizer_config.collapse_layers) {
-    return 0.0;
-  }
+using FilterFunction = std::function<bool(const spark_dsg::SceneGraphNode&)>;
 
-  return z_offset_scale * visualizer_config.layer_z_step;
-}
+using NodeColorFunction =
+    std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
 
-inline double getZOffset(const LayerConfig& config,
-                         const VisualizerConfig& visualizer_config) {
-  return getZOffset(config.z_offset_scale, visualizer_config);
-}
+using EdgeColorFunction =
+    std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&,
+                                   const spark_dsg::SceneGraphNode&,
+                                   const spark_dsg::SceneGraphEdge&,
+                                   bool)>;
 
-}  // namespace hydra
+struct DefaultNodeColorFunction {
+  spark_dsg::Color operator()(const spark_dsg::SceneGraphNode& node) const;
+};
+
+struct DefaultEdgeColorFunction {
+  spark_dsg::Color operator()(const spark_dsg::SceneGraphNode& source,
+                              const spark_dsg::SceneGraphNode& target,
+                              const spark_dsg::SceneGraphEdge& edge,
+                              bool is_source) const;
+};
+
+template <typename ConfigT>
+struct LayerInfo {
+  hydra_ros::VisualizerConfig graph;
+  ConfigT layer;
+  NodeColorFunction node_color = DefaultNodeColorFunction();
+  EdgeColorFunction edge_color = DefaultEdgeColorFunction();
+  mutable FilterFunction filter = {};
+
+  double getZOffset() const;
+  bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
+};
+
+using StaticLayerInfo = LayerInfo<hydra_ros::LayerVisualizerConfig>;
+using DynamicLayerInfo = LayerInfo<hydra_ros::DynamicLayerVisualizerConfig>;
+
+struct GraphInfo {
+  struct EdgeInformation {
+    bool visualize = false;
+    size_t num_to_skip;
+    double scale;
+    std_msgs::ColorRGBA color;
+    double source_offset;
+    double target_offset;
+  };
+
+  EdgeInformation getEdgeInfo(const spark_dsg::LayerKey& source_layer,
+                              const spark_dsg::SceneGraphNode& source,
+                              const spark_dsg::LayerKey& target_layer,
+                              const spark_dsg::SceneGraphNode& target) const;
+
+  std::map<spark_dsg::LayerId, StaticLayerInfo> layers;
+  std::map<spark_dsg::LayerId, DynamicLayerInfo> dynamic_layers;
+};
+
+}  // namespace hydra::visualizer

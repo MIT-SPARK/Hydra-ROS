@@ -35,7 +35,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
-#include <hydra/common/dsg_types.h>
+#include <spark_dsg/dynamic_scene_graph.h>
 #include <visualization_msgs/Marker.h>
 
 #include <Eigen/Dense>
@@ -43,19 +43,20 @@
 
 namespace hydra {
 
-double getMeanChildHeight(const DynamicSceneGraph& graph, const SceneGraphNode& parent);
+double getMeanChildHeight(const spark_dsg::DynamicSceneGraph& graph,
+                          const spark_dsg::SceneGraphNode& parent);
 
-double getMeanNeighborHeight(const SceneGraphLayer& graph,
-                             const SceneGraphNode& parent,
+double getMeanNeighborHeight(const spark_dsg::SceneGraphLayer& graph,
+                             const spark_dsg::SceneGraphNode& parent,
                              double neighborhood = 10.0,
                              bool use_nearest_node_finder = false);
 
-Eigen::MatrixXd getCirclePolygon(const SceneGraphNode& node,
+Eigen::MatrixXd getCirclePolygon(const spark_dsg::SceneGraphNode& node,
                                  double radius,
                                  size_t num_samples);
 
-Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
-                                      const SceneGraphNode& parent);
+Eigen::MatrixXd getChildrenConvexHull(const spark_dsg::DynamicSceneGraph& graph,
+                                      const spark_dsg::SceneGraphNode& parent);
 
 void makeFilledPolygon(const Eigen::MatrixXd& points,
                        const std_msgs::ColorRGBA& color,

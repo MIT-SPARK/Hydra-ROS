@@ -39,14 +39,22 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
+#include <spark_dsg/node_attributes.h>
+#include <spark_dsg/node_symbol.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <visualization_msgs/MarkerArray.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
 #include "hydra_ros/visualizer/polygon_utilities.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
+
+using spark_dsg::DsgLayers;
+using spark_dsg::DynamicSceneGraph;
+using spark_dsg::NodeSymbol;
+using spark_dsg::SemanticNodeAttributes;
+using visualization_msgs::Marker;
+using visualization_msgs::MarkerArray;
 
 void declare_config(RegionPlugin::Config& config) {
   using namespace config;
@@ -69,44 +77,41 @@ RegionPlugin::RegionPlugin(const Config& config,
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 }
 
-RegionPlugin::~RegionPlugin() {}
-
-void RegionPlugin::draw(const ConfigManager&,
-                        const std_msgs::Header& header,
+void RegionPlugin::draw(const std_msgs::Header& header,
                         const DynamicSceneGraph& graph) {
-  visualization_msgs::MarkerArray msg;
-  msg.markers.resize(3);
+  visualization_msgs::MarkerArray markers;
+  markers.markers.resize(3);
 
-  msg.markers[0].header = header;
-  msg.markers[0].ns = "region_plugin_mesh";
-  msg.markers[0].id = 0;
-  msg.markers[0].type = visualization_msgs::Marker::TRIANGLE_LIST;
-  msg.markers[0].action = visualization_msgs::Marker::ADD;
-  msg.markers[0].pose.orientation.w = 1.0;
-  msg.markers[0].color.a = config.mesh_alpha;
-  msg.markers[0].scale.x = 1.0;
-  msg.markers[0].scale.y = 1.0;
-  msg.markers[0].scale.z = 1.0;
+  markers.markers[0].header = header;
+  markers.markers[0].ns = "region_plugin_mesh";
+  markers.markers[0].id = 0;
+  markers.markers[0].type = visualization_msgs::Marker::TRIANGLE_LIST;
+  markers.markers[0].action = visualization_msgs::Marker::ADD;
+  markers.markers[0].pose.orientation.w = 1.0;
+  markers.markers[0].color.a = config.mesh_alpha;
+  markers.markers[0].scale.x = 1.0;
+  markers.markers[0].scale.y = 1.0;
+  markers.markers[0].scale.z = 1.0;
 
-  msg.markers[1].header = header;
-  msg.markers[1].ns = "region_plugin_wireframe";
-  msg.markers[1].id = 0;
-  msg.markers[1].type = visualization_msgs::Marker::LINE_LIST;
-  msg.markers[1].action = visualization_msgs::Marker::ADD;
-  msg.markers[1].pose.orientation.w = 1.0;
-  msg.markers[1].scale.x = config.line_width;
-  msg.markers[1].scale.y = 0.0;
-  msg.markers[1].scale.z = 0.0;
+  markers.markers[1].header = header;
+  markers.markers[1].ns = "region_plugin_wireframe";
+  markers.markers[1].id = 0;
+  markers.markers[1].type = visualization_msgs::Marker::LINE_LIST;
+  markers.markers[1].action = visualization_msgs::Marker::ADD;
+  markers.markers[1].pose.orientation.w = 1.0;
+  markers.markers[1].scale.x = config.line_width;
+  markers.markers[1].scale.y = 0.0;
+  markers.markers[1].scale.z = 0.0;
 
-  msg.markers[2].header = header;
-  msg.markers[2].ns = "region_plugin_wireframe_vertices";
-  msg.markers[2].id = 0;
-  msg.markers[2].type = visualization_msgs::Marker::SPHERE_LIST;
-  msg.markers[2].action = visualization_msgs::Marker::ADD;
-  msg.markers[2].pose.orientation.w = 1.0;
-  msg.markers[2].scale.x = config.line_width;
-  msg.markers[2].scale.y = config.line_width;
-  msg.markers[2].scale.z = config.line_width;
+  markers.markers[2].header = header;
+  markers.markers[2].ns = "region_plugin_wireframe_vertices";
+  markers.markers[2].id = 0;
+  markers.markers[2].type = visualization_msgs::Marker::SPHERE_LIST;
+  markers.markers[2].action = visualization_msgs::Marker::ADD;
+  markers.markers[2].pose.orientation.w = 1.0;
+  markers.markers[2].scale.x = config.line_width;
+  markers.markers[2].scale.y = config.line_width;
+  markers.markers[2].scale.z = config.line_width;
 
   const auto& regions = graph.getLayer(DsgLayers::ROOMS);
   for (auto&& [id, node] : regions.nodes()) {
@@ -114,7 +119,8 @@ void RegionPlugin::draw(const ConfigManager&,
     if (config.skip_unknown && attrs.name == "unknown") {
       continue;
     }
-    auto color = dsg_utils::makeColorMsg(attrs.color);
+
+    auto color = visualizer::makeColorMsg(attrs.color);
     color.a = config.line_alpha;
 
     const double mean_z = getMeanChildHeight(graph, *node);
@@ -134,30 +140,30 @@ void RegionPlugin::draw(const ConfigManager&,
       text_marker.pose.orientation.w = 1.0;
       tf2::convert(pos, text_marker.pose.position);
       text_marker.pose.position.z = mean_z;
-      published_labels_.insert(text_marker.id);
-      msg.markers.push_back(text_marker);
+      markers.markers.push_back(text_marker);
     }
 
     auto mesh_color = color;
     mesh_color.a = config.mesh_alpha;
-    makeFilledPolygon(hull_points, mesh_color, msg.markers[0], mean_z);
-    makePolygonBoundary(hull_points, color, msg.markers[1], mean_z, &msg.markers[2]);
+    makeFilledPolygon(hull_points, mesh_color, markers.markers[0], mean_z);
+    makePolygonBoundary(
+        hull_points, color, markers.markers[1], mean_z, &markers.markers[2]);
   }
 
-  pub_.publish(msg);
+  MarkerArray msg;
+  tracker_.add(markers, msg);
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
+  }
 }
 
 void RegionPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
   visualization_msgs::MarkerArray msg;
-  msg.markers.push_back(makeDeleteMarker(header, 0, "region_plugin_mesh"));
-  msg.markers.push_back(makeDeleteMarker(header, 0, "region_plugin_wireframe"));
-  msg.markers.push_back(
-      makeDeleteMarker(header, 0, "region_plugin_wireframe_vertices"));
-  for (const auto id : published_labels_) {
-    msg.markers.push_back(makeDeleteMarker(header, id, "region_plugin_labels"));
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
   }
-  published_labels_.clear();
-  pub_.publish(msg);
 }
 
 }  // namespace hydra

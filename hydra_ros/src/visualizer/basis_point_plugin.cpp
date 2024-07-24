@@ -40,6 +40,7 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/semantic_color_map.h>
+#include <spark_dsg/node_attributes.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
@@ -47,7 +48,11 @@
 
 namespace hydra {
 
-using dsg_utils::makeColorMsg;
+using spark_dsg::DsgLayers;
+using spark_dsg::DynamicSceneGraph;
+using spark_dsg::PlaceNodeAttributes;
+using spark_dsg::SceneGraphNode;
+using spark_dsg::SemanticNodeAttributes;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
@@ -56,11 +61,6 @@ void declare_config(BasisPointPlugin::Config& config) {
   name("BasisPlugin::Config");
   field(config.show_voxblox_connections, "show_voxblox_connections");
   field(config.draw_basis_points, "draw_basis_points");
-  field(config.places_use_sphere, "places_use_sphere");
-  field(config.draw_places_labels, "draw_places_labels");
-  field(config.places_label_scale, "places_label_scale");
-  field(config.places_node_scale, "places_node_scale");
-  field(config.places_node_alpha, "places_node_alpha");
   field(config.places_edge_scale, "places_edge_scale");
   field(config.places_edge_alpha, "places_edge_alpha");
   field(config.basis_point_scale, "basis_point_scale");
@@ -120,7 +120,9 @@ std::vector<BasisPoint> getBasisPoints(const PlaceNodeAttributes& attrs,
 BasisPointPlugin::BasisPointPlugin(const Config& config,
                                    const ros::NodeHandle& nh,
                                    const std::string& name)
-    : DsgVisualizerPlugin(nh, name), config(config::checkValid(config)) {
+    : DsgVisualizerPlugin(nh, name),
+      config(config::checkValid(config)),
+      layer_config_(nh_, "graph") {
   if (!config.label_colormap.empty()) {
     colormap_ = SemanticColorMap::fromCsv(config.label_colormap);
     if (!colormap_) {
@@ -132,80 +134,59 @@ BasisPointPlugin::BasisPointPlugin(const Config& config,
   pub_ = nh_.advertise<visualization_msgs::MarkerArray>("", 1, true);
 }
 
-void BasisPointPlugin::draw(const ConfigManager&,
-                            const std_msgs::Header& header,
+void BasisPointPlugin::draw(const std_msgs::Header& header,
                             const DynamicSceneGraph& graph) {
-  // TODO(nathan) actual use dynamic configs
-  if (!graph.hasLayer(DsgLayers::PLACES)) {
-    reset(header, graph);
-    return;
-  }
-
-  const auto& places = graph.getLayer(DsgLayers::PLACES);
-  if (places.numNodes() == 0) {
-    reset(header, graph);
-    return;
-  }
-
   MarkerArray msg;
-  drawNodes(header, graph, msg);
-  drawEdges(header, graph, msg);
-  if (config.draw_basis_points) {
-    drawBasisPoints(header, graph, msg);
-  }
-  pub_.publish(msg);
-}
-
-void BasisPointPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
-  MarkerArray msg;
-  for (const auto& ns : published_) {
-    msg.markers.push_back(makeDeleteMarker(header, 0, ns));
-  }
-  published_.clear();
-
+  fillMarkers(header, graph, msg);
+  tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
     pub_.publish(msg);
   }
 }
 
-void BasisPointPlugin::drawNodes(const std_msgs::Header& header,
-                                 const DynamicSceneGraph& graph,
-                                 MarkerArray& msg) const {
-  const auto& layer = graph.getLayer(DsgLayers::PLACES);
+void BasisPointPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
+  MarkerArray msg;
+  tracker_.clearPrevious(header, msg);
+  if (!msg.markers.empty()) {
+    pub_.publish(msg);
+  }
+}
 
-  VisualizerConfig viz_config;
-  viz_config.layer_z_step = 0.0;
+void BasisPointPlugin::fillMarkers(const std_msgs::Header& header,
+                                   const DynamicSceneGraph& graph,
+                                   MarkerArray& msg) const {
+  if (!graph.hasLayer(DsgLayers::PLACES)) {
+    return;
+  }
 
-  hydra_ros::LayerVisualizerConfig layer_config;
-  layer_config.marker_scale = config.places_node_scale;
-  layer_config.marker_alpha = config.places_node_alpha;
-  layer_config.use_sphere_marker = config.places_use_sphere;
-  layer_config.use_label = config.draw_places_labels;
-  layer_config.label_scale = config.places_label_scale;
-  layer_config.use_bounding_box = false;
-  auto nodes = makeCentroidMarkers(
-      header,
-      layer_config,
-      layer,
-      viz_config,
-      "places_parent_graph_nodes",
-      [&](const SceneGraphNode& node) -> Color {
-        const auto parent = node.getParent();
-        if (!parent) {
-          return Color();
-        } else {
-          return graph.getNode(*parent).attributes<SemanticNodeAttributes>().color;
-        }
-      });
+  const auto& places = graph.getLayer(DsgLayers::PLACES);
 
-  published_.insert(nodes.ns);
-  msg.markers.push_back(nodes);
+  visualizer::StaticLayerInfo info{{}, layer_config_.get()};
+  info.graph.layer_z_step = 0.0;
+  info.graph.collapse_layers = true;
+  info.node_color = [&](const SceneGraphNode& node) -> Color {
+    const auto parent = node.getParent();
+    return parent ? graph.getNode(*parent).attributes<SemanticNodeAttributes>().color
+                  : Color();
+  };
+
+  if (!info.layer.visualize) {
+    return;
+  }
+
+  tracker_.add(makeLayerNodeMarkers(header, info, places, "nodes"), msg);
+  tracker_.add(makeLayerEdgeMarkers(header, info, places, "edges"), msg);
+
+  drawEdges(header, graph, msg);
+  if (config.draw_basis_points) {
+    drawBasisPoints(header, graph, msg);
+  }
 }
 
 void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
                                  const DynamicSceneGraph& graph,
                                  MarkerArray& msg) const {
-  auto& marker = msg.markers.emplace_back();
+  Marker marker;
   marker.header = header;
   marker.type = Marker::LINE_LIST;
   marker.action = Marker::ADD;
@@ -233,7 +214,7 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
     }
   }
 
-  published_.insert(marker.ns);
+  tracker_.add(marker, msg);
 }
 
 void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
@@ -244,7 +225,7 @@ void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
     return;
   }
 
-  auto& marker = msg.markers.emplace_back();
+  Marker marker;
   marker.header = header;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
@@ -273,7 +254,7 @@ void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
     }
   }
 
-  published_.insert(marker.ns);
+  tracker_.add(marker, msg);
 }
 
 }  // namespace hydra

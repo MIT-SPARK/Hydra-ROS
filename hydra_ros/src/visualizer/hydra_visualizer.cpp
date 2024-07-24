@@ -40,7 +40,6 @@
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <glog/logging.h>
-#include <hydra/utils/timing_utilities.h>
 
 namespace hydra {
 
@@ -69,7 +68,7 @@ HydraVisualizer::HydraVisualizer(const ros::NodeHandle& nh) : nh_(nh) {
     auto plugin = config.create(nh_, name);
     if (plugin) {
       visualizer_->addPlugin(std::move(plugin));
-    } 
+    }
   }
 
   if (!config_.output_path.empty()) {
@@ -79,18 +78,11 @@ HydraVisualizer::HydraVisualizer(const ros::NodeHandle& nh) : nh_(nh) {
   }
 }
 
-HydraVisualizer::~HydraVisualizer() {
-  std::cout << "timing stats: "
-            << hydra::timing::ElapsedTimeRecorder::instance().getStats("receive_dsg")
-            << std::endl;
-  std::cout << "mesh timing stats: "
-            << hydra::timing::ElapsedTimeRecorder::instance().getStats("receive_mesh")
-            << std::endl;
-}
+HydraVisualizer::~HydraVisualizer() {}
 
 void HydraVisualizer::loadGraph() {
   ROS_INFO_STREAM("Loading dsg from: " << config_.scene_graph_filepath);
-  auto dsg = hydra::DynamicSceneGraph::load(config_.scene_graph_filepath);
+  auto dsg = spark_dsg::DynamicSceneGraph::load(config_.scene_graph_filepath);
   ROS_INFO_STREAM("Loaded dsg: " << dsg->numNodes() << " nodes, " << dsg->numEdges()
                                  << " edges, has mesh? "
                                  << (dsg->hasMesh() ? "yes" : "no"));

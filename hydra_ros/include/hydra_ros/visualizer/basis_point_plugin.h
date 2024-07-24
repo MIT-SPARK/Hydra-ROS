@@ -36,7 +36,10 @@
 #include <config_utilities/factory.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include "hydra_ros/LayerVisualizerConfig.h"
+#include "hydra_ros/visualizer/config_wrapper.h"
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/marker_tracker.h"
 
 namespace hydra {
 
@@ -47,11 +50,6 @@ class BasisPointPlugin : public DsgVisualizerPlugin {
   struct Config {
     bool show_voxblox_connections = false;
     bool draw_basis_points = true;
-    bool places_use_sphere = false;
-    bool draw_places_labels = false;
-    double places_label_scale = 0.2;
-    double places_node_scale = 0.2;
-    double places_node_alpha = 0.8;
     double places_edge_scale = 0.05;
     double places_edge_alpha = 0.5;
     double basis_point_scale = 0.1;
@@ -64,28 +62,33 @@ class BasisPointPlugin : public DsgVisualizerPlugin {
 
   virtual ~BasisPointPlugin() = default;
 
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  void draw(const std_msgs::Header& header,
+            const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header,
+             const spark_dsg::DynamicSceneGraph& graph) override;
 
  protected:
+  void fillMarkers(const std_msgs::Header& header,
+                   const spark_dsg::DynamicSceneGraph& graph,
+                   visualization_msgs::MarkerArray& msg) const;
+
   void drawNodes(const std_msgs::Header& header,
-                 const DynamicSceneGraph& graph,
+                 const spark_dsg::DynamicSceneGraph& graph,
                  visualization_msgs::MarkerArray& msg) const;
 
   void drawEdges(const std_msgs::Header& header,
-                 const DynamicSceneGraph& graph,
+                 const spark_dsg::DynamicSceneGraph& graph,
                  visualization_msgs::MarkerArray& msg) const;
 
   void drawBasisPoints(const std_msgs::Header& header,
-                       const DynamicSceneGraph& graph,
+                       const spark_dsg::DynamicSceneGraph& graph,
                        visualization_msgs::MarkerArray& msg) const;
 
   ros::Publisher pub_;
-  mutable std::set<std::string> published_;
+  mutable MarkerTracker tracker_;
   std::unique_ptr<SemanticColorMap> colormap_;
+  visualizer::ConfigWrapper<hydra_ros::LayerVisualizerConfig> layer_config_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<DsgVisualizerPlugin,

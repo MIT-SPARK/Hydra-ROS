@@ -33,24 +33,17 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra_ros/ColormapConfig.h>
+#include <spark_dsg/color.h>
 #include <std_msgs/ColorRGBA.h>
 
-#include "hydra_ros/visualizer/visualizer_types.h"
+namespace hydra::visualizer {
 
-namespace hydra::dsg_utils {
+spark_dsg::Color interpolateColorMap(const hydra_ros::ColormapConfig& config,
+                                     double value,
+                                     double min = 0.0,
+                                     double max = 1.0);
 
-inline double computeRatio(double min, double max, double value) {
-  if (value <= min) {
-    return 0.0;
-  }
-  if (value >= max) {
-    return 1.0;
-  }
-  return (value - min) / (max - min);
-}
+std_msgs::ColorRGBA makeColorMsg(const spark_dsg::Color& color, double alpha = -1.0);
 
-std_msgs::ColorRGBA makeColorMsg(const Color& color, double alpha = -1.0);
-
-Color interpolateColorMap(const ColormapConfig& config, double ratio);
-
-}  // namespace hydra::dsg_utils
+}  // namespace hydra::visualizer

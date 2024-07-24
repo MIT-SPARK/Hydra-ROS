@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/gvd_visualization_utilities.h"
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 
 #include <tf2_eigen/tf2_eigen.h>
 
@@ -42,72 +42,54 @@
 
 namespace hydra {
 
+using hydra_ros::ColormapConfig;
+using hydra_ros::GvdVisualizerConfig;
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
-using dsg_utils::computeRatio;
-
-MarkerGroupPub::MarkerGroupPub(const ros::NodeHandle& nh) : nh_(nh) {}
-
-void MarkerGroupPub::publish(const std::string& name,
-                             const MarkerCallback& func) const {
-  publish(name, [&func](MarkerArray& msg) {
-    Marker marker;
-    msg.markers.push_back(marker);
-    return func(msg.markers.back());
-  });
+Color getColorFromDistance(const ColormapConfig& colormap,
+                           const GvdVisualizerConfig& config,
+                           const GvdVoxel& voxel) {
+  return visualizer::interpolateColorMap(
+      colormap, voxel.distance, config.gvd_min_distance, config.gvd_max_distance);
 }
 
-void MarkerGroupPub::publish(const std::string& name, const ArrayCallback& func) const {
-  auto iter = pubs_.find(name);
-  if (iter == pubs_.end()) {
-    iter = pubs_.emplace(name, nh_.advertise<MarkerArray>(name, 1, true)).first;
-  }
-
-  if (!iter->second.getNumSubscribers()) {
-    return;  // avoid doing computation if we don't need to publish
-  }
-
-  MarkerArray msg;
-  if (func(msg)) {
-    iter->second.publish(msg);
-  }
+Color getColorFromBasisPoints(const ColormapConfig& colormap,
+                              const GvdVisualizerConfig& config,
+                              const GvdVoxel& voxel) {
+  return visualizer::interpolateColorMap(colormap,
+                                         static_cast<double>(voxel.num_extra_basis),
+                                         static_cast<double>(config.min_num_basis),
+                                         static_cast<double>(config.max_num_basis));
 }
 
-double getRatioFromDistance(const GvdVisualizerConfig& config, const GvdVoxel& voxel) {
-  return computeRatio(config.gvd_min_distance, config.gvd_max_distance, voxel.distance);
-}
-
-double getRatioFromBasisPoints(const GvdVisualizerConfig& config,
-                               const GvdVoxel& voxel) {
-  return computeRatio(static_cast<double>(config.min_num_basis),
-                      static_cast<double>(config.max_num_basis),
-                      static_cast<double>(voxel.num_extra_basis));
-}
-
-double getRatio(const GvdVisualizerConfig& config, const GvdVoxel& voxel) {
+Color getColor(const ColormapConfig& colormap,
+               const GvdVisualizerConfig& config,
+               const GvdVoxel& voxel) {
   switch (static_cast<GvdVisualizationMode>(config.gvd_mode)) {
     case GvdVisualizationMode::BASIS_POINTS:
-      return getRatioFromBasisPoints(config, voxel);
+      return getColorFromBasisPoints(colormap, config, voxel);
     case GvdVisualizationMode::DISTANCE:
     case GvdVisualizationMode::DEFAULT:
     default:
-      return getRatioFromDistance(config, voxel);
+      return getColorFromDistance(colormap, config, voxel);
   }
-  return 0.0;
+
+  return {};
 }
 
 Marker makeGvdMarker(const GvdVisualizerConfig& config,
                      const ColormapConfig& colors,
-                     const GvdLayer& layer) {
+                     const GvdLayer& layer,
+                     const std::string& ns) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
   marker.id = 0;
-  marker.ns = "gvd_markers";
+  marker.ns = ns;
 
   Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
   tf2::convert(identity_pos, marker.pose.position);
@@ -129,11 +111,8 @@ Marker makeGvdMarker(const GvdVisualizerConfig& config,
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
-      double ratio = getRatio(config, voxel);
-      Color color = dsg_utils::interpolateColorMap(colors, ratio);
-
-      std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.gvd_alpha);
-      marker.colors.push_back(color_msg);
+      const auto color = getColor(colors, config, voxel);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
     }
   }
 
@@ -175,16 +154,13 @@ Marker makeErrorMarker(const GvdVisualizerConfig& config,
         continue;
       }
 
-      double ratio = computeRatio(0, 10, error);
-      Color color = dsg_utils::interpolateColorMap(colors, ratio);
-
       const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
       geometry_msgs::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
-      std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.gvd_alpha);
-      marker.colors.push_back(color_msg);
+      const auto color = visualizer::interpolateColorMap(colors, error, 0.0, 10.0);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
     }
   }
 
@@ -193,12 +169,13 @@ Marker makeErrorMarker(const GvdVisualizerConfig& config,
 
 Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
                               const ColormapConfig& colors,
-                              const GvdLayer& layer) {
+                              const GvdLayer& layer,
+                              const std::string& ns) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
   marker.id = 0;
-  marker.ns = "surface_markers";
+  marker.ns = ns;
 
   Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
   tf2::convert(identity_pos, marker.pose.position);
@@ -220,11 +197,9 @@ Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
-      double ratio = computeRatio(-0.4, 0.4, voxel.distance);
-      Color color = dsg_utils::interpolateColorMap(colors, ratio);
-
-      std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.gvd_alpha);
-      marker.colors.push_back(color_msg);
+      const auto dist = voxel.distance;
+      const auto color = visualizer::interpolateColorMap(colors, dist, -0.4, 0.4);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
     }
   }
 
@@ -233,12 +208,13 @@ Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
 
 Marker makeEsdfMarker(const GvdVisualizerConfig& config,
                       const ColormapConfig& colors,
-                      const GvdLayer& layer) {
+                      const GvdLayer& layer,
+                      const std::string& ns) {
   Marker marker;
   marker.type = Marker::CUBE_LIST;
   marker.action = Marker::ADD;
   marker.id = 0;
-  marker.ns = "esdf_slice_markers";
+  marker.ns = ns;
 
   Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
   tf2::convert(identity_pos, marker.pose.position);
@@ -271,12 +247,9 @@ Marker makeEsdfMarker(const GvdVisualizerConfig& config,
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
-      double ratio = computeRatio(
-          config.esdf_min_distance, config.esdf_max_distance, voxel.distance);
-      Color color = dsg_utils::interpolateColorMap(colors, ratio);
-
-      std_msgs::ColorRGBA color_msg = dsg_utils::makeColorMsg(color, config.esdf_alpha);
-      marker.colors.push_back(color_msg);
+      const auto color = visualizer::interpolateColorMap(
+          colors, voxel.distance, config.esdf_min_distance, config.esdf_max_distance);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.esdf_alpha));
     }
   }
 
@@ -333,11 +306,13 @@ void fillMarkerFromBlock(Marker& marker,
 
 template <typename BlockT>
 Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
-                            double scale) {
+                            double scale,
+                            const std::string& ns) {
   Marker marker;
   marker.type = Marker::LINE_LIST;
   marker.action = Marker::ADD;
   marker.id = 0;
+  marker.ns = ns;
   marker.color.r = 0.662;
   marker.color.g = 0.0313;
   marker.color.b = 0.7607;
@@ -358,74 +333,35 @@ Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
   return marker;
 }
 
-Marker makeMeshBlocksMarker(const MeshLayer& layer, double scale) {
-  Marker marker;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.scale.x = scale;
-  marker.scale.y = scale;
-  marker.scale.z = scale;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  std_msgs::ColorRGBA good;
-  good.r = 0.2;
-  good.g = 1.0;
-  good.b = 0.2;
-  good.a = 0.8;
-
-  std_msgs::ColorRGBA bad;
-  bad.r = 1.0;
-  bad.g = 0.2;
-  bad.b = 0.2;
-  bad.a = 0.8;
-
-  for (const auto& block : layer) {
-    fillMarkerFromBlock(marker, block.origin().cast<double>(), block.block_size);
-
-    while (marker.colors.size() < marker.points.size()) {
-      marker.colors.push_back(block.points.size() != 0 ? good : bad);
-    }
-  }
-
-  return marker;
+Marker makeBlocksMarker(const TsdfLayer& layer, double scale, const std::string& ns) {
+  return makeBlocksMarkerImpl(layer, scale, ns);
 }
 
-Marker makeBlocksMarker(const TsdfLayer& layer, double scale) {
-  return makeBlocksMarkerImpl(layer, scale);
-}
-
-Marker makeBlocksMarker(const GvdLayer& layer, double scale) {
-  return makeBlocksMarkerImpl(layer, scale);
+Marker makeBlocksMarker(const GvdLayer& layer, double scale, const std::string& ns) {
+  return makeBlocksMarkerImpl(layer, scale, ns);
 }
 
 std_msgs::ColorRGBA makeGvdColor(const GvdVisualizerConfig& config,
                                  const ColormapConfig& colors,
                                  double distance,
                                  uint8_t num_basis_points) {
-  double ratio;
-  double alpha;
-  double alpha_diff = config.gvd_alpha - config.gvd_min_alpha;
+  Color c;
   switch (static_cast<GvdVisualizationMode>(config.gvd_mode)) {
     case GvdVisualizationMode::BASIS_POINTS:
-      ratio = computeRatio(static_cast<double>(config.min_num_basis),
-                           static_cast<double>(config.max_num_basis),
-                           static_cast<double>(num_basis_points));
-      alpha = config.gvd_min_alpha + ratio * alpha_diff;
+      c = visualizer::interpolateColorMap(colors,
+                                          static_cast<double>(num_basis_points),
+                                          static_cast<double>(config.min_num_basis),
+                                          static_cast<double>(config.max_num_basis));
       break;
     case GvdVisualizationMode::DISTANCE:
     case GvdVisualizationMode::DEFAULT:
     default:
-      ratio = computeRatio(config.gvd_min_distance, config.gvd_max_distance, distance);
-      alpha = config.gvd_alpha;
+      c = visualizer::interpolateColorMap(
+          colors, distance, config.gvd_min_distance, config.gvd_max_distance);
       break;
   }
 
-  Color color = dsg_utils::interpolateColorMap(colors, ratio);
-  return dsg_utils::makeColorMsg(color, alpha);
+  return visualizer::makeColorMsg(c, config.gvd_alpha);
 }
 
 using EdgeMap = std::unordered_map<uint64_t, std::unordered_set<uint64_t>>;
@@ -609,8 +545,8 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
   std::vector<std_msgs::ColorRGBA> colors;
   for (size_t i = 0; i < num_colors; ++i) {
     const double ratio = static_cast<double>(i) / static_cast<double>(num_colors);
-    const auto color = dsg_utils::interpolateColorMap(colormap, ratio);
-    colors.push_back(dsg_utils::makeColorMsg(color, config.gvd_alpha));
+    const auto color = visualizer::interpolateColorMap(colormap, ratio);
+    colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
   }
 
   EdgeMap seen_edges;
@@ -623,7 +559,8 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
       const auto& cluster_color = colors.at(color_mapping.at(cluster_id));
       nodes.colors.push_back(cluster_color);
     } else {
-      nodes.colors.push_back(dsg_utils::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
+      nodes.colors.push_back(
+          visualizer::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
     }
 
     auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
@@ -649,7 +586,7 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
         edges.colors.push_back(neighbor_color);
       } else {
         edges.colors.push_back(
-            dsg_utils::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
+            visualizer::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
       }
     }
   }
@@ -683,7 +620,7 @@ MarkerArray makePlaceSpheres(const std_msgs::Header& header,
     tf2::convert(id_node_pair.second->attributes().position, marker.pose.position);
 
     Color desired_color(255, 0, 0);
-    marker.color = dsg_utils::makeColorMsg(desired_color, alpha);
+    marker.color = visualizer::makeColorMsg(desired_color, alpha);
     spheres.markers.push_back(marker);
     ++id;
   }

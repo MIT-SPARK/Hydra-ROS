@@ -5,7 +5,6 @@
     <arg name="config_dir" default="$(find hydra)/config/uhumans2"/>
     <arg name="use_gt_frame" default="true" doc="use simulator-provided tf frame"/>
     <arg name="use_gt_semantics" default="true" doc="use simulator-provider semantics"/>
-    <arg name="use_static_tfs" default="true" doc="publish static tfs from file"/>
     <arg name="color_mesh_by_label" default="false" doc="display mesh colored by semantic label"/>
     <arg name="use_single_channel_label_image" default="false"/>
 
@@ -28,9 +27,12 @@
                             if="$(arg use_gt_semantics)"/>
     <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
-    <include file="$(find hydra_ros)/launch/static_tfs/uhumans2_static_tfs.xml" if="$(arg use_static_tfs)"/>
+    <arg name="use_static_tfs" default="true" doc="publish static tfs from file"/>
+    <group if="$(arg use_static_tfs)">
+        <include file="$(find hydra_ros)/launch/static_tfs/uhumans2_static_tfs.xml"/>
 
-    <node pkg="tf2_ros" type="static_transform_publisher" name="fake_world_tf" args="0 0 0 0 0 0 1 map world" if="$(arg use_gt_frame)"/>
+        <node pkg="tf2_ros" type="static_transform_publisher" name="fake_world_tf" args="0 0 0 0 0 0 1 map world" if="$(arg use_gt_frame)"/>
+    </group>
 
     <group unless="$(arg use_gt_semantics)">
         <remap from="semantic_inference/image_raw" to="$(arg rgb_topic)"/>
@@ -40,7 +42,8 @@
         </include>
     </group>
 
-    <group>
+    <arg name="start_hydra" default="true"/>
+    <group if="$(arg start_hydra)">
         <remap from="hydra_ros_node/input0/depth_registered/image_rect" to="$(arg depth_topic)"/>
         <remap from="hydra_ros_node/input0/rgb/image_raw" to="$(arg rgb_topic)"/>
         <remap from="hydra_ros_node/input0/rgb/camera_info" to="$(arg rgb_info_topic)"/>

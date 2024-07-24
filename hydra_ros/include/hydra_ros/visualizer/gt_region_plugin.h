@@ -37,6 +37,7 @@
 #include <visualization_msgs/MarkerArray.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/marker_group_pub.h"
 
 namespace hydra {
 
@@ -72,34 +73,19 @@ class GtRegionPlugin : public DsgVisualizerPlugin {
                  const ros::NodeHandle& nh,
                  const std::string& name);
 
-  virtual ~GtRegionPlugin();
+  virtual ~GtRegionPlugin() = default;
 
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  void draw(const std_msgs::Header& header,
+            const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header,
+             const spark_dsg::DynamicSceneGraph& graph) override;
 
  protected:
-  std::optional<size_t> getFillMarker(const std_msgs::Header& header,
-                                      visualization_msgs::MarkerArray& msg);
-
-  std::optional<size_t> getBoundaryMarker(const std_msgs::Header& header,
-                                          visualization_msgs::MarkerArray& msg);
-
-  std::optional<size_t> getVertexMarker(const std_msgs::Header& header,
-                                        visualization_msgs::MarkerArray& msg);
-
-  void addLabelMarker(const std_msgs::Header& header,
-                      const Region& region,
-                      visualization_msgs::MarkerArray& msg);
-
+  bool published_;
   ros::Publisher pub_;
+  MarkerTracker tracker_;
   std::vector<Region> regions_;
-  std::map<std::string, size_t> published_labels_;
-  int fill_index_ = -1;
-  int boundary_index_ = -1;
-  int vertex_index_ = -1;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<DsgVisualizerPlugin,

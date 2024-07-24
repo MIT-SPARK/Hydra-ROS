@@ -33,52 +33,33 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/reconstruction/reconstruction_module.h>
-#include <ros/ros.h>
+#include <visualization_msgs/MarkerArray.h>
 
-#include "hydra_ros/ColormapConfig.h"
-#include "hydra_ros/visualizer/config_wrapper.h"
-#include "hydra_ros/visualizer/marker_group_pub.h"
+#include <set>
 
 namespace hydra {
 
-class ReconstructionVisualizer : public ReconstructionModule::Sink {
+class MarkerTracker {
  public:
-  struct Config {
-    std::string ns = "~reconstruction";
-    double min_weight = 0.0;
-    double max_weight = 10.0;
-    double min_distance = 0.0;
-    double max_distance = 2.0;
-    double marker_alpha = 0.5;
-    bool use_relative_height = true;
-    double slice_height = 0.0;
-    double min_observation_weight = 1.0e-5;
-  } const config;
+  MarkerTracker() = default;
+  ~MarkerTracker() = default;
 
-  explicit ReconstructionVisualizer(const Config& config);
+  void add(const visualization_msgs::Marker& marker,
+           visualization_msgs::MarkerArray& msg);
 
-  virtual ~ReconstructionVisualizer() = default;
+  void add(const visualization_msgs::MarkerArray& markers,
+           visualization_msgs::MarkerArray& msg);
 
-  std::string printInfo() const override;
+  void remove(const std_msgs::Header& header,
+              const std::string& ns,
+              size_t marker_id,
+              visualization_msgs::MarkerArray& msg);
 
-  void call(uint64_t timestamp_ns,
-            const Eigen::Isometry3d& world_T_sensor,
-            const TsdfLayer& tsdf,
-            const ReconstructionOutput& msg) const override;
-
- protected:
-  ros::NodeHandle nh_;
-  MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
+  void clearPrevious(const std_msgs::Header& header,
+                     visualization_msgs::MarkerArray& msg);
 
  private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<ReconstructionModule::Sink,
-                                     ReconstructionVisualizer,
-                                     Config>("ReconstructionVisualizer");
+  std::map<std::string, std::set<size_t>> published_markers_;
 };
-
-void declare_config(ReconstructionVisualizer::Config& config);
 
 }  // namespace hydra

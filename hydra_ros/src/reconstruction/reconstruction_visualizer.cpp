@@ -41,35 +41,37 @@
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/visualizer/colormap_utilities.h"
-#include "hydra_ros/visualizer/gvd_visualization_utilities.h"
 
 namespace hydra {
 
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-using VizConfig = ReconstructionVisualizer::Config;
 
 using ColorFunction =
-    std::function<std_msgs::ColorRGBA(const VizConfig&, const TsdfVoxel&)>;
+    std::function<std_msgs::ColorRGBA(const ReconstructionVisualizer::Config&,
+                                      const hydra_ros::ColormapConfig&,
+                                      const TsdfVoxel&)>;
 
-std_msgs::ColorRGBA colorVoxelByDist(const VizConfig& config, const TsdfVoxel& voxel) {
-  double ratio =
-      dsg_utils::computeRatio(config.min_distance, config.max_distance, voxel.distance);
-  auto color = dsg_utils::interpolateColorMap(config.colors, ratio);
-  return dsg_utils::makeColorMsg(color, config.marker_alpha);
+std_msgs::ColorRGBA colorVoxelByDist(const ReconstructionVisualizer::Config& config,
+                                     const hydra_ros::ColormapConfig& cmap,
+                                     const TsdfVoxel& voxel) {
+  auto color = visualizer::interpolateColorMap(
+      cmap, voxel.distance, config.min_distance, config.max_distance);
+  return visualizer::makeColorMsg(color, config.marker_alpha);
 }
 
-std_msgs::ColorRGBA colorVoxelByWeight(const VizConfig& config,
+std_msgs::ColorRGBA colorVoxelByWeight(const ReconstructionVisualizer::Config& config,
+                                       const hydra_ros::ColormapConfig& cmap,
                                        const TsdfVoxel& voxel) {
   // TODO(nathan) consider exponential
-  double ratio =
-      dsg_utils::computeRatio(config.min_weight, config.max_weight, voxel.weight);
-  auto color = dsg_utils::interpolateColorMap(config.colors, ratio);
-  return dsg_utils::makeColorMsg(color, config.marker_alpha);
+  auto color = visualizer::interpolateColorMap(
+      cmap, voxel.weight, config.min_weight, config.max_weight);
+  return visualizer::makeColorMsg(color, config.marker_alpha);
 }
 
 // adapted from khronos
-Marker makeTsdfMarker(const VizConfig& config,
+Marker makeTsdfMarker(const ReconstructionVisualizer::Config& config,
+                      const hydra_ros::ColormapConfig& cmap,
                       const std_msgs::Header& header,
                       const TsdfLayer& layer,
                       const Eigen::Isometry3d& world_T_sensor,
@@ -114,12 +116,11 @@ Marker makeTsdfMarker(const VizConfig& config,
           continue;
         }
 
-        const Eigen::Vector3d pos =
-            block.getVoxelPosition(voxel_index).cast<double>();
+        const Eigen::Vector3d pos = block.getVoxelPosition(voxel_index).cast<double>();
         geometry_msgs::Point marker_pos;
         tf2::convert(pos, marker_pos);
         msg.points.push_back(marker_pos);
-        msg.colors.push_back(color_func(config, voxel));
+        msg.colors.push_back(color_func(config, cmap, voxel));
       }
     }
   }
@@ -139,24 +140,14 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.use_relative_height, "use_relative_height");
   field(config.slice_height, "slice_height", "m");
   field(config.min_observation_weight, "min_observation_weight");
-  field(config.colors.min_hue, "min_hue");
-  field(config.colors.max_hue, "max_hue");
-  field(config.colors.min_luminance, "min_luminance");
-  field(config.colors.max_luminance, "max_luminance");
-  field(config.colors.min_saturation, "min_saturation");
-  field(config.colors.max_saturation, "max_saturation");
 }
 
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
-    : config_(config), nh_(config.ns) {
-  pubs_.reset(new MarkerGroupPub(nh_));
-}
-
-ReconstructionVisualizer::~ReconstructionVisualizer() {}
+    : config(config), nh_(config.ns), pubs_(nh_), colormap_(nh_, "colormap") {}
 
 std::string ReconstructionVisualizer::printInfo() const {
   std::stringstream ss;
-  ss << config::toString(config_);
+  ss << config::toString(config);
   return ss.str();
 }
 
@@ -168,27 +159,24 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
-  pubs_->publish("tsdf_viz", [&](Marker& msg) {
-    msg = makeTsdfMarker(
-        config_, header, tsdf, world_T_sensor, colorVoxelByDist, "tsdf_distance_slice");
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      LOG(INFO) << "visualizing empty TSDF slice";
-      return false;
-    }
+  pubs_.publish("tsdf_viz", header, [&]() -> Marker {
+    return makeTsdfMarker(config,
+                          colormap_.get(),
+                          header,
+                          tsdf,
+                          world_T_sensor,
+                          colorVoxelByDist,
+                          "distances");
   });
 
-  pubs_->publish("tsdf_weight_viz", [&](Marker& msg) {
-    msg = makeTsdfMarker(
-        config_, header, tsdf, world_T_sensor, colorVoxelByWeight, "tsdf_weight_slice");
-
-    if (msg.points.size()) {
-      return true;
-    } else {
-      return false;
-    }
+  pubs_.publish("tsdf_weight_viz", header, [&]() -> Marker {
+    return makeTsdfMarker(config,
+                          colormap_.get(),
+                          header,
+                          tsdf,
+                          world_T_sensor,
+                          colorVoxelByWeight,
+                          "weights");
   });
 }
 

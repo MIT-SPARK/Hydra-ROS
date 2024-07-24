@@ -33,52 +33,37 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/reconstruction/reconstruction_module.h>
 #include <ros/ros.h>
+#include <visualization_msgs/Marker.h>
+#include <visualization_msgs/MarkerArray.h>
 
-#include "hydra_ros/ColormapConfig.h"
-#include "hydra_ros/visualizer/config_wrapper.h"
-#include "hydra_ros/visualizer/marker_group_pub.h"
+#include "hydra_ros/visualizer/marker_tracker.h"
 
 namespace hydra {
 
-class ReconstructionVisualizer : public ReconstructionModule::Sink {
+class MarkerGroupPub {
  public:
-  struct Config {
-    std::string ns = "~reconstruction";
-    double min_weight = 0.0;
-    double max_weight = 10.0;
-    double min_distance = 0.0;
-    double max_distance = 2.0;
-    double marker_alpha = 0.5;
-    bool use_relative_height = true;
-    double slice_height = 0.0;
-    double min_observation_weight = 1.0e-5;
-  } const config;
+  using MarkerCallback = std::function<visualization_msgs::Marker()>;
+  using ArrayCallback = std::function<visualization_msgs::MarkerArray()>;
 
-  explicit ReconstructionVisualizer(const Config& config);
+  struct TrackedPublisher {
+    MarkerTracker tracker;
+    ros::Publisher pub;
+  };
 
-  virtual ~ReconstructionVisualizer() = default;
+  explicit MarkerGroupPub(const ros::NodeHandle& nh);
 
-  std::string printInfo() const override;
+  void publish(const std::string& name,
+               const std_msgs::Header& header,
+               const MarkerCallback& marker) const;
 
-  void call(uint64_t timestamp_ns,
-            const Eigen::Isometry3d& world_T_sensor,
-            const TsdfLayer& tsdf,
-            const ReconstructionOutput& msg) const override;
-
- protected:
-  ros::NodeHandle nh_;
-  MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
+  void publish(const std::string& name,
+               const std_msgs::Header& header,
+               const ArrayCallback& marker) const;
 
  private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<ReconstructionModule::Sink,
-                                     ReconstructionVisualizer,
-                                     Config>("ReconstructionVisualizer");
+  mutable ros::NodeHandle nh_;
+  mutable std::map<std::string, TrackedPublisher> pubs_;
 };
-
-void declare_config(ReconstructionVisualizer::Config& config);
 
 }  // namespace hydra

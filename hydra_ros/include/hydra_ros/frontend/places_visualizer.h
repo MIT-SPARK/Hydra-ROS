@@ -33,40 +33,28 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <dynamic_reconfigure/server.h>
 #include <hydra/frontend/gvd_place_extractor.h>
-#include <hydra/places/gvd_voxel.h>
-#include <hydra_ros/GvdVisualizerConfig.h>
 
-#include "hydra_ros/visualizer/visualizer_types.h"
+#include "hydra_ros/ColormapConfig.h"
+#include "hydra_ros/GvdVisualizerConfig.h"
+#include "hydra_ros/LayerVisualizerConfig.h"
+#include "hydra_ros/visualizer/config_wrapper.h"
+#include "hydra_ros/visualizer/marker_group_pub.h"
 
 namespace hydra {
 namespace places {
 class GraphExtractorInterface;
-class GvdGraph;
 }  // namespace places
-
-class MarkerGroupPub;
-
-using hydra_ros::GvdVisualizerConfig;
 
 class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
   struct Config {
     std::string ns = "~places";
-    std::string place_marker_ns = "raw_places_graph";
-    bool show_block_outlines = false;
-    bool use_gvd_block_outlines = false;
-    double outline_scale = 0.01;
-    ColormapConfig colormap;
-    GvdVisualizerConfig gvd;
-    VisualizerConfig graph;
-    LayerConfig graph_layer;
-  };
+  } const config;
 
   explicit PlacesVisualizer(const Config& config);
 
-  virtual ~PlacesVisualizer();
+  virtual ~PlacesVisualizer() = default;
 
   std::string printInfo() const override;
 
@@ -75,60 +63,21 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
             const places::GvdLayer& gvd,
             const places::GraphExtractorInterface* extractor) const override;
 
-  void visualizeError(uint64_t timestamp_ns,
-                      const places::GvdLayer& lhs,
-                      const places::GvdLayer& rhs,
-                      double threshold);
-
  private:
+  void visualizeGvd(const std_msgs::Header& header, const places::GvdLayer& gvd) const;
+
+  void visualizeExtractor(const std_msgs::Header& header,
+                          const places::GraphExtractorInterface& extractor) const;
+
   void visualizeGraph(const std_msgs::Header& header,
                       const SceneGraphLayer& graph) const;
 
-  void visualizeGvd(const std_msgs::Header& header,
-                    const places::GvdLayer& gvd) const;
-
-  void visualizeGvdGraph(const std_msgs::Header& header,
-                         const places::GvdGraph& gvd_graph) const;
-
-  void visualizeBlocks(const std_msgs::Header& header,
-                       const places::GvdLayer& gvd) const;
-
-  void publishGraphLabels(const std_msgs::Header& header,
-                          const SceneGraphLayer& graph) const;
-
-  void publishFreespace(const std_msgs::Header& header,
-                        const SceneGraphLayer& graph) const;
-
-  void gvdConfigCb(GvdVisualizerConfig& config, uint32_t level);
-
-  void graphConfigCb(LayerConfig& config, uint32_t level);
-
-  void colormapCb(ColormapConfig& config, uint32_t level);
-
-  void setupConfigServers();
-
-  template <typename Config, typename Callback>
-  void startRqtServer(const std::string& config_ns,
-                      std::unique_ptr<dynamic_reconfigure::Server<Config>>& server,
-                      const Callback& callback) {
-    ros::NodeHandle config_nh(nh_, config_ns);
-    server.reset(new dynamic_reconfigure::Server<Config>(config_nh));
-    server->setCallback(boost::bind(callback, this, _1, _2));
-  }
-
  protected:
-  Config config_;
   ros::NodeHandle nh_;
-  std::unique_ptr<MarkerGroupPub> pubs_;
-
-  mutable std::set<int> previous_labels_;
-  mutable size_t previous_spheres_;
-  mutable bool published_gvd_graph_;
-  mutable bool published_gvd_clusters_;
-
-  std::unique_ptr<dynamic_reconfigure::Server<GvdVisualizerConfig>> gvd_config_server_;
-  std::unique_ptr<dynamic_reconfigure::Server<LayerConfig>> graph_config_server_;
-  std::unique_ptr<dynamic_reconfigure::Server<ColormapConfig>> colormap_server_;
+  MarkerGroupPub pubs_;
+  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
+  visualizer::ConfigWrapper<hydra_ros::GvdVisualizerConfig> gvd_config_;
+  visualizer::ConfigWrapper<hydra_ros::LayerVisualizerConfig> layer_config_;
 
  private:
   inline static const auto registration_ =

@@ -46,6 +46,8 @@
 
 namespace hydra {
 
+using spark_dsg::DynamicSceneGraph;
+
 void declare_config(MeshPlugin::Config& config) {
   using namespace config;
   name("MeshPlugin::Config");
@@ -75,9 +77,7 @@ MeshPlugin::MeshPlugin(const Config& config,
 
 MeshPlugin::~MeshPlugin() {}
 
-void MeshPlugin::draw(const ConfigManager&,
-                      const std_msgs::Header& header,
-                      const DynamicSceneGraph& graph) {
+void MeshPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) {
   auto mesh = graph.mesh();
   if (!mesh || mesh->empty()) {
     return;

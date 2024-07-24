@@ -37,6 +37,7 @@
 #include <std_srvs/SetBool.h>
 
 #include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/marker_tracker.h"
 
 namespace hydra {
 
@@ -53,7 +54,7 @@ class FootprintPlugin : public DsgVisualizerPlugin {
     double mesh_alpha = 0.6;
     double footprint_radius = 0.5;
     size_t num_samples = 100;
-    LayerId layer_id = DsgLayers::PLACES;
+    spark_dsg::LayerId layer_id = spark_dsg::DsgLayers::PLACES;
   } const config;
 
   FootprintPlugin(const Config& config,
@@ -62,15 +63,15 @@ class FootprintPlugin : public DsgVisualizerPlugin {
 
   virtual ~FootprintPlugin();
 
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  void draw(const std_msgs::Header& header,
+            const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header,
+             const spark_dsg::DynamicSceneGraph& graph) override;
 
  protected:
   ros::Publisher pub_;
-  std::set<std::string> namespaces_;
+  MarkerTracker tracker_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<DsgVisualizerPlugin,

@@ -66,6 +66,7 @@ add_library(
   src/hydra_ros_pipeline.cpp
   src/backend/ros_backend_publisher.cpp
   src/backend/ros_backend.cpp
+  src/frontend/gvd_visualization_utilities.cpp
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
@@ -92,14 +93,16 @@ add_library(
   src/visualizer/config_manager.cpp
   src/visualizer/dynamic_scene_graph_visualizer.cpp
   src/visualizer/footprint_plugin.cpp
+  src/visualizer/graph_color_adaptors.cpp
   src/visualizer/gt_region_plugin.cpp
-  src/visualizer/gvd_visualization_utilities.cpp
   src/visualizer/hydra_visualizer.cpp
+  src/visualizer/marker_group_pub.cpp
+  src/visualizer/marker_tracker.cpp
   src/visualizer/mesh_plugin.cpp
   src/visualizer/polygon_utilities.cpp
   src/visualizer/region_plugin.cpp
-  src/visualizer/visualizer_plugins.cpp
   src/visualizer/visualizer_utilities.cpp
+  src/visualizer/visualizer_types.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}

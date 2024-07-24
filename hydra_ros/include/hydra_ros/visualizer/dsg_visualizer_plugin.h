@@ -33,10 +33,8 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/dsg_types.h>
 #include <ros/ros.h>
-
-#include "hydra_ros/visualizer/config_manager.h"
+#include <spark_dsg/dynamic_scene_graph.h>
 
 namespace hydra {
 
@@ -49,12 +47,11 @@ class DsgVisualizerPlugin {
 
   virtual ~DsgVisualizerPlugin() = default;
 
-  virtual void draw(const ConfigManager& configs,
-                    const std_msgs::Header& header,
-                    const DynamicSceneGraph& graph) = 0;
+  virtual void draw(const std_msgs::Header& header,
+                    const spark_dsg::DynamicSceneGraph& graph) = 0;
 
   virtual void reset(const std_msgs::Header& header,
-                     const DynamicSceneGraph& graph) = 0;
+                     const spark_dsg::DynamicSceneGraph& graph) = 0;
 
   // Let plugins request changes.
   virtual bool hasChange() const { return false; }

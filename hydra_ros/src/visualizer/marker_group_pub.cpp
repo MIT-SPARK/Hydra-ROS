@@ -32,53 +32,45 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/reconstruction/reconstruction_module.h>
-#include <ros/ros.h>
-
-#include "hydra_ros/ColormapConfig.h"
-#include "hydra_ros/visualizer/config_wrapper.h"
 #include "hydra_ros/visualizer/marker_group_pub.h"
 
 namespace hydra {
 
-class ReconstructionVisualizer : public ReconstructionModule::Sink {
- public:
-  struct Config {
-    std::string ns = "~reconstruction";
-    double min_weight = 0.0;
-    double max_weight = 10.0;
-    double min_distance = 0.0;
-    double max_distance = 2.0;
-    double marker_alpha = 0.5;
-    bool use_relative_height = true;
-    double slice_height = 0.0;
-    double min_observation_weight = 1.0e-5;
-  } const config;
+using visualization_msgs::Marker;
+using visualization_msgs::MarkerArray;
 
-  explicit ReconstructionVisualizer(const Config& config);
+MarkerGroupPub::MarkerGroupPub(const ros::NodeHandle& nh) : nh_(nh) {}
 
-  virtual ~ReconstructionVisualizer() = default;
+void MarkerGroupPub::publish(const std::string& name,
+                             const std_msgs::Header& header,
+                             const MarkerCallback& func) const {
+  publish(name, header, [&func]() -> MarkerArray {
+    MarkerArray msg;
+    msg.markers.push_back(func());
+    return msg;
+  });
+}
 
-  std::string printInfo() const override;
+void MarkerGroupPub::publish(const std::string& name,
+                             const std_msgs::Header& header,
+                             const ArrayCallback& func) const {
+  auto iter = pubs_.find(name);
+  if (iter == pubs_.end()) {
+    TrackedPublisher pub{{}, nh_.advertise<MarkerArray>(name, 1, true)};
+    iter = pubs_.emplace(name, pub).first;
+  }
 
-  void call(uint64_t timestamp_ns,
-            const Eigen::Isometry3d& world_T_sensor,
-            const TsdfLayer& tsdf,
-            const ReconstructionOutput& msg) const override;
+  if (!iter->second.pub.getNumSubscribers()) {
+    return;  // avoid doing computation if we don't need to publish
+  }
 
- protected:
-  ros::NodeHandle nh_;
-  MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
-
- private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<ReconstructionModule::Sink,
-                                     ReconstructionVisualizer,
-                                     Config>("ReconstructionVisualizer");
-};
-
-void declare_config(ReconstructionVisualizer::Config& config);
+  MarkerArray msg;
+  iter->second.tracker.add(func(), msg);
+  for (auto& marker : msg.markers) {
+    marker.header = header;
+  }
+  iter->second.tracker.clearPrevious(header, msg);
+  iter->second.pub.publish(msg);
+}
 
 }  // namespace hydra

@@ -33,86 +33,134 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <dynamic_reconfigure/server.h>
 #include <ros/ros.h>
+#include <spark_dsg/dynamic_scene_graph.h>
+#include <std_msgs/String.h>
 
+#include "hydra_ros/ColormapConfig.h"
+#include "hydra_ros/visualizer/config_wrapper.h"
+#include "hydra_ros/visualizer/graph_color_adaptors.h"
 #include "hydra_ros/visualizer/visualizer_types.h"
 
-namespace hydra {
+namespace hydra::visualizer {
 
-template <typename Config>
-class ConfigWrapper {
+const std::string& getColorMode(const hydra_ros::LayerVisualizerConfig& config);
+const std::string& getColorMode(const hydra_ros::DynamicLayerVisualizerConfig& config);
+
+class ColorManager {
  public:
-  using Ptr = std::shared_ptr<ConfigWrapper<Config>>;
-  using Server = dynamic_reconfigure::Server<Config>;
-  using UpdateCallback = std::function<void()>;
-
-  ConfigWrapper(const ros::NodeHandle& nh, const std::string& ns)
-      : nh_(nh, ns), changed_(true), on_update_callback_([]() {}) {
-    server_ = std::make_unique<Server>(nh_);
-    server_->setCallback(boost::bind(&ConfigWrapper<Config>::update, this, _1, _2));
-  }
-
-  bool hasChange() { return changed_; }
-
-  void clearChangeFlag() { changed_ = false; }
-
-  const Config& get() const { return config_; };
-
-  void setUpdateCallback(UpdateCallback callback) {
-    on_update_callback_ = std::move(callback);
-  }
+  using ColorFunc = std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
+  explicit ColorManager(const ros::NodeHandle& nh);
+  ColorFunc get(const spark_dsg::DynamicSceneGraph& graph) const;
+  void set(const std::string& mode);
+  bool hasChange() const;
+  void clearChangeFlag();
 
  private:
-  void update(Config& config, uint32_t) {
-    config_ = config;
-    changed_ = true;
-    on_update_callback_();
-  }
+  void setAdaptor();
+  void callback(const std_msgs::String& msg);
 
- private:
+  bool has_change_;
+  std::string mode_;
   ros::NodeHandle nh_;
-
-  bool changed_;
-  Config config_;
-
-  std::unique_ptr<Server> server_;
-
-  UpdateCallback on_update_callback_;
+  ros::Subscriber sub_;
+  std::string curr_contents_;
+  std::unique_ptr<GraphColorAdaptor> adaptor_;
 };
+
+template <typename ConfigT>
+class LayerConfig {
+ public:
+  LayerConfig(const ros::NodeHandle& nh, const std::string& ns)
+      : color(std::make_unique<ColorManager>(ros::NodeHandle(nh, ns))),
+        config(std::make_unique<ConfigWrapper<ConfigT>>(nh, ns)) {
+    setCallback();
+  }
+
+  ~LayerConfig() = default;
+  LayerConfig(const LayerConfig& other) = delete;
+  LayerConfig& operator=(const LayerConfig& other) = delete;
+
+  LayerConfig(LayerConfig&& other)
+      : color(std::move(other.color)), config(std::move(other.config)) {
+    setCallback();
+  }
+
+  LayerConfig& operator=(LayerConfig&& other) {
+    color = std::move(other.color);
+    config = std::move(other.config);
+    setCallback();
+    return *this;
+  }
+
+  LayerInfo<ConfigT> getInfo(const spark_dsg::DynamicSceneGraph& graph) const;
+
+  bool hasChange() const { return color->hasChange() || config->hasChange(); }
+  void clearChangeFlag() {
+    color->clearChangeFlag();
+    config->clearChangeFlag();
+  }
+
+  std::unique_ptr<ColorManager> color;
+  std::unique_ptr<ConfigWrapper<ConfigT>> config;
+
+ private:
+  void setCallback() {
+    color->set(getColorMode(config->get()));
+    config->setUpdateCallback([this](const auto& c) { color->set(getColorMode(c)); });
+  }
+};
+
+using StaticLayerConfig = LayerConfig<hydra_ros::LayerVisualizerConfig>;
+using DynamicLayerConfig = LayerConfig<hydra_ros::DynamicLayerVisualizerConfig>;
 
 class ConfigManager {
  public:
-  using Ptr = std::shared_ptr<ConfigManager>;
+  template <typename T>
+  using LayerMap = std::map<spark_dsg::LayerId, T>;
 
-  ConfigManager(const ros::NodeHandle& nh);
+  ~ConfigManager();
 
-  virtual ~ConfigManager();
+  static ConfigManager& instance();
 
-  virtual void reset();
+  static void init(const ros::NodeHandle& nh);
 
-  virtual void reset(const DynamicSceneGraph& graph);
+  static void reset();
 
-  virtual bool hasChange() const;
+  static void reset(const spark_dsg::DynamicSceneGraph& graph);
 
-  virtual void clearChangeFlags();
+  bool hasChange() const;
 
-  const VisualizerConfig& getVisualizerConfig() const;
+  void clearChangeFlags();
 
-  const LayerConfig* getLayerConfig(LayerId layer) const;
+  const hydra_ros::VisualizerConfig& getVisualizerConfig() const;
 
-  const DynamicLayerConfig& getDynamicLayerConfig(LayerId layer) const;
+  const hydra_ros::ColormapConfig& getColormapConfig(const std::string& name) const;
 
-  const ColormapConfig& getColormapConfig(const std::string& name) const;
+  const StaticLayerConfig& getLayerConfig(spark_dsg::LayerId layer) const;
+
+  const DynamicLayerConfig& getDynamicLayerConfig(spark_dsg::LayerId layer) const;
 
  private:
-  ros::NodeHandle nh_;
+  ConfigManager();
 
-  mutable ConfigWrapper<VisualizerConfig>::Ptr visualizer_config_;
-  mutable std::map<LayerId, ConfigWrapper<LayerConfig>::Ptr> layer_configs_;
-  mutable std::map<LayerId, ConfigWrapper<DynamicLayerConfig>::Ptr>
-      dynamic_layer_configs_;
-  mutable std::map<std::string, ConfigWrapper<ColormapConfig>::Ptr> colormaps_;
+  inline static std::unique_ptr<ConfigManager> s_instance_ = nullptr;
+
+  ros::NodeHandle nh_;
+  mutable ConfigWrapper<hydra_ros::VisualizerConfig>::Ptr visualizer_config_;
+  mutable std::map<std::string, ConfigWrapper<hydra_ros::ColormapConfig>::Ptr> colors_;
+  mutable LayerMap<StaticLayerConfig> layers_;
+  mutable LayerMap<DynamicLayerConfig> dynamic_layers_;
 };
 
-}  // namespace hydra
+template <typename ConfigT>
+LayerInfo<ConfigT> LayerConfig<ConfigT>::getInfo(
+    const spark_dsg::DynamicSceneGraph& graph) const {
+  LayerInfo<ConfigT> info;
+  info.graph = ConfigManager::instance().getVisualizerConfig();
+  info.layer = config->get();
+  info.node_color = color->get(graph);
+  return info;
+}
+
+}  // namespace hydra::visualizer

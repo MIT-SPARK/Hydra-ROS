@@ -57,11 +57,11 @@ class MeshPlugin : public DsgVisualizerPlugin {
 
   virtual ~MeshPlugin();
 
-  void draw(const ConfigManager& configs,
-            const std_msgs::Header& header,
-            const DynamicSceneGraph& graph) override;
+  void draw(const std_msgs::Header& header,
+            const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header, const DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header,
+             const spark_dsg::DynamicSceneGraph& graph) override;
 
   bool hasChange() const override;
 

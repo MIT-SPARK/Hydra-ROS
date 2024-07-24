@@ -33,46 +33,52 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/utils/minimum_spanning_tree.h>
-#include <kimera_pgmo/deformation_graph.h>
-#include <visualization_msgs/Marker.h>
+#include <dynamic_reconfigure/server.h>
+#include <ros/ros.h>
 
-#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
-#include "hydra_ros/visualizer/visualizer_types.h"
+namespace hydra::visualizer {
 
-namespace hydra {
-
-struct PMGraphPluginConfig {
-  explicit PMGraphPluginConfig(const ros::NodeHandle& nh);
-
-  double mesh_edge_scale = 0.005;
-  double mesh_edge_alpha = 0.8;
-  double mesh_marker_scale = 0.1;
-  double mesh_marker_alpha = 0.8;
-  Color leaf_color;
-  Color interior_color;
-  Color invalid_color;
-  LayerConfig layer_config;
-};
-
-class PlacesFactorGraphViz {
+// TODO(nathan) make threadsafe
+template <typename Config>
+class ConfigWrapper {
  public:
-  using Ptr = std::shared_ptr<PlacesFactorGraphViz>;
+  using Ptr = std::shared_ptr<ConfigWrapper<Config>>;
+  using Server = dynamic_reconfigure::Server<Config>;
+  using UpdateCallback = std::function<void(const Config&)>;
 
-  explicit PlacesFactorGraphViz(const ros::NodeHandle& nh);
+  ConfigWrapper(const ros::NodeHandle& nh, const std::string& ns)
+      : nh_(nh, ns), changed_(true) {
+    server_ = std::make_unique<Server>(nh_);
+    server_->setCallback(boost::bind(&ConfigWrapper<Config>::update, this, _1, _2));
+  }
 
-  virtual ~PlacesFactorGraphViz() = default;
+  bool hasChange() const { return changed_; }
 
-  void draw(const std::string& frame_id,
-            char vertex_prefix,
-            const SceneGraphLayer& places,
-            const MinimumSpanningTreeInfo& mst_info,
-            const kimera_pgmo::DeformationGraph& deformations);
+  void clearChangeFlag() { changed_ = false; }
 
- protected:
+  const Config& get() const { return config_; };
+
+  void setUpdateCallback(const UpdateCallback& callback) {
+    on_update_callback_ = callback;
+  }
+
+ private:
+  void update(Config& config, uint32_t) {
+    config_ = config;
+    changed_ = true;
+    if (on_update_callback_) {
+      on_update_callback_(config_);
+    }
+  }
+
+ private:
   ros::NodeHandle nh_;
-  ros::Publisher marker_pub_;
-  PMGraphPluginConfig config_;
+
+  bool changed_;
+  Config config_;
+
+  std::unique_ptr<Server> server_;
+  UpdateCallback on_update_callback_;
 };
 
-}  // namespace hydra
+}  // namespace hydra::visualizer
