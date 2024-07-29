@@ -144,7 +144,7 @@ void BasisPointPlugin::draw(const std_msgs::Header& header,
   }
 }
 
-void BasisPointPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
+void BasisPointPlugin::reset(const std_msgs::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
@@ -164,10 +164,10 @@ void BasisPointPlugin::fillMarkers(const std_msgs::Header& header,
   visualizer::StaticLayerInfo info{{}, layer_config_.get()};
   info.graph.layer_z_step = 0.0;
   info.graph.collapse_layers = true;
-  info.node_color = [&](const SceneGraphNode& node) -> Color {
+  info.node_color = [&](const SceneGraphNode& node) {
     const auto parent = node.getParent();
     return parent ? graph.getNode(*parent).attributes<SemanticNodeAttributes>().color
-                  : Color();
+                  : spark_dsg::Color();
   };
 
   if (!info.layer.visualize) {

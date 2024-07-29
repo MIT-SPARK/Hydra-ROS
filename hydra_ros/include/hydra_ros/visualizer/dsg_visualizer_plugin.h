@@ -50,8 +50,7 @@ class DsgVisualizerPlugin {
   virtual void draw(const std_msgs::Header& header,
                     const spark_dsg::DynamicSceneGraph& graph) = 0;
 
-  virtual void reset(const std_msgs::Header& header,
-                     const spark_dsg::DynamicSceneGraph& graph) = 0;
+  virtual void reset(const std_msgs::Header& header) = 0;
 
   // Let plugins request changes.
   virtual bool hasChange() const { return false; }

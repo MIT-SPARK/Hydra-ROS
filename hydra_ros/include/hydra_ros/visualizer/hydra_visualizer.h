@@ -36,62 +36,60 @@
 
 #include <config_utilities/virtual_config.h>
 #include <ros/ros.h>
-#include <spark_dsg/zmq_interface.h>
 #include <std_srvs/Empty.h>
 
 #include <fstream>
 
-#include "hydra_ros/utils/dsg_streaming_interface.h"
-#include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
-#include "hydra_ros/visualizer/mesh_plugin.h"
+#include "hydra_ros/visualizer/dsg_visualizer_plugin.h"
+#include "hydra_ros/visualizer/graph_wrappers.h"
+#include "hydra_ros/visualizer/scene_graph_renderer.h"
 
 namespace hydra {
 
-using DsgVisualizer = hydra::DynamicSceneGraphVisualizer;
-using spark_dsg::getDefaultLayerIds;
+class HydraVisualizer {
+ public:
+  struct Config {
+    std::string ns = "~";
+    double loop_period_s = 0.1;
+    std::string visualizer_frame = "map";
+    config::VirtualConfig<GraphWrapper> graph;
+    // Specify additional plugins that should be loaded <name, config>
+    std::map<std::string, config::VirtualConfig<DsgVisualizerPlugin>> plugins;
+  } const config;
 
-struct HydraVisualizerConfig {
-  bool load_graph = false;
-  bool use_zmq = false;
-  std::string scene_graph_filepath = "";
-  std::string visualizer_ns = "/hydra_dsg_visualizer";
-  std::string output_path = "";
-  std::string zmq_url = "tcp://127.0.0.1:8001";
-  size_t zmq_num_threads = 2;
-  size_t zmq_poll_time_ms = 10;
+  //! Construct the visualizer from a config
+  explicit HydraVisualizer(const Config& config);
 
-  // Specify additional plugins that should be loaded <name, config>
-  std::map<std::string, config::VirtualConfig<DsgVisualizerPlugin>> plugins;
-};
+  ~HydraVisualizer() = default;
 
-void declare_config(HydraVisualizerConfig& config);
+  //! Loop and redraw when changes occur
+  void start();
 
-struct HydraVisualizer {
-  HydraVisualizer(const ros::NodeHandle& nh);
-  ~HydraVisualizer();
+  //! Delete all currently published visualization artifacts and remake graph
+  void reset();
 
-  void loadGraph();
-
-  bool handleReload(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
-  bool handleRedraw(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
-
+  //! Add a new graph plugin
   void addPlugin(DsgVisualizerPlugin::Ptr plugin);
-  void clearPlugins();
-  inline DynamicSceneGraphVisualizer& getVisualizer() { return *visualizer_; }
 
-  void spinRos();
-  void spinFile();
-  void spinZmq();
-  void spin();
+  //! Delete all current plugins
+  void clearPlugins();
+
+ private:
+  void spinOnce(bool force = false);
+
+  bool redraw(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
+  bool reset(std_srvs::Empty::Request&, std_srvs::Empty::Response&);
 
   ros::NodeHandle nh_;
-  std::shared_ptr<DsgVisualizer> visualizer_;
-  std::unique_ptr<DsgReceiver> receiver_;
-  std::unique_ptr<spark_dsg::ZmqReceiver> zmq_receiver_;
-  HydraVisualizerConfig config_;
-  std::unique_ptr<std::ofstream> size_log_file_;
-  ros::ServiceServer reload_service_;
+  ros::WallTimer loop_timer_;
+
+  GraphWrapper::Ptr graph_;
+  SceneGraphRenderer::Ptr renderer_;
+  std::vector<DsgVisualizerPlugin::Ptr> plugins_;
   ros::ServiceServer redraw_service_;
+  ros::ServiceServer reset_service_;
 };
+
+void declare_config(HydraVisualizer::Config& config);
 
 }  // namespace hydra

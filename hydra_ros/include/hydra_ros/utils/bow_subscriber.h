@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/common/shared_module_state.h>
 #include <pose_graph_tools_msgs/BowQueries.h>
 #include <ros/ros.h>
 
@@ -41,7 +40,7 @@ namespace hydra {
 
 class BowSubscriber {
  public:
-  BowSubscriber(const ros::NodeHandle& nh, const SharedModuleState::Ptr& state);
+  explicit BowSubscriber(const ros::NodeHandle& nh);
 
  protected:
   void callback(const pose_graph_tools_msgs::BowQueries& msg);
@@ -49,7 +48,6 @@ class BowSubscriber {
  protected:
   ros::NodeHandle nh_;
   ros::Subscriber sub_;
-  SharedModuleState::Ptr state_;
 };
 
 }  // namespace hydra

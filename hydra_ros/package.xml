@@ -33,6 +33,8 @@
   <exec_depend>depth_image_proc</exec_depend>
   <exec_depend>rviz</exec_depend>
   <exec_depend>kimera_pgmo_rviz</exec_depend>
+  <!-- optional build dependency -->
+  <exec_depend>semantic_inference_msgs</exec_depend>
 
   <export>
   </export>

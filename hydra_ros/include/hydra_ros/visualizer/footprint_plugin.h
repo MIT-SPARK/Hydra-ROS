@@ -66,8 +66,7 @@ class FootprintPlugin : public DsgVisualizerPlugin {
   void draw(const std_msgs::Header& header,
             const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header,
-             const spark_dsg::DynamicSceneGraph& graph) override;
+  void reset(const std_msgs::Header& header) override;
 
  protected:
   ros::Publisher pub_;

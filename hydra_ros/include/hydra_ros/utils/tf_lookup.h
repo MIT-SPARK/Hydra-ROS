@@ -32,91 +32,50 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/utils/lookup_tf.h"
-
-#include <geometry_msgs/TransformStamped.h>
-#include <glog/logging.h>
-#include <tf2_eigen/tf2_eigen.h>
+#pragma once
+#include <hydra/input/input_module.h>
+#include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+
+#include <Eigen/Geometry>
+#include <optional>
+#include <string>
 
 namespace hydra {
 
 PoseStatus lookupTransform(const std::string& target,
                            const std::string& source,
-                           double wait_duration_s,
-                           int verbosity) {
-  tf2_ros::Buffer buffer;
-  tf2_ros::TransformListener listener(buffer);
-  return lookupTransform(
-      buffer, std::nullopt, target, source, std::nullopt, wait_duration_s, verbosity);
-}
+                           double wait_duration_s = 0.1,
+                           int verbosity = 10);
 
 PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
                            const std::optional<ros::Time>& stamp,
                            const std::string& target,
                            const std::string& source,
-                           std::optional<size_t> max_tries,
-                           double wait_duration_s,
-                           int verbosity) {
-  ros::WallRate tf_wait_rate(1.0 / wait_duration_s);
-  std::string stamp_suffix;
-  if (stamp) {
-    std::stringstream ss;
-    ss << " @ " << stamp.value().toNSec() << " [ns]";
-    stamp_suffix = ss.str();
-  }
+                           std::optional<size_t> max_tries = std::nullopt,
+                           double wait_duration_s = 0.1,
+                           int verbosity = 10);
 
-  bool have_transform = false;
-  std::string err_str;
-  VLOG(verbosity) << "Looking up transform " << target << "_T_" << source
-                  << stamp_suffix;
+struct TFLookup {
+  struct Config {
+    //! Amount of time to wait between tf lookup attempts
+    double wait_duration_s = 0.1;
+    //! Buffer size in second for tf
+    double buffer_size_s = 30.0;
+    //! Number of lookup attempts before giving up
+    int max_tries = 5;
+    //! Logging verbosity of tf lookup process
+    int verbosity = 3;
+  } const config;
 
-  const auto lookup_time = stamp.value_or(ros::Time());
-  size_t attempt_number = 0;
-  while (ros::ok()) {
-    VLOG(verbosity) << "Attempting to lookup tf @ " << lookup_time.toNSec()
-                    << " [ns]: " << attempt_number << " / "
-                    << (max_tries ? std::to_string(max_tries.value()) : "n/a");
-    if (max_tries && attempt_number >= *max_tries) {
-      break;
-    }
+  explicit TFLookup(const Config& config);
+  PoseStatus getBodyPose(uint64_t timestamp_ns) const;
 
-    if (buffer.canTransform(target, source, lookup_time, ros::Duration(0), &err_str)) {
-      have_transform = true;
-      break;
-    }
+  ros::NodeHandle nh;
+  tf2_ros::Buffer buffer;
+  tf2_ros::TransformListener listener;
+};
 
-    ++attempt_number;
-    tf_wait_rate.sleep();
-    ros::spinOnce();
-  }
-
-  if (!have_transform) {
-    LOG(ERROR) << "Failed to find: " << target << "_T_" << source << stamp_suffix
-               << ": " << err_str;
-    return {false, {}, {}};
-  }
-
-  geometry_msgs::TransformStamped transform;
-  try {
-    transform = buffer.lookupTransform(target, source, lookup_time);
-  } catch (const tf2::TransformException& ex) {
-    LOG(ERROR) << "Failed to look up: " << target << "_T_" << source << stamp_suffix;
-    return {false, {}, {}};
-  }
-
-  geometry_msgs::Pose curr_pose;
-  curr_pose.position.x = transform.transform.translation.x;
-  curr_pose.position.y = transform.transform.translation.y;
-  curr_pose.position.z = transform.transform.translation.z;
-  curr_pose.orientation = transform.transform.rotation;
-
-  PoseStatus to_return;
-  to_return.is_valid = true;
-  tf2::convert(curr_pose.position, to_return.target_p_source);
-  tf2::convert(curr_pose.orientation, to_return.target_R_source);
-  to_return.target_R_source.normalize();
-  return to_return;
-}
+void declare_config(TFLookup::Config& config);
 
 }  // namespace hydra

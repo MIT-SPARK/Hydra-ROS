@@ -40,7 +40,6 @@
 #include <hydra/common/global_info.h>
 
 #include "hydra_ros/input/ros_sensors.h"
-#include "hydra_ros/utils/lookup_tf.h"
 
 namespace hydra {
 
@@ -48,11 +47,8 @@ void declare_config(RosInputModule::Config& config) {
   using namespace config;
   name("RosInputModule::Config");
   base<InputModule::Config>(config);
+  field(config.tf_lookup, "tf_lookup");
   field(config.clear_queue_on_fail, "clear_queue_on_fail");
-  field(config.tf_wait_duration_s, "tf_wait_duration_s");
-  field(config.tf_buffer_size_s, "tf_buffer_size_s");
-  field(config.tf_max_tries, "tf_max_tries");
-  field(config.tf_verbosity, "tf_verbosity");
 }
 
 InputModule::Config RosInputModule::Config::remapSensors() const {
@@ -67,11 +63,8 @@ InputModule::Config RosInputModule::Config::remapSensors() const {
 RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& queue)
     : InputModule(config.remapSensors(), queue),
       config(config),
-      nh_(""),
-      have_first_pose_(false) {
-  buffer_.reset(new tf2_ros::Buffer(ros::Duration(config.tf_buffer_size_s)));
-  tf_listener_.reset(new tf2_ros::TransformListener(*buffer_));
-}
+      lookup_(config.tf_lookup),
+      have_first_pose_(false) {}
 
 RosInputModule::~RosInputModule() = default;
 
@@ -82,21 +75,7 @@ std::string RosInputModule::printInfo() const {
 }
 
 PoseStatus RosInputModule::getBodyPose(uint64_t timestamp_ns) {
-  // negative or 0 for tf_max_tries means we spin forever if the transform isn't present
-  const std::optional<size_t> max_tries =
-      config.tf_max_tries > 0 ? std::optional<size_t>(config.tf_max_tries)
-                              : std::nullopt;
-
-  ros::Time curr_ros_time;
-  curr_ros_time.fromNSec(timestamp_ns);
-  const auto pose_status = lookupTransform(*buffer_,
-                                           curr_ros_time,
-                                           GlobalInfo::instance().getFrames().odom,
-                                           GlobalInfo::instance().getFrames().robot,
-                                           max_tries,
-                                           config.tf_wait_duration_s,
-                                           config.tf_verbosity);
-
+  const auto pose_status = lookup_.getBodyPose(timestamp_ns);
   if (pose_status && !have_first_pose_) {
     have_first_pose_ = true;
   }

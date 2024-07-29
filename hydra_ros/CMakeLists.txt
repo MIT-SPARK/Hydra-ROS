@@ -70,6 +70,7 @@ add_library(
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
+  src/input/feature_receiver.cpp
   src/input/image_receiver.cpp
   src/input/pointcloud_adaptor.cpp
   src/input/pointcloud_receiver.cpp
@@ -78,22 +79,24 @@ add_library(
   src/input/ros_sensors.cpp
   src/loop_closure/ros_lcd_registration.cpp
   src/odometry/ros_pose_graph_tracker.cpp
+  src/openset/ros_embedding_group.cpp
   src/reconstruction/reconstruction_visualizer.cpp
   src/utils/bag_reader.cpp
   src/utils/bow_subscriber.cpp
   src/utils/dsg_streaming_interface.cpp
   src/utils/ear_clipping.cpp
-  src/utils/lookup_tf.cpp
   src/utils/node_utilities.cpp
   src/utils/occupancy_publisher.cpp
   src/utils/pose_cache.cpp
+  src/utils/tf_lookup.cpp
   src/visualizer/basis_point_plugin.cpp
   src/visualizer/mesh_color_adaptor.cpp
   src/visualizer/colormap_utilities.cpp
   src/visualizer/config_manager.cpp
-  src/visualizer/dynamic_scene_graph_visualizer.cpp
+  src/visualizer/feature_color_adaptors.cpp
   src/visualizer/footprint_plugin.cpp
   src/visualizer/graph_color_adaptors.cpp
+  src/visualizer/graph_wrappers.cpp
   src/visualizer/gt_region_plugin.cpp
   src/visualizer/hydra_visualizer.cpp
   src/visualizer/marker_group_pub.cpp
@@ -101,13 +104,14 @@ add_library(
   src/visualizer/mesh_plugin.cpp
   src/visualizer/polygon_utilities.cpp
   src/visualizer/region_plugin.cpp
+  src/visualizer/scene_graph_renderer.cpp
   src/visualizer/visualizer_utilities.cpp
   src/visualizer/visualizer_types.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}
   PUBLIC include ${catkin_INCLUDE_DIRS}
-  PRIVATE ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS}
+  PRIVATE ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR}
 )
 target_link_libraries(
   ${PROJECT_NAME}
@@ -117,6 +121,19 @@ target_link_libraries(
 add_dependencies(
   ${PROJECT_NAME} ${catkin_EXPORTED_TARGETS} ${${PROJECT_NAME}_EXPORTED_TARGETS}
 )
+
+find_package(semantic_inference_msgs QUIET)
+
+if(${semantic_inference_msgs_FOUND})
+  set(HYDRA_USE_SEMANTIC_INFERENCE_VALUE 1)
+  target_include_directories(
+    ${PROJECT_NAME} PRIVATE ${semantic_inference_msgs_INCLUDE_DIRS}
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${semantic_inference_msgs_LIBRARIES})
+else()
+  set(HYDRA_USE_SEMANTIC_INFERENCE_VALUE 0)
+endif()
+configure_file(cmake/hydra_ros_build_config.h.in hydra_ros_build_config.h)
 
 add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
 target_link_libraries(dsg_optimizer_node ${PROJECT_NAME} ${gflags_LIBRARIES})

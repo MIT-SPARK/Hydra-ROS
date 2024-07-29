@@ -32,15 +32,11 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/ros.h>
 #include <glog/logging.h>
-#include <std_srvs/Trigger.h>
 
 #include "hydra_ros/visualizer/hydra_visualizer.h"
-
-bool handleShutdown(std_srvs::Trigger::Request&, std_srvs::Trigger::Response&) {
-  ros::shutdown();
-  return true;
-}
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "dsg_visualizer_node");
@@ -54,11 +50,12 @@ int main(int argc, char** argv) {
   google::InstallFailureSignalHandler();
 
   ros::NodeHandle nh("~");
+  const auto config = config::fromRos<hydra::HydraVisualizer::Config>(nh);
+  ROS_INFO_STREAM("Config:\n" << config::toString(config));
 
-  auto service = nh.advertiseService("shutdown", handleShutdown);
-  auto node = std::make_unique<hydra::HydraVisualizer>(nh);
-  node->spin();
-  node.reset();
+  auto node = std::make_unique<hydra::HydraVisualizer>(config);
+  node->start();
 
+  ros::spin();
   return 0;
 }

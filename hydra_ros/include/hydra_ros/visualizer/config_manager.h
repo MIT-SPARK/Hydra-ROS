@@ -50,7 +50,7 @@ const std::string& getColorMode(const hydra_ros::DynamicLayerVisualizerConfig& c
 class ColorManager {
  public:
   using ColorFunc = std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
-  explicit ColorManager(const ros::NodeHandle& nh);
+  ColorManager(const ros::NodeHandle& nh, spark_dsg::LayerId layer);
   ColorFunc get(const spark_dsg::DynamicSceneGraph& graph) const;
   void set(const std::string& mode);
   bool hasChange() const;
@@ -64,6 +64,7 @@ class ColorManager {
   std::string mode_;
   ros::NodeHandle nh_;
   ros::Subscriber sub_;
+  spark_dsg::LayerId layer_;
   std::string curr_contents_;
   std::unique_ptr<GraphColorAdaptor> adaptor_;
 };
@@ -71,8 +72,10 @@ class ColorManager {
 template <typename ConfigT>
 class LayerConfig {
  public:
-  LayerConfig(const ros::NodeHandle& nh, const std::string& ns)
-      : color(std::make_unique<ColorManager>(ros::NodeHandle(nh, ns))),
+  LayerConfig(const ros::NodeHandle& nh,
+              const std::string& ns,
+              spark_dsg::LayerId layer)
+      : color(std::make_unique<ColorManager>(ros::NodeHandle(nh, ns), layer)),
         config(std::make_unique<ConfigWrapper<ConfigT>>(nh, ns)) {
     setCallback();
   }

@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
+#include "hydra_ros/visualizer/scene_graph_renderer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
@@ -88,6 +88,10 @@ struct MarkerNamespaces {
     return std::string("layer_polygon_boundaries_edges_") + std::to_string(layer);
   }
 
+  static std::string meshEdgeNamespace(spark_dsg::LayerId layer) {
+    return std::string("mesh_edges_") + std::to_string(layer);
+  }
+
   static std::string dynamicNodeNamespace(char layer_prefix) {
     return std::string("dynamic_nodes_") + layer_prefix;
   }
@@ -101,153 +105,62 @@ struct MarkerNamespaces {
   }
 };
 
-void declare_config(DynamicSceneGraphVisualizer::Config& config) {
-  using namespace config;
-  name("DynamicSceneGraphVisualizer::Config");
-  field(config.visualizer_frame, "visualizer_frame");
-  checkCondition(!config.visualizer_frame.empty(), "visualizer_frame");
-}
-
-DynamicSceneGraphVisualizer::DynamicSceneGraphVisualizer(const ros::NodeHandle& nh)
-    : config(config::fromRos<Config>(nh)),
-      nh_(nh),
-      need_redraw_(false),
-      periodic_redraw_(false),
-      pub_(nh_.advertise<MarkerArray>("dsg_markers", 1, true)) {
+SceneGraphRenderer::SceneGraphRenderer(const ros::NodeHandle& nh)
+    : nh_(nh), pub_(nh_.advertise<MarkerArray>("dsg_markers", 1, true)) {
   ConfigManager::init(nh_);
 }
 
-void DynamicSceneGraphVisualizer::reset() {
-  if (!graph_) {
-    return;
-  }
-
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
-  header.frame_id = config.visualizer_frame;
-
+void SceneGraphRenderer::reset(const std_msgs::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
     pub_.publish(msg);
   }
 
-  for (const auto& plugin : plugins_) {
-    plugin->reset(header, *graph_);
-  }
-
-  graph_.reset();
+  // TODO(nathan) think if we actually want to do this
+  // ConfigManager::reset();
 }
 
-bool DynamicSceneGraphVisualizer::redraw() {
-  if (!graph_) {
-    return false;
-  }
-
-  auto& manager = ConfigManager::instance();
-  need_redraw_ |= manager.hasChange();
-  for (const auto& plugin : plugins_) {
-    need_redraw_ |= plugin->hasChange();
-  }
-
-  if (!need_redraw_) {
-    return false;
-  }
-
-  need_redraw_ = false;
-
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
-  header.frame_id = config.visualizer_frame;
-
-  redrawImpl(header);
-
-  manager.clearChangeFlags();
-  for (auto& plugin : plugins_) {
-    plugin->clearChangeFlag();
-  }
-
-  return true;
+bool SceneGraphRenderer::hasChange() const {
+  return ConfigManager::instance().hasChange();
 }
 
-void DynamicSceneGraphVisualizer::start(bool periodic_redraw) {
-  periodic_redraw_ = periodic_redraw;
-  double visualizer_loop_period = 1.0e-1;
-  nh_.param("visualizer_loop_period", visualizer_loop_period, visualizer_loop_period);
-  visualizer_loop_timer_ =
-      nh_.createWallTimer(ros::WallDuration(visualizer_loop_period),
-                          &DynamicSceneGraphVisualizer::displayLoop,
-                          this);
+void SceneGraphRenderer::clearChangeFlag() {
+  ConfigManager::instance().clearChangeFlags();
 }
 
-void DynamicSceneGraphVisualizer::setGraph(const DynamicSceneGraph::Ptr& scene_graph,
-                                           bool need_reset) {
-  if (scene_graph == nullptr) {
-    ROS_ERROR("Request to visualize invalid scene graph! Ignoring");
-    return;
-  }
-
-  if (need_reset || !graph_) {
-    ConfigManager::reset(*scene_graph);
-  }
-
-  if (need_reset) {
-    reset();
-  }
-
-  graph_ = scene_graph;
-  need_redraw_ = true;
-}
-
-bool DynamicSceneGraphVisualizer::graphIsSet() const { return graph_ != nullptr; }
-
-DynamicSceneGraph::Ptr DynamicSceneGraphVisualizer::getGraph() { return graph_; }
-
-void DynamicSceneGraphVisualizer::addPlugin(const DsgVisualizerPlugin::Ptr& plugin) {
-  plugins_.push_back(plugin);
-}
-
-void DynamicSceneGraphVisualizer::clearPlugins() { plugins_.clear(); }
-
-void DynamicSceneGraphVisualizer::setNeedRedraw() { need_redraw_ = true; }
-
-void DynamicSceneGraphVisualizer::setGraphUpdated() { need_redraw_ = true; }
-
-void DynamicSceneGraphVisualizer::displayLoop(const ros::WallTimerEvent&) {
-  if (periodic_redraw_) {
-    need_redraw_ = true;
-  }
-
-  redraw();
-}
-
-void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header) {
+void SceneGraphRenderer::draw(const std_msgs::Header& header,
+                              const DynamicSceneGraph& graph) {
   visualizer::GraphInfo info;
   const auto& manager = ConfigManager::instance();
 
   MarkerArray msg;
-  for (auto&& [layer_id, layer] : graph_->layers()) {
+  for (auto&& [layer_id, layer] : graph.layers()) {
     const auto& conf = manager.getLayerConfig(layer_id);
-    auto iter = info.layers.emplace(layer_id, conf.getInfo(*graph_)).first;
+    auto iter = info.layers.emplace(layer_id, conf.getInfo(graph)).first;
     drawLayer(header, iter->second, *layer, msg);
+    if (iter->second.layer.visualize && iter->second.layer.draw_mesh_edges) {
+      const std::string ns = MarkerNamespaces::meshEdgeNamespace(layer_id);
+      tracker_.add(makeMeshEdgesMarker(header, iter->second, graph, *layer, ns), msg);
+    }
   }
 
-  for (auto&& [layer_id, sublayers] : graph_->dynamicLayers()) {
+  for (auto&& [layer_id, sublayers] : graph.dynamicLayers()) {
     const auto& conf = manager.getDynamicLayerConfig(layer_id);
-    auto iter = info.dynamic_layers.emplace(layer_id, conf.getInfo(*graph_)).first;
+    auto iter = info.dynamic_layers.emplace(layer_id, conf.getInfo(graph)).first;
     for (auto&& [prefix, layer] : sublayers) {
       drawDynamicLayer(header, iter->second, *layer, msg);
     }
   }
 
   const auto static_edges = makeGraphEdgeMarkers(
-      header, info, *graph_, graph_->interlayer_edges(), "interlayer_edges_");
+      header, info, graph, graph.interlayer_edges(), "interlayer_edges_");
   tracker_.add(static_edges, msg);
 
   const auto dynamic_edges = makeGraphEdgeMarkers(header,
                                                   info,
-                                                  *graph_,
-                                                  graph_->dynamic_interlayer_edges(),
+                                                  graph,
+                                                  graph.dynamic_interlayer_edges(),
                                                   "dynamic_interlayer_edges_");
   tracker_.add(dynamic_edges, msg);
 
@@ -255,16 +168,12 @@ void DynamicSceneGraphVisualizer::redrawImpl(const std_msgs::Header& header) {
   if (!msg.markers.empty()) {
     pub_.publish(msg);
   }
-
-  for (const auto& plugin : plugins_) {
-    plugin->draw(header, *graph_);
-  }
 }
 
-void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
-                                            const StaticLayerInfo& info,
-                                            const SceneGraphLayer& layer,
-                                            MarkerArray& msg) {
+void SceneGraphRenderer::drawLayer(const std_msgs::Header& header,
+                                   const StaticLayerInfo& info,
+                                   const SceneGraphLayer& layer,
+                                   MarkerArray& msg) {
   if (!info.layer.visualize) {
     return;
   }
@@ -330,19 +239,14 @@ void DynamicSceneGraphVisualizer::drawLayer(const std_msgs::Header& header,
     info.filter = {};  // we reset the manual filter to draw edges to frontiers
   }
 
-  if (info.layer.draw_mesh_edges) {
-    const std::string ns = "mesh_2d_place_connections";
-    tracker_.add(makeMeshEdgesMarker(header, info, *graph_, layer, ns), msg);
-  }
-
   const auto edge_ns = MarkerNamespaces::layerEdgeNamespace(layer.id);
   tracker_.add(makeLayerEdgeMarkers(header, info, layer, edge_ns), msg);
 }
 
-void DynamicSceneGraphVisualizer::drawDynamicLayer(const std_msgs::Header& header,
-                                                   const DynamicLayerInfo& info,
-                                                   const DynamicSceneGraphLayer& layer,
-                                                   MarkerArray& msg) {
+void SceneGraphRenderer::drawDynamicLayer(const std_msgs::Header& header,
+                                          const DynamicLayerInfo& info,
+                                          const DynamicSceneGraphLayer& layer,
+                                          MarkerArray& msg) {
   if (!info.layer.visualize) {
     return;
   }

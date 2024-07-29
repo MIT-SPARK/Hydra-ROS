@@ -263,8 +263,7 @@ void GtRegionPlugin::draw(const std_msgs::Header& header,
   published_ = true;
 }
 
-void GtRegionPlugin::reset(const std_msgs::Header& header,
-                           const spark_dsg::DynamicSceneGraph&) {
+void GtRegionPlugin::reset(const std_msgs::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {

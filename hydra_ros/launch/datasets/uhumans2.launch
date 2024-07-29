@@ -42,6 +42,13 @@
         </include>
     </group>
 
+    <arg name="use_openset_features" default="false" doc="assign clip features to places"/>
+    <group if="$(arg use_openset_features)">
+        <remap from="/clip_publisher_node/image" to="/tesse/left_cam/rgb/image_raw"/>
+        <remap from="/clip_publisher_node/feature" to="/hydra_ros_node/input0/feature"/>
+        <include file="$(find semantic_inference_ros)/launch/clip_publisher.launch"/>
+    </group>
+
     <arg name="start_hydra" default="true"/>
     <group if="$(arg start_hydra)">
         <remap from="hydra_ros_node/input0/depth_registered/image_rect" to="$(arg depth_topic)"/>
@@ -57,6 +64,7 @@
     <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
     <group if="$(arg start_visualizer)">
         <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
+        <remap from="hydra_dsg_visualizer/feature" to="hydra_ros_node/input0/feature"/>
         <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
             <arg name="visualizer_frame" default="map"/>
         </include>

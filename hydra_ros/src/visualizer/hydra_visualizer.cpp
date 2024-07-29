@@ -36,178 +36,112 @@
 #include "hydra_ros/visualizer/hydra_visualizer.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
-#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 #include <glog/logging.h>
 
 namespace hydra {
 
-void declare_config(HydraVisualizerConfig& config) {
+void declare_config(HydraVisualizer::Config& config) {
   using namespace config;
   name("HydraVisualizerConfig");
-  field(config.load_graph, "load_graph");
-  field(config.use_zmq, "use_zmq");
-  field(config.scene_graph_filepath, "scene_graph_filepath");
-  field(config.visualizer_ns, "visualizer_ns");
-  field(config.output_path, "output_path");
-  field(config.zmq_url, "zmq_url");
-  field(config.zmq_num_threads, "zmq_num_threads");
+  field(config.ns, "ns");
+  field(config.loop_period_s, "loop_period_s", "s");
+  field(config.visualizer_frame, "visualizer_frame");
+  field(config.graph, "graph");
   field(config.plugins, "plugins");
+  checkCondition(!config.visualizer_frame.empty(), "visualizer_frame");
 }
 
-HydraVisualizer::HydraVisualizer(const ros::NodeHandle& nh) : nh_(nh) {
-  const auto yaml_node = config::internal::rosToYaml(nh);
-  VLOG(5) << "ROS Config: " << std::endl << yaml_node;
+HydraVisualizer::HydraVisualizer(const Config& config)
+    : config(config::checkValid(config)),
+      nh_(config.ns),
+      renderer_(new SceneGraphRenderer(nh_)) {
+  for (auto&& [name, plugin] : config.plugins) {
+    plugins_.push_back(plugin.create(nh_, name));
+  }
 
-  config_ = config::fromRos<HydraVisualizerConfig>(nh);
-  ROS_INFO_STREAM("Config: " << std::endl << config_);
+  graph_ = config.graph.create();
+  redraw_service_ = nh_.advertiseService("redraw", &HydraVisualizer::redraw, this);
+  reset_service_ = nh_.advertiseService("reset", &HydraVisualizer::reset, this);
+}
 
-  visualizer_.reset(new DsgVisualizer(nh_));
-  for (auto&& [name, config] : config_.plugins) {
-    auto plugin = config.create(nh_, name);
+void HydraVisualizer::start() {
+  loop_timer_ = nh_.createWallTimer(ros::WallDuration(config.loop_period_s),
+                                    [this](const ros::WallTimerEvent&) { spinOnce(); });
+}
+
+void HydraVisualizer::reset() {
+  std_msgs::Header header;
+  header.stamp = ros::Time::now();
+  header.frame_id = config.visualizer_frame;
+
+  renderer_->reset(header);
+  for (const auto& plugin : plugins_) {
     if (plugin) {
-      visualizer_->addPlugin(std::move(plugin));
+      plugin->reset(header);
     }
   }
 
-  if (!config_.output_path.empty()) {
-    size_log_file_.reset(
-        new std::ofstream(config_.output_path + "/dsg_message_sizes.csv"));
-    *size_log_file_ << "time_ns,bytes" << std::endl;
-  }
-}
-
-HydraVisualizer::~HydraVisualizer() {}
-
-void HydraVisualizer::loadGraph() {
-  ROS_INFO_STREAM("Loading dsg from: " << config_.scene_graph_filepath);
-  auto dsg = spark_dsg::DynamicSceneGraph::load(config_.scene_graph_filepath);
-  ROS_INFO_STREAM("Loaded dsg: " << dsg->numNodes() << " nodes, " << dsg->numEdges()
-                                 << " edges, has mesh? "
-                                 << (dsg->hasMesh() ? "yes" : "no"));
-  visualizer_->setGraph(dsg);
-}
-
-bool HydraVisualizer::handleReload(std_srvs::Empty::Request&,
-                                   std_srvs::Empty::Response&) {
-  loadGraph();
-  return true;
-}
-
-bool HydraVisualizer::handleRedraw(std_srvs::Empty::Request&,
-                                   std_srvs::Empty::Response&) {
-  // TODO(nathan) this is technically safe, but not super ideal
-  visualizer_->setGraphUpdated();
-  visualizer_->redraw();
-  return true;
-}
-
-void HydraVisualizer::spinRos() {
-  receiver_.reset(new DsgReceiver(nh_, [&](const ros::Time& stamp, size_t bytes) {
-    if (size_log_file_) {
-      *size_log_file_ << stamp.toNSec() << "," << bytes << std::endl;
-    }
-  }));
-
-  bool graph_set = false;
-
-  ros::WallRate r(10);
-  while (ros::ok()) {
-    ros::spinOnce();
-
-    if (receiver_ && receiver_->updated()) {
-      if (!receiver_->graph()) {
-        r.sleep();
-        continue;
-      }
-      if (!graph_set) {
-        visualizer_->setGraph(receiver_->graph());
-        graph_set = true;
-      } else {
-        visualizer_->setGraphUpdated();
-      }
-
-      visualizer_->redraw();
-      receiver_->clearUpdated();
-    }
-
-    r.sleep();
-  }
-}
-
-void HydraVisualizer::spinFile() {
-  if (config_.scene_graph_filepath.empty()) {
-    LOG(ERROR) << "Scene graph filepath invalid!";
-    return;
-  }
-
-  loadGraph();
-
-  reload_service_ =
-      nh_.advertiseService("reload", &HydraVisualizer::handleReload, this);
-  visualizer_->start();
-
-  // Still publish updates if they need to be e.g. redrawn.
-  ros::WallRate r(5);
-  while (ros::ok()) {
-    ros::spinOnce();
-    visualizer_->setGraphUpdated();
-    visualizer_->redraw();
-    r.sleep();
-  }
-}
-
-void HydraVisualizer::spinZmq() {
-  zmq_receiver_.reset(
-      new spark_dsg::ZmqReceiver(config_.zmq_url, config_.zmq_num_threads));
-
-  bool graph_set = false;
-  while (ros::ok()) {
-    ros::spinOnce();
-
-    // we always receive all messages
-    if (!zmq_receiver_->recv(config_.zmq_poll_time_ms, true)) {
-      continue;
-    }
-
-    auto graph = zmq_receiver_->graph();
-    if (!graph) {
-      continue;
-    }
-
-    if (!graph_set) {
-      visualizer_->setGraph(graph);
-      graph_set = true;
-    } else {
-      visualizer_->setGraphUpdated();
-    }
-
-    visualizer_->redraw();
-  }
-}
-
-void HydraVisualizer::spin() {
-  ROS_DEBUG("Visualizer running");
-  redraw_service_ =
-      nh_.advertiseService("redraw", &HydraVisualizer::handleRedraw, this);
-
-  if (config_.load_graph) {
-    spinFile();
-    return;
-  }
-
-  if (config_.use_zmq) {
-    spinZmq();
-  } else {
-    spinRos();
-  }
+  graph_ = config.graph.create();
 }
 
 void HydraVisualizer::addPlugin(DsgVisualizerPlugin::Ptr plugin) {
-  visualizer_->addPlugin(std::move(plugin));
+  plugins_.push_back(std::move(plugin));
 }
 
-void HydraVisualizer::clearPlugins() { visualizer_->clearPlugins(); }
+void HydraVisualizer::clearPlugins() { plugins_.clear(); }
+
+void HydraVisualizer::spinOnce(bool force) {
+  if (!graph_) {
+    return;
+  }
+
+  bool has_change = false;
+  has_change = graph_->hasChange();
+  has_change |= renderer_->hasChange();
+  for (const auto& plugin : plugins_) {
+    if (plugin) {
+      has_change |= plugin->hasChange();
+    }
+  }
+
+  if (!has_change && !force) {
+    return;
+  }
+
+  std_msgs::Header header;
+  header.stamp = ros::Time::now();
+  header.frame_id = config.visualizer_frame;
+
+  const auto graph = graph_->get();
+  if (!graph) {
+    return;
+  }
+
+  renderer_->draw(header, *graph);
+  for (const auto& plugin : plugins_) {
+    if (plugin) {
+      plugin->draw(header, *graph);
+    }
+  }
+
+  graph_->clearChangeFlag();
+  renderer_->clearChangeFlag();
+  for (auto& plugin : plugins_) {
+    if (plugin) {
+      plugin->clearChangeFlag();
+    }
+  }
+}
+
+bool HydraVisualizer::redraw(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+  spinOnce(true);
+  return true;
+}
+
+bool HydraVisualizer::reset(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+  reset();
+  return true;
+}
 
 }  // namespace hydra

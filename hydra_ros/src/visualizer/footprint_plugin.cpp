@@ -170,7 +170,7 @@ void FootprintPlugin::draw(const std_msgs::Header& header,
   }
 }
 
-void FootprintPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
+void FootprintPlugin::reset(const std_msgs::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {

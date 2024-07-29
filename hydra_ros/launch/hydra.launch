@@ -18,7 +18,6 @@
     <arg name="reconstruction_config_path" default="$(arg config_dir)/reconstruction_config.yaml"/>
     <arg name="frontend_config_path" default="$(arg config_dir)/frontend_config.yaml"/>
     <arg name="backend_config_path" default="$(arg config_dir)/backend_config.yaml"/>
-    <arg name="ros_params_file" default="$(find hydra_ros)/config/ros_params.yaml"/>
     <arg name="mesh_segmenter_sinks" default="$(find hydra_ros)/config/mesh_segmenter_sinks.yaml"/>
     <arg name="gvd_places_sinks" default="$(find hydra_ros)/config/gvd_places_sinks.yaml"/>
     <arg name="reconstruction_sinks" default="$(find hydra_ros)/config/reconstruction_sinks.yaml"/>
@@ -70,7 +69,6 @@
         <rosparam file="$(arg frontend_config_path)" ns="frontend"/>
         <rosparam file="$(arg backend_config_path)" ns="backend"/>
         <rosparam file="$(arg lcd_config_path)"/>
-        <rosparam file="$(arg ros_params_file)"/>
 
         <!-- visualization -->
         <rosparam file="$(arg mesh_segmenter_sinks)" ns="frontend/objects"/>

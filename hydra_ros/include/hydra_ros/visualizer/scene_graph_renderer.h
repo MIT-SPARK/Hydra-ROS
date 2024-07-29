@@ -45,47 +45,26 @@
 
 namespace hydra {
 
-class DsgVisualizerPlugin;
-
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
 
-class DynamicSceneGraphVisualizer {
+class SceneGraphRenderer {
  public:
-  struct Config {
-    std::string visualizer_frame = "map";
-  } const config;
+  using Ptr = std::shared_ptr<SceneGraphRenderer>;
+  explicit SceneGraphRenderer(const ros::NodeHandle& nh);
 
-  explicit DynamicSceneGraphVisualizer(const ros::NodeHandle& nh);
+  virtual ~SceneGraphRenderer() = default;
 
-  virtual ~DynamicSceneGraphVisualizer() = default;
+  virtual void reset(const std_msgs::Header& header);
 
-  void reset();
+  virtual void draw(const std_msgs::Header& header,
+                    const spark_dsg::DynamicSceneGraph& graph);
 
-  bool redraw();
+  virtual bool hasChange() const;
 
-  void start(bool periodic_redraw = false);
-
-  void setGraph(const spark_dsg::DynamicSceneGraph::Ptr& scene_graph,
-                bool need_reset = true);
-
-  bool graphIsSet() const;
-
-  spark_dsg::DynamicSceneGraph::Ptr getGraph();
-
-  void addPlugin(const std::shared_ptr<DsgVisualizerPlugin>& plugin);
-
-  void clearPlugins();
-
-  void setNeedRedraw();
-
-  void setGraphUpdated();
+  virtual void clearChangeFlag();
 
  protected:
-  void displayLoop(const ros::WallTimerEvent&);
-
-  virtual void redrawImpl(const std_msgs::Header& header);
-
   virtual void drawLayer(const std_msgs::Header& header,
                          const visualizer::StaticLayerInfo& info,
                          const spark_dsg::SceneGraphLayer& layer,
@@ -98,17 +77,8 @@ class DynamicSceneGraphVisualizer {
 
  protected:
   ros::NodeHandle nh_;
-  ros::WallTimer visualizer_loop_timer_;
-
-  bool need_redraw_;
-  bool periodic_redraw_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
-
   ros::Publisher pub_;
   MarkerTracker tracker_;
-  std::list<std::shared_ptr<DsgVisualizerPlugin>> plugins_;
 };
-
-void declare_config(DynamicSceneGraphVisualizer::Config& config);
 
 }  // namespace hydra

@@ -33,27 +33,46 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/input/input_module.h>
-#include <tf2_ros/buffer.h>
+#include <config_utilities/factory.h>
+#include <hydra/common/module.h>
+#include <ros/ros.h>
 
-#include <Eigen/Geometry>
-#include <optional>
-#include <string>
+#include "hydra_ros/utils/tf_lookup.h"
 
 namespace hydra {
 
-PoseStatus lookupTransform(const std::string& target,
-                           const std::string& source,
-                           double wait_duration_s = 0.1,
-                           int verbosity = 10);
+struct FeatureSubscriber;
 
-// TODO(nathan) early shutdown...
-PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
-                           const std::optional<ros::Time>& stamp,
-                           const std::string& target,
-                           const std::string& source,
-                           std::optional<size_t> max_tries = std::nullopt,
-                           double wait_duration_s = 0.1,
-                           int verbosity = 10);
+class FeatureReceiver : public Module {
+ public:
+  struct Config {
+    //! Node handle namespace
+    std::string ns = "~";
+    //! Individual subscriber queue size
+    size_t queue_size = 10;
+    //! Lookup settings for poses
+    TFLookup::Config tf_lookup;
+    //! Sensor ids to not subscribe for
+    std::vector<size_t> sensors_to_exclude;
+  } const config;
+
+  FeatureReceiver(const Config& config);
+  virtual ~FeatureReceiver();
+  void start() override;
+  void stop() override;
+  void save(const LogSetup& setup) override;
+  std::string printInfo() const override;
+
+ private:
+  TFLookup lookup_;
+  ros::NodeHandle nh_;
+  std::vector<std::unique_ptr<FeatureSubscriber>> subs_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<FeatureReceiver, FeatureReceiver, Config>(
+          "FeatureReceiver");
+};
+
+void declare_config(FeatureReceiver::Config& config);
 
 }  // namespace hydra

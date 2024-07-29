@@ -39,7 +39,6 @@
 #include <std_srvs/Empty.h>
 
 #include "hydra_ros/backend/ros_backend.h"
-#include "hydra_ros/visualizer/dynamic_scene_graph_visualizer.h"
 
 namespace hydra {
 
@@ -88,11 +87,7 @@ struct DsgOptimizer {
     input.deformation_graph = std::make_shared<pose_graph_tools::PoseGraph>();
     backend->spinOnce(input, true);
 
-    visualizer->setGraph(backend_dsg->graph);
-    visualizer->redraw();
-
-    // backend->visualizePoseGraph();
-    // backend->visualizeDeformationGraphEdges();
+    // TODO(nathan) publish graph
   }
 
   void run() {
@@ -127,8 +122,6 @@ struct DsgOptimizer {
   SharedDsgInfo::Ptr backend_dsg;
 
   BackendModule::Ptr backend;
-  std::unique_ptr<DynamicSceneGraphVisualizer> visualizer;
-
   ros::ServiceServer optimize_service;
 };
 

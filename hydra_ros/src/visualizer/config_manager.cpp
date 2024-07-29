@@ -58,8 +58,8 @@ const std::string& getColorMode(const hydra_ros::DynamicLayerVisualizerConfig& c
   return config.node_color_mode;
 }
 
-ColorManager::ColorManager(const ros::NodeHandle& nh)
-    : has_change_(false), nh_(nh, "color_settings") {
+ColorManager::ColorManager(const ros::NodeHandle& nh, spark_dsg::LayerId layer)
+    : has_change_(false), nh_(nh, "color_settings"), layer_(layer) {
   // NOTE(nathan) this is ugly but probably the easiest way to parse the current
   // settings from ros
   std::stringstream ss;
@@ -73,7 +73,7 @@ ColorManager::ColorFunc ColorManager::get(const DynamicSceneGraph& graph) const 
     return DefaultNodeColorFunction();
   }
 
-  adaptor_->setGraph(graph);
+  adaptor_->setGraph(graph, layer_);
   return [this, &graph](const SceneGraphNode& node) {
     return adaptor_->getColor(graph, node);
   };
@@ -156,7 +156,7 @@ void ConfigManager::reset(const DynamicSceneGraph& graph) {
 }
 
 bool ConfigManager::hasChange() const {
-  bool has_changed = visualizer_config_->hasChange();
+  bool has_changed = visualizer_config_ ? visualizer_config_->hasChange() : false;
   for (const auto& name_config_pair : colors_) {
     has_changed |= name_config_pair.second->hasChange();
   }
@@ -173,7 +173,10 @@ bool ConfigManager::hasChange() const {
 }
 
 void ConfigManager::clearChangeFlags() {
-  visualizer_config_->clearChangeFlag();
+  if (visualizer_config_) {
+    visualizer_config_->clearChangeFlag();
+  }
+
   for (auto& id_config_pair : layers_) {
     id_config_pair.second.clearChangeFlag();
   }
@@ -211,7 +214,7 @@ const StaticLayerConfig& ConfigManager::getLayerConfig(LayerId layer) const {
   auto iter = layers_.find(layer);
   if (iter == layers_.end()) {
     const auto ns = "config/layer" + std::to_string(layer);
-    iter = layers_.emplace(layer, StaticLayerConfig(nh_, ns)).first;
+    iter = layers_.emplace(layer, StaticLayerConfig(nh_, ns, layer)).first;
   }
 
   return iter->second;
@@ -221,7 +224,7 @@ const DynamicLayerConfig& ConfigManager::getDynamicLayerConfig(LayerId layer) co
   auto iter = dynamic_layers_.find(layer);
   if (iter == dynamic_layers_.end()) {
     const std::string ns = "config/dynamic_layer/layer" + std::to_string(layer);
-    iter = dynamic_layers_.emplace(layer, DynamicLayerConfig(nh_, ns)).first;
+    iter = dynamic_layers_.emplace(layer, DynamicLayerConfig(nh_, ns, layer)).first;
   }
 
   return iter->second;

@@ -22,12 +22,9 @@
         output="$(eval 'screen' if arg('visualizer_debug') else arg('visualizer_roslog_destination'))"
         required="true"
         args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
-    <param name="scene_graph_filepath" value=""/>
-    <param name="output_path" value=""/>
-    <param name="load_graph" value="false"/>
-    <param name="use_zmq" value="$(arg visualizer_use_zmq)"/>
-    <param name="zmq_url" value="$(arg visualizer_zmq_url)"/>
     <param name="visualizer_frame" value="$(arg visualizer_frame)"/>
+    <param name="graph/type" value="$(eval 'GraphFromZmq' if arg('visualizer_use_zmq') else 'GraphFromRos')"/>
+    <param name="graph/url" value="$(arg visualizer_zmq_url)"/>
     <rosparam file="$(arg visualizer_config_path)" ns="config"/>
     <rosparam file="$(arg visualizer_plugins_path)" subst_value="true"/>
   </node>

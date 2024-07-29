@@ -36,6 +36,7 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/printing.h>
+#include <hydra/common/pipeline_queues.h>
 #include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
@@ -88,7 +89,7 @@ void RosBackend::inputCallback(const KimeraPgmoMesh::ConstPtr& mesh,
   }
   pose_graph_queue_.clear();
 
-  state_->backend_queue.push(input);
+  PipelineQueues::instance().backend_queue.push(input);
 }
 
 void RosBackend::poseGraphCallback(const PoseGraph::ConstPtr& msg) {

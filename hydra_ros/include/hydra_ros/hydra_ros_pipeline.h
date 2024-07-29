@@ -36,6 +36,7 @@
 #include <hydra/common/hydra_pipeline.h>
 #include <ros/ros.h>
 
+#include "hydra_ros/input/feature_receiver.h"
 #include "hydra_ros/input/ros_input_module.h"
 
 namespace hydra {
@@ -45,6 +46,7 @@ class BowSubscriber;
 struct HydraRosConfig {
   bool enable_frontend_output = true;
   RosInputModule::Config input;
+  config::VirtualConfig<FeatureReceiver> features;
 };
 
 void declare_config(HydraRosConfig& conf);

@@ -1,5 +1,6 @@
 #include "hydra_ros/input/pointcloud_receiver.h"
 
+#include <config_utilities/config.h>
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
 

@@ -100,7 +100,7 @@ void MeshPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& g
   mesh_pub_.publish(msg);
 }
 
-void MeshPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
+void MeshPlugin::reset(const std_msgs::Header& header) {
   kimera_pgmo_msgs::KimeraPgmoMesh msg;
   msg.header = header;
   msg.ns = getMsgNamespace();

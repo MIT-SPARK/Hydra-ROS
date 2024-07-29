@@ -34,23 +34,28 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/utils/bow_subscriber.h"
 
+#include <hydra/common/pipeline_queues.h>
 #include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
 using pose_graph_tools_msgs::BowQueries;
 
-BowSubscriber::BowSubscriber(const ros::NodeHandle& nh,
-                             const SharedModuleState::Ptr& state)
-    : nh_(nh), state_(state) {
-  if (state_->bow_queue) {
+BowSubscriber::BowSubscriber(const ros::NodeHandle& nh) : nh_(nh) {
+  auto queue = PipelineQueues::instance().bow_queue;
+  if (queue) {
     sub_ = nh_.subscribe("bow_vectors", 100, &BowSubscriber::callback, this);
   }
 }
 
 void BowSubscriber::callback(const BowQueries& msg) {
+  auto queue = PipelineQueues::instance().bow_queue;
+  if (!queue) {
+    return;
+  }
+
   for (const auto& query : msg.queries) {
-    state_->bow_queue->push(
+    queue->push(
         std::make_shared<pose_graph_tools::BowQuery>(pose_graph_tools::fromMsg(query)));
   }
 }

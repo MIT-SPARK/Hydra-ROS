@@ -66,7 +66,8 @@ struct GraphColorAdaptor {
    * Allows color adaptors to gather statistics about the scene graph before generating
    * any node colors when drawing the scene graph
    */
-  virtual void setGraph(const spark_dsg::DynamicSceneGraph& /* graph */) {}
+  virtual void setGraph(const spark_dsg::DynamicSceneGraph& /* graph */,
+                        spark_dsg::LayerId /* layer */) {}
 };
 
 struct NodeColorAdaptor : GraphColorAdaptor {

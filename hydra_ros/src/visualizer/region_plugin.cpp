@@ -158,7 +158,7 @@ void RegionPlugin::draw(const std_msgs::Header& header,
   }
 }
 
-void RegionPlugin::reset(const std_msgs::Header& header, const DynamicSceneGraph&) {
+void RegionPlugin::reset(const std_msgs::Header& header) {
   visualization_msgs::MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {

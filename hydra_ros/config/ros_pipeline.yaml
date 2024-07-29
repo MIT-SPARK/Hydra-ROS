@@ -4,6 +4,8 @@ semantic_label_remap_filepath: $(arg semantic_label_remap_filepath)
 exit_after_clock: $(arg exit_after_clock)
 log_path: $(arg log_path)
 log_timing_incrementally: $(arg log_timing_incrementally)
+disable_timer_output: $(arg disable_timer_output)
+timing_disabled: $(arg timing_disabled)
 enable_frontend_output: $(arg enable_frontend_output)
 frontend:
   type: FrontendModule
@@ -32,3 +34,5 @@ lcd:
     object_model_path: $(arg lcd_gnn_object_model)
     places_model_path: $(arg lcd_gnn_places_model)
     label_embeddings_file: $(arg lcd_gnn_label_embeddings)
+features:
+  type: $(arg feature_receiver_type)

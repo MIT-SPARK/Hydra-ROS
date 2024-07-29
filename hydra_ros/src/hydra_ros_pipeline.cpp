@@ -57,17 +57,21 @@
 
 namespace hydra {
 
-void declare_config(HydraRosConfig& conf) {
+void declare_config(HydraRosConfig& config) {
   using namespace config;
   name("HydraRosConfig");
-  field(conf.enable_frontend_output, "enable_frontend_output");
-  field(conf.input, "input");
+  field(config.enable_frontend_output, "enable_frontend_output");
+  field(config.input, "input");
+  config.features.setOptional();
+  field(config.features, "features");
 }
 
 HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
     : HydraPipeline(config::fromRos<PipelineConfig>(nh), robot_id),
       config_(config::checkValid(config::fromRos<HydraRosConfig>(nh))),
-      nh_(nh) {}
+      nh_(nh) {
+  VLOG(1) << "Starting Hydra-ROS with\n" << config::toString(config_);
+}
 
 HydraRosPipeline::~HydraRosPipeline() {}
 
@@ -78,12 +82,16 @@ void HydraRosPipeline::init() {
   initReconstruction();
   if (pipeline_config.enable_lcd) {
     initLCD();
-    bow_sub_.reset(new BowSubscriber(nh_, shared_state_));
+    bow_sub_.reset(new BowSubscriber(nh_));
   }
 
   const auto reconstruction = getModule<ReconstructionModule>("reconstruction");
   CHECK(reconstruction);
   input_module_.reset(new RosInputModule(config_.input, reconstruction->queue()));
+
+  if (config_.features) {
+    modules_["features"] = config_.features.create();
+  }
 }
 
 void HydraRosPipeline::initFrontend() {
@@ -145,7 +153,6 @@ void HydraRosPipeline::initLCD() {
   VLOG(1) << "Number of classes for LCD: " << lcd_config.detector.num_semantic_classes;
   config::checkValid(lcd_config);
 
-  shared_state_->lcd_queue.reset(new InputQueue<LcdInput::Ptr>());
   auto lcd = std::make_shared<LoopClosureModule>(lcd_config, shared_state_);
   modules_["lcd"] = lcd;
 

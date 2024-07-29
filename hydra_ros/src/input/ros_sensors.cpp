@@ -46,8 +46,8 @@
 #include <rosbag/view.h>
 #include <sensor_msgs/CameraInfo.h>
 
-#include "hydra_ros/utils/lookup_tf.h"
 #include "hydra_ros/utils/pose_cache.h"
+#include "hydra_ros/utils/tf_lookup.h"
 
 namespace hydra {
 
@@ -205,9 +205,10 @@ VirtualSensor loadSensor(const VirtualSensor& sensor, size_t sensor_index) {
   const auto contents = config::toYaml(sensor);
   const auto derived = config::fromYaml<RosCamera::Config>(contents);
 
-  const auto ns = derived.ns.empty()
-                      ? std::string("~/input") + std::to_string(sensor_index) + std::string("/rgb")
-                      : derived.ns;
+  const auto ns =
+      derived.ns.empty()
+          ? std::string("~/input") + std::to_string(sensor_index) + std::string("/rgb")
+          : derived.ns;
   const auto msg = getCameraInfo(ns);
   if (!msg) {
     return {};
