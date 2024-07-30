@@ -34,6 +34,10 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/backend/ros_backend_publisher.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/ros.h>
+#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
 #include <kimera_pgmo_ros/visualization_functions.h>
 #include <pose_graph_tools_msgs/PoseGraph.h>
@@ -48,17 +52,23 @@ using kimera_pgmo_msgs::KimeraPgmoMesh;
 using pose_graph_tools_msgs::PoseGraph;
 using visualization_msgs::Marker;
 
-RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh) : nh_(nh) {
+void declare_config(RosBackendPublisher::Config& config) {
+  using namespace config;
+  name("RosBackendPublisher::Config");
+  field(config.publish_mesh, "publish_mesh");
+}
+
+RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh)
+    : config(config::checkValid(config::fromRos<Config>(nh))), nh_(nh) {
   mesh_mesh_edges_pub_ =
       nh_.advertise<Marker>("deformation_graph_mesh_mesh", 10, false);
   pose_mesh_edges_pub_ =
       nh_.advertise<Marker>("deformation_graph_pose_mesh", 10, false);
   pose_graph_pub_ = nh_.advertise<PoseGraph>("pose_graph", 10, false);
 
-  double separation = 0.0;
-  nh_.getParam("min_mesh_separation_s", separation);
   const auto map_frame = GlobalInfo::instance().getFrames().map;
-  dsg_sender_.reset(new hydra::DsgSender(nh_, map_frame, "backend", false, separation));
+  dsg_sender_.reset(
+      new hydra::DsgSender(nh_, map_frame, "backend", config.publish_mesh));
 }
 
 void RosBackendPublisher::call(uint64_t timestamp_ns,
@@ -77,6 +87,8 @@ void RosBackendPublisher::call(uint64_t timestamp_ns,
     publishDeformationGraphViz(dgraph, timestamp_ns);
   }
 }
+
+std::string RosBackendPublisher::printInfo() const { return config::toString(config); }
 
 void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
                                            const DeformationGraph& dgraph) const {

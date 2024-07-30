@@ -41,6 +41,14 @@
     <arg name="print_missing" default="false" doc="have config utilities print all missing parameters when parsing configs"/>
     <arg name="launch_prefix" value="$(eval 'gdb -ex run --args' if arg('debug') else '')" />
 
+    <!-- parameter files -->
+    <rosparam file="$(arg labelspace_path)" ns="hydra_ros_node"/>
+    <rosparam file="$(arg input_config_path)" ns="hydra_ros_node/input" subst_value="true"/>
+    <rosparam file="$(arg reconstruction_config_path)" ns="hydra_ros_node/reconstruction"/>
+    <rosparam file="$(arg frontend_config_path)" ns="hydra_ros_node/frontend"/>
+    <rosparam file="$(arg backend_config_path)" ns="hydra_ros_node/backend"/>
+    <rosparam file="$(arg lcd_config_path)" ns="hydra_ros_node"/>
+
     <arg name="pipeline_path" default="$(find hydra_ros)/config/ros_pipeline.yaml"/>
     <include file="$(find hydra_ros)/launch/pipeline_config.launch" pass_all_args="true">
         <arg name="pipeline_path" value="$(arg pipeline_path)"/>
@@ -62,13 +70,6 @@
         <param name="robot_frame" value="$(arg robot_frame)"/>
         <param name="map_frame" value="$(arg map_frame)"/>
 
-        <!-- parameter files -->
-        <rosparam file="$(arg labelspace_path)"/>
-        <rosparam file="$(arg input_config_path)" ns="input" subst_value="true"/>
-        <rosparam file="$(arg reconstruction_config_path)" ns="reconstruction"/>
-        <rosparam file="$(arg frontend_config_path)" ns="frontend"/>
-        <rosparam file="$(arg backend_config_path)" ns="backend"/>
-        <rosparam file="$(arg lcd_config_path)"/>
 
         <!-- visualization -->
         <rosparam file="$(arg mesh_segmenter_sinks)" ns="frontend/objects"/>

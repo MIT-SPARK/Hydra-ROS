@@ -39,8 +39,7 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <hydra/backend/backend_module.h>
-#include <hydra/backend/update_frontiers_functor.h>
-#include <hydra/backend/update_surface_places_functor.h>
+#include <hydra/backend/zmq_interfaces.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/frontend_module.h>
@@ -114,24 +113,14 @@ void HydraRosPipeline::initBackend() {
       bnh, backend_dsg_, shared_state_, GlobalInfo::instance().getLogs());
   CHECK(backend) << "Failed to construct backend!";
   backend->addSink(std::make_shared<RosBackendPublisher>(bnh));
+  const auto zmq_config = config::fromRos<ZmqSink::Config>(bnh, "zmq_sink");
+  backend->addSink(std::make_shared<ZmqSink>(zmq_config));
   modules_["backend"] = backend;
 
   const auto frontend = getModule<FrontendModule>("frontend");
   if (!frontend) {
     LOG(ERROR) << "Invalid frontend module! Not setting 2D places update";
     return;
-  }
-
-  if (frontend->config.surface_places) {
-    auto places_functor =
-        std::make_shared<Update2dPlacesFunctor>(backend->config.places2d_config);
-    backend->setUpdateFunctor(DsgLayers::MESH_PLACES, places_functor);
-  }
-
-  if (frontend->config.use_frontiers && frontend->config.frontier_places) {
-    auto frontiers_functor =
-        std::make_shared<UpdateFrontiersFunctor>(backend->config.frontier_config);
-    backend->setUpdateFunctor(DsgLayers::BUILDINGS + 1, frontiers_functor);
   }
 }
 

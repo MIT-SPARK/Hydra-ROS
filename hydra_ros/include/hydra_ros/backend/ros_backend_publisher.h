@@ -41,6 +41,10 @@ namespace hydra {
 
 class RosBackendPublisher : public BackendModule::Sink {
  public:
+  struct Config {
+    bool publish_mesh = false;
+  } const config;
+
   explicit RosBackendPublisher(const ros::NodeHandle& nh);
 
   virtual ~RosBackendPublisher() = default;
@@ -48,6 +52,8 @@ class RosBackendPublisher : public BackendModule::Sink {
   void call(uint64_t timestamp_ns,
             const DynamicSceneGraph& graph,
             const kimera_pgmo::DeformationGraph& dgraph) const override;
+
+  std::string printInfo() const override;
 
  protected:
   virtual void publishPoseGraph(const DynamicSceneGraph& graph,
