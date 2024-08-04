@@ -45,7 +45,7 @@ class PointcloudReceiver : public RosDataReceiver {
   struct Config : RosDataReceiver::Config {
   } const config;
 
-  PointcloudReceiver(const Config& config, size_t sensor_id);
+  PointcloudReceiver(const Config& config, const std::string& sensor_name);
   virtual ~PointcloudReceiver() = default;
 
  protected:
@@ -60,7 +60,7 @@ class PointcloudReceiver : public RosDataReceiver {
       config::RegistrationWithConfig<DataReceiver,
                                      PointcloudReceiver,
                                      PointcloudReceiver::Config,
-                                     size_t>("PointcloudReceiver");
+                                     std::string>("PointcloudReceiver");
 };
 
 void declare_config(PointcloudReceiver::Config& config);

@@ -53,8 +53,8 @@ void declare_config(RosInputModule::Config& config) {
 
 InputModule::Config RosInputModule::Config::remapSensors() const {
   InputModule::Config to_return = *this;
-  for (size_t i = 0; i < to_return.inputs.size(); ++i) {
-    to_return.inputs[i].sensor = input::loadSensor(to_return.inputs[i].sensor, i);
+  for (const auto& [name, input_pair] : inputs) {
+    to_return.inputs[name].sensor = input::loadSensor(input_pair.sensor, name);
   }
 
   return to_return;

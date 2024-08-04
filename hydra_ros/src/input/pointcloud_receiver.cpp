@@ -14,8 +14,9 @@ void declare_config(PointcloudReceiver::Config& config) {
   base<RosDataReceiver::Config>(config);
 }
 
-PointcloudReceiver::PointcloudReceiver(const Config& config, size_t sensor_id)
-    : RosDataReceiver(config, sensor_id), config(config) {}
+PointcloudReceiver::PointcloudReceiver(const Config& config,
+                                       const std::string& sensor_name)
+    : RosDataReceiver(config, sensor_name), config(config) {}
 
 bool PointcloudReceiver::initImpl() {
   sub_ = nh_.subscribe(
@@ -32,7 +33,7 @@ void PointcloudReceiver::callback(const sensor_msgs::PointCloud2& msg) {
     return;
   }
 
-  auto packet = std::make_shared<CloudInputPacket>(timestamp_ns, sensor_id_);
+  auto packet = std::make_shared<CloudInputPacket>(timestamp_ns, sensor_name_);
   fillPointcloudPacket(msg, *packet, false);
   // TODO(nathan) this is brittle, but at least handles kitti
   packet->in_world_frame =

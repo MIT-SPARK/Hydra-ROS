@@ -65,7 +65,7 @@ class ImageReceiver : public RosDataReceiver {
   struct Config : RosDataReceiver::Config {
   } const config;
 
-  ImageReceiver(const Config& config, size_t sensor_id);
+  ImageReceiver(const Config& config, const std::string& sensor_name);
   virtual ~ImageReceiver() = default;
 
  protected:
@@ -85,7 +85,7 @@ class ImageReceiver : public RosDataReceiver {
       config::RegistrationWithConfig<DataReceiver,
                                      ImageReceiver,
                                      ImageReceiver::Config,
-                                     size_t>("ImageReceiver");
+                                     std::string>("ImageReceiver");
 };
 
 void declare_config(ImageReceiver::Config& config);

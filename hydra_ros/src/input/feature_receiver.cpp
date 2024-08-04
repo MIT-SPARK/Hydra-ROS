@@ -67,23 +67,23 @@ struct FeatureSubscriber {
   using Callback = std::function<PoseStatus(uint64_t)>;
 
   FeatureSubscriber(ros::NodeHandle& nh,
-                    size_t sensor_id,
+                    const std::string& sensor_name,
                     const Callback& pose_callback,
                     size_t queue_size = 10);
 
   void callback(const FeatureVectorStamped& msg);
 
   ros::Subscriber sub;
-  const size_t sensor_id;
+  const std::string sensor_name;
   const Callback pose_callback;
 };
 
 FeatureSubscriber::FeatureSubscriber(ros::NodeHandle& nh,
-                                     size_t sensor_id,
+                                     const std::string& sensor_name,
                                      const Callback& pose_callback,
                                      size_t queue_size)
-    : sensor_id(sensor_id), pose_callback(pose_callback) {
-  const std::string topic = "input" + std::to_string(sensor_id) + "/feature";
+    : sensor_name(sensor_name), pose_callback(pose_callback) {
+  const std::string topic = sensor_name + "/feature";
   sub = nh.subscribe(topic, queue_size, &FeatureSubscriber::callback, this);
 }
 
@@ -91,11 +91,11 @@ void FeatureSubscriber::callback(const FeatureVectorStamped& msg) {
   const auto timestamp_ns = msg.header.stamp.toNSec();
   const auto& vec = msg.feature.data;
 
-  const auto sensor = GlobalInfo::instance().getSensor(sensor_id);
+  const auto sensor = GlobalInfo::instance().getSensor(sensor_name);
   const auto pose_status = pose_callback(timestamp_ns);
   if (!pose_status) {
     LOG(WARNING) << "Dropping feature @ " << timestamp_ns << "[ns] for sensor "
-                 << sensor_id;
+                 << sensor_name;
     return;
   }
 
@@ -105,22 +105,23 @@ void FeatureSubscriber::callback(const FeatureVectorStamped& msg) {
       timestamp_ns,
       world_T_sensor.inverse(),
       Eigen::Map<const Eigen::VectorXf>(vec.data(), vec.size()),
-      GlobalInfo::instance().getSensor(sensor_id).get());
+      GlobalInfo::instance().getSensor(sensor_name).get());
 
   PipelineQueues::instance().input_features_queue.push(std::move(packet));
 }
 
 void FeatureReceiver::start() {
-  std::set<size_t> to_exclude(config.sensors_to_exclude.begin(),
-                              config.sensors_to_exclude.end());
-  for (size_t i = 0; i < GlobalInfo::instance().numSensors(); ++i) {
-    if (to_exclude.count(i)) {
+  std::set<std::string> to_exclude(config.sensors_to_exclude.begin(),
+                                   config.sensors_to_exclude.end());
+  const auto sensor_names = GlobalInfo::instance().getAvailableSensors();
+  for (const auto& name : sensor_names) {
+    if (to_exclude.count(name)) {
       continue;
     }
 
     subs_.push_back(std::make_unique<FeatureSubscriber>(
         nh_,
-        i,
+        name,
         [this](uint64_t timestamp_ns) { return lookup_.getBodyPose(timestamp_ns); },
         config.queue_size));
   }

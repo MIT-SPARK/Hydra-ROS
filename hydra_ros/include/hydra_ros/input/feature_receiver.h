@@ -52,8 +52,8 @@ class FeatureReceiver : public Module {
     size_t queue_size = 10;
     //! Lookup settings for poses
     TFLookup::Config tf_lookup;
-    //! Sensor ids to not subscribe for
-    std::vector<size_t> sensors_to_exclude;
+    //! Sensors to not subscribe to
+    std::vector<std::string> sensors_to_exclude;
   } const config;
 
   FeatureReceiver(const Config& config);

@@ -45,7 +45,7 @@ class RosDataReceiver : public DataReceiver {
     size_t queue_size = 10;
   } const config;
 
-  RosDataReceiver(const Config& config, size_t sensor_id);
+  RosDataReceiver(const Config& config, const std::string& name);
   virtual ~RosDataReceiver() = default;
 
  protected:

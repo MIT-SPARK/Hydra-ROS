@@ -71,8 +71,8 @@ ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
       sub(std::make_shared<SubscriberFilter>(
           *transport, img_name, queue_size, getHints(nh, cam_name))) {}
 
-ImageReceiver::ImageReceiver(const Config& config, size_t sensor_id)
-    : RosDataReceiver(config, sensor_id), config(config) {}
+ImageReceiver::ImageReceiver(const Config& config, const std::string& sensor_name)
+    : RosDataReceiver(config, sensor_name), config(config) {}
 
 bool ImageReceiver::initImpl() {
   // TODO(nathan) subscribe to image subsets
@@ -107,7 +107,7 @@ void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
   }
 
   auto packet =
-      std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_id_);
+      std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_name_);
   try {
     const auto cv_depth = cv_bridge::toCvShare(depth);
     packet->depth = cv_depth->image.clone();

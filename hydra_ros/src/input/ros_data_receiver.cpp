@@ -38,8 +38,8 @@
 
 namespace hydra {
 
-inline std::string getNamespace(const std::string& ns, size_t sensor_id) {
-  return ns.empty() ? std::string("~/input") + std::to_string(sensor_id) : ns;
+inline std::string getNamespace(const std::string& ns, const std::string& name) {
+  return ns.empty() ? "~/input/" + name : ns;
 }
 
 void declare_config(RosDataReceiver::Config& config) {
@@ -50,9 +50,9 @@ void declare_config(RosDataReceiver::Config& config) {
   field(config.queue_size, "queue_size");
 }
 
-RosDataReceiver::RosDataReceiver(const Config& config, size_t sensor_id)
-    : DataReceiver(config, sensor_id),
+RosDataReceiver::RosDataReceiver(const Config& config, const std::string& sensor_name)
+    : DataReceiver(config, sensor_name),
       config(config),
-      nh_(getNamespace(config.ns, sensor_id)) {}
+      nh_(getNamespace(config.ns, sensor_name)) {}
 
 }  // namespace hydra

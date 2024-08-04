@@ -99,7 +99,7 @@ void declare_config(RosbagCamera::Config& config);
 namespace input {
 
 config::VirtualConfig<Sensor> loadSensor(const config::VirtualConfig<Sensor>& sensor,
-                                         size_t sensor_index);
+                                         const std::string& name);
 
 config::VirtualConfig<Sensor> loadSensor(const rosbag::Bag& bag,
                                          const config::VirtualConfig<Sensor>& sensor);
