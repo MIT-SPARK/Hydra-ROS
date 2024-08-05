@@ -15,6 +15,11 @@ void declare_config(UniformMeshColoring::Config& config) {
   field(config.color, "color");
 }
 
+UniformMeshColoring::UniformMeshColoring(const spark_dsg::Color& color)
+    : UniformMeshColoring(Config{color}) {}
+
+UniformMeshColoring::UniformMeshColoring(const Config& config) : config(config) {}
+
 void declare_config(SemanticMeshColoring::Config& config) {
   using namespace config;
   name("SemanticMeshColoring::Config");

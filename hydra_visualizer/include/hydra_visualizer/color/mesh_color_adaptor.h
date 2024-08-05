@@ -70,7 +70,8 @@ struct UniformMeshColoring : public MeshColoring {
   struct Config {
     spark_dsg::Color color;
   } const config;
-  explicit UniformMeshColoring(const Config& config) : config(config) {}
+  explicit UniformMeshColoring(const spark_dsg::Color& color);
+  explicit UniformMeshColoring(const Config& config);
   virtual ~UniformMeshColoring() = default;
 
   spark_dsg::Color getVertexColor(const spark_dsg::Mesh&, size_t) const override {
