@@ -4,9 +4,9 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
-#include <hydra/common/config_utilities.h>
 #include <hydra/openset/embedding_distances.h>
 #include <hydra/openset/embedding_group.h>
+#include <hydra_visualizer/color/color_parsing.h>
 #include <spark_dsg/colormaps.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>

@@ -35,7 +35,6 @@
 #include <spark_dsg/color.h>
 #include <yaml-cpp/yaml.h>
 
-// TODO(nathan) make sure this is still compatible with Hydra definition
 namespace YAML {
 template <>
 struct convert<spark_dsg::Color> {
@@ -50,7 +49,9 @@ struct convert<spark_dsg::Color> {
 
   static bool decode(const Node& node, spark_dsg::Color& color) {
     if (!node.IsSequence() || node.size() < 3 || node.size() > 4) {
-      return false;
+      throw std::runtime_error(
+          "Invalid color representation with '" +
+          (node.IsSequence() ? std::to_string(node.size()) : "n/a") + "' channels!");
     }
 
     color.r = node[0].as<uint16_t>();
