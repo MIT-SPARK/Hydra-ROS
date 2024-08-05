@@ -36,6 +36,10 @@ void declare_config(FirstSeenMeshColoring::Config&) {
   config::name("FirstSeenMeshColoring::Config");
 }
 
+FirstSeenMeshColoring::FirstSeenMeshColoring() : FirstSeenMeshColoring(Config()) {}
+
+FirstSeenMeshColoring::FirstSeenMeshColoring(const Config&) {}
+
 void FirstSeenMeshColoring::setMesh(const Mesh& mesh) {
   min_ = std::numeric_limits<Mesh::Timestamp>::max();
   max_ = std::numeric_limits<Mesh::Timestamp>::min();
@@ -62,6 +66,10 @@ void declare_config(LastSeenMeshColoring::Config&) {
   config::name("LastSeenMeshColoring::Config");
 }
 
+LastSeenMeshColoring::LastSeenMeshColoring() : LastSeenMeshColoring(Config()) {}
+
+LastSeenMeshColoring::LastSeenMeshColoring(const Config&) {}
+
 void LastSeenMeshColoring::setMesh(const Mesh& mesh) {
   min_ = std::numeric_limits<Mesh::Timestamp>::max();
   max_ = std::numeric_limits<Mesh::Timestamp>::min();
@@ -87,6 +95,11 @@ void LastSeenMeshColoring::setBounds(Mesh::Timestamp min, Mesh::Timestamp max) {
 void declare_config(SeenDurationMeshColoring::Config&) {
   config::name("SeenDurationMeshColoring::Config");
 }
+
+SeenDurationMeshColoring::SeenDurationMeshColoring()
+    : SeenDurationMeshColoring(Config()) {}
+
+SeenDurationMeshColoring::SeenDurationMeshColoring(const Config&) {}
 
 void SeenDurationMeshColoring::setMesh(const Mesh& mesh) {
   max_ = 0;

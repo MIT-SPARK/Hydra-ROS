@@ -115,7 +115,8 @@ void declare_config(SemanticMeshColoring::Config& config);
  */
 struct FirstSeenMeshColoring : public MeshColoring {
   struct Config {};
-  explicit FirstSeenMeshColoring(const Config&){};
+  FirstSeenMeshColoring();
+  explicit FirstSeenMeshColoring(const Config&);
   virtual ~FirstSeenMeshColoring() = default;
 
   void setMesh(const spark_dsg::Mesh& mesh) override;
@@ -140,7 +141,8 @@ void declare_config(FirstSeenMeshColoring::Config& config);
  */
 struct LastSeenMeshColoring : public MeshColoring {
   struct Config {};
-  explicit LastSeenMeshColoring(const Config&){};
+  LastSeenMeshColoring();
+  explicit LastSeenMeshColoring(const Config&);
   virtual ~LastSeenMeshColoring() = default;
 
   void setMesh(const spark_dsg::Mesh& mesh) override;
@@ -165,7 +167,8 @@ void declare_config(LastSeenMeshColoring::Config& config);
  */
 struct SeenDurationMeshColoring : public MeshColoring {
   struct Config {};
-  explicit SeenDurationMeshColoring(const Config&){};
+  SeenDurationMeshColoring();
+  explicit SeenDurationMeshColoring(const Config&);
   virtual ~SeenDurationMeshColoring() = default;
 
   void setMesh(const spark_dsg::Mesh& mesh) override;
