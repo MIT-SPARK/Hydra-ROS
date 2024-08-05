@@ -16,6 +16,7 @@ find_package(
              dynamic_reconfigure
              geometry_msgs
              hydra_msgs
+             hydra_visualizer
              image_transport
              kimera_pgmo_ros
              kimera_pgmo_msgs
@@ -31,13 +32,7 @@ find_package(
 
 catkin_python_setup()
 
-generate_dynamic_reconfigure_options(
-  cfg/Colormap.cfg
-  cfg/DynamicLayerVisualizer.cfg
-  cfg/GvdVisualizer.cfg
-  cfg/LayerVisualizer.cfg
-  cfg/Visualizer.cfg
-)
+generate_dynamic_reconfigure_options(cfg/GvdVisualizer.cfg)
 
 catkin_package(
   CATKIN_DEPENDS
@@ -65,7 +60,6 @@ add_library(
   ${PROJECT_NAME}
   src/hydra_ros_pipeline.cpp
   src/backend/ros_backend_publisher.cpp
-  src/backend/ros_backend.cpp
   src/frontend/gvd_visualization_utilities.cpp
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
@@ -84,29 +78,12 @@ add_library(
   src/utils/bag_reader.cpp
   src/utils/bow_subscriber.cpp
   src/utils/dsg_streaming_interface.cpp
-  src/utils/ear_clipping.cpp
   src/utils/node_utilities.cpp
   src/utils/occupancy_publisher.cpp
   src/utils/pose_cache.cpp
+  src/utils/scene_graph_logger.cpp
   src/utils/tf_lookup.cpp
-  src/visualizer/basis_point_plugin.cpp
-  src/visualizer/mesh_color_adaptor.cpp
-  src/visualizer/colormap_utilities.cpp
-  src/visualizer/config_manager.cpp
   src/visualizer/feature_color_adaptors.cpp
-  src/visualizer/footprint_plugin.cpp
-  src/visualizer/graph_color_adaptors.cpp
-  src/visualizer/graph_wrappers.cpp
-  src/visualizer/gt_region_plugin.cpp
-  src/visualizer/hydra_visualizer.cpp
-  src/visualizer/marker_group_pub.cpp
-  src/visualizer/marker_tracker.cpp
-  src/visualizer/mesh_plugin.cpp
-  src/visualizer/polygon_utilities.cpp
-  src/visualizer/region_plugin.cpp
-  src/visualizer/scene_graph_renderer.cpp
-  src/visualizer/visualizer_utilities.cpp
-  src/visualizer/visualizer_types.cpp
 )
 target_include_directories(
   ${PROJECT_NAME}
@@ -135,20 +112,10 @@ else()
 endif()
 configure_file(cmake/hydra_ros_build_config.h.in hydra_ros_build_config.h)
 
-add_executable(dsg_optimizer_node src/nodes/dsg_optimizer_node.cpp)
-target_link_libraries(dsg_optimizer_node ${PROJECT_NAME} ${gflags_LIBRARIES})
-
-add_executable(hydra_ros_node src/nodes/hydra_node.cpp)
+add_executable(hydra_ros_node app/hydra_node.cpp)
 target_link_libraries(hydra_ros_node ${PROJECT_NAME} ${gflags_LIBRARIES})
 
-add_executable(hydra_visualizer_node src/nodes/hydra_visualizer_node.cpp)
-target_link_libraries(hydra_visualizer_node ${PROJECT_NAME} ${gflags_LIBRARIES})
-
-add_executable(rotate_tf_node src/nodes/rotate_tf_node.cpp)
-target_include_directories(rotate_tf_node PUBLIC ${catkin_INCLUDE_DIRS})
-target_link_libraries(rotate_tf_node PUBLIC ${catkin_LIBRARIES})
-
-add_executable(scene_graph_logger_node src/nodes/scene_graph_logger_node.cpp)
+add_executable(scene_graph_logger_node app/scene_graph_logger_node.cpp)
 target_link_libraries(scene_graph_logger_node ${PROJECT_NAME})
 
 add_executable(reconstruct_mesh app/reconstruct_mesh.cpp)
@@ -160,10 +127,7 @@ endif()
 
 install(
   TARGETS ${PROJECT_NAME}
-          dsg_optimizer_node
           hydra_ros_node
-          hydra_visualizer_node
-          rotate_tf_node
           scene_graph_logger_node
           reconstruct_mesh
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -179,9 +143,9 @@ install(DIRECTORY launch/ DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 
 catkin_install_python(
   PROGRAMS
-  bin/dsg_republisher
-  bin/csv_to_tf
-  bin/odom_to_tf
+  app/dsg_republisher
+  app/csv_to_tf
+  app/odom_to_tf
   DESTINATION
   ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

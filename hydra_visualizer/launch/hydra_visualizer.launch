@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="ISO-8859-15"?>
+<launch>
+  <arg name="scene_graph" doc="scene graph filename to show"/>
+  <arg name="scene_graph_dir" default="$(find hydra)/output" doc="directory of scene graph file"/>
+  <arg name="scene_graph_path" value="$(arg scene_graph_dir)/$(arg scene_graph)" doc="full path to scene graph to show"/>
+  <arg name="publish_view_transforms" default="false" doc="publish top-down and orthographic views"/>
+  <arg name="visualizer_ns" value="hydra_visualizer" doc="visualizer namespace"/>
+
+  <arg name="visualizer_frame" default="map"/>
+  <arg name="color_mesh_by_label" default="true"/>
+  <arg name="visualizer_config_path" default="$(find hydra_visualizer)/config/visualizer_config.yaml"/>
+  <arg name="visualizer_plugins_path" default="$(find hydra_visualizer)/config/visualizer_plugins.yaml"/>
+
+  <arg name="verbosity" default="0" doc="visualizer verbosity"/>
+  <arg name="visualizer_debug" default="false"/>
+  <arg name="visualizer_launch_prefix" value="$(eval 'gdb -ex run --args' if arg('visualizer_debug') else '')"/>
+
+  <arg name="start_rviz" default="true" doc="automatically start rviz"/>
+  <group if="$(arg start_rviz)">
+      <include file="$(find hydra_visualizer)/launch/hydra_rviz.launch">
+          <arg name="rviz_path" default="$(find hydra_visualizer)/rviz/hydra_visualizer.rviz"/>
+      </include>
+  </group>
+
+  <node pkg="hydra_visualizer" type="hydra_visualizer_node" name="$(arg visualizer_ns)"
+        launch-prefix="$(arg visualizer_launch_prefix)"
+        output="screen"
+        required="true"
+        args="-alsologtostderr -colorlogtostderr -v=$(arg verbosity)">
+    <param name="visualizer_frame" value="$(arg visualizer_frame)"/>
+    <param name="graph/type" value="GraphFromFile"/>
+    <param name="graph/filepath" value="$(arg scene_graph_path)"/>
+    <rosparam file="$(arg visualizer_config_path)" ns="config"/>
+    <rosparam file="$(arg visualizer_plugins_path)" subst_value="true"/>
+  </node>
+
+  <group if="$(arg publish_view_transforms)">
+    <!-- Publish a static tf to visualize scene-graph in orthographic projection sideways -->
+    <node pkg="tf2_ros"
+        type="static_transform_publisher"
+        name="ortho_tf_publisher"
+        args="0 0 0 0.707 0 0 0.707 $(arg visualizer_frame) rviz_ortho"/>
+
+    <!-- Publish a static tf to visualize scene-graph top-down -->
+    <node pkg="tf2_ros"
+        type="static_transform_publisher"
+        name="topdown_tf_publisher"
+        args="0 0 0 0 0.707 0 0.707 $(arg visualizer_frame) rviz_topdown"/>
+  </group>
+</launch>

@@ -34,419 +34,43 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/frontend/gvd_visualization_utilities.h"
 
+#include <hydra_visualizer/color/colormap_utilities.h>
+#include <hydra_visualizer/utils/visualizer_utilities.h>
 #include <tf2_eigen/tf2_eigen.h>
 
 #include <random>
 
-#include "hydra_ros/visualizer/colormap_utilities.h"
+#include "hydra_ros/visualizer/draw_voxel_slice.h"
 
 namespace hydra {
 
-using hydra_ros::ColormapConfig;
 using hydra_ros::GvdVisualizerConfig;
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
-
-Color getColorFromDistance(const ColormapConfig& colormap,
-                           const GvdVisualizerConfig& config,
-                           const GvdVoxel& voxel) {
-  return visualizer::interpolateColorMap(
-      colormap, voxel.distance, config.gvd_min_distance, config.gvd_max_distance);
-}
-
-Color getColorFromBasisPoints(const ColormapConfig& colormap,
-                              const GvdVisualizerConfig& config,
-                              const GvdVoxel& voxel) {
-  return visualizer::interpolateColorMap(colormap,
-                                         static_cast<double>(voxel.num_extra_basis),
-                                         static_cast<double>(config.min_num_basis),
-                                         static_cast<double>(config.max_num_basis));
-}
-
-Color getColor(const ColormapConfig& colormap,
-               const GvdVisualizerConfig& config,
-               const GvdVoxel& voxel) {
-  switch (static_cast<GvdVisualizationMode>(config.gvd_mode)) {
-    case GvdVisualizationMode::BASIS_POINTS:
-      return getColorFromBasisPoints(colormap, config, voxel);
-    case GvdVisualizationMode::DISTANCE:
-    case GvdVisualizationMode::DEFAULT:
-    default:
-      return getColorFromDistance(colormap, config, voxel);
-  }
-
-  return {};
-}
-
-Marker makeGvdMarker(const GvdVisualizerConfig& config,
-                     const ColormapConfig& colors,
-                     const GvdLayer& layer,
-                     const std::string& ns) {
-  Marker marker;
-  marker.type = Marker::CUBE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  marker.scale.x = layer.voxel_size;
-  marker.scale.y = layer.voxel_size;
-  marker.scale.z = layer.voxel_size;
-
-  for (const auto& block : layer) {
-    for (size_t i = 0; i < block.numVoxels(); ++i) {
-      const auto& voxel = block.getVoxel(i);
-      if (!voxel.observed || voxel.num_extra_basis < config.basis_threshold) {
-        continue;
-      }
-
-      const Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
-      tf2::convert(voxel_pos, marker_pos);
-      marker.points.push_back(marker_pos);
-
-      const auto color = getColor(colors, config, voxel);
-      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
-    }
-  }
-
-  return marker;
-}
-
-Marker makeErrorMarker(const GvdVisualizerConfig& config,
-                       const ColormapConfig& colors,
-                       const GvdLayer& lhs,
-                       const GvdLayer& rhs,
-                       double threshold) {
-  Marker marker;
-  marker.type = Marker::CUBE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = "error_locations";
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  marker.scale.x = lhs.voxel_size;
-  marker.scale.y = lhs.voxel_size;
-  marker.scale.z = lhs.voxel_size;
-
-  for (const auto& lhs_block : lhs) {
-    const auto& rhs_block = rhs.getBlock(lhs_block.index);
-
-    for (size_t i = 0; i < lhs_block.numVoxels(); ++i) {
-      const auto& lvoxel = lhs_block.getVoxel(i);
-      const auto& rvoxel = rhs_block.getVoxel(i);
-
-      if (!lvoxel.observed || !rvoxel.observed) {
-        continue;
-      }
-
-      const double error = std::abs(lvoxel.distance - rvoxel.distance);
-      if (error <= threshold) {
-        continue;
-      }
-
-      const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
-      tf2::convert(voxel_pos, marker_pos);
-      marker.points.push_back(marker_pos);
-
-      const auto color = visualizer::interpolateColorMap(colors, error, 0.0, 10.0);
-      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
-    }
-  }
-
-  return marker;
-}
-
-Marker makeSurfaceVoxelMarker(const GvdVisualizerConfig& config,
-                              const ColormapConfig& colors,
-                              const GvdLayer& layer,
-                              const std::string& ns) {
-  Marker marker;
-  marker.type = Marker::CUBE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  marker.scale.x = layer.voxel_size;
-  marker.scale.y = layer.voxel_size;
-  marker.scale.z = layer.voxel_size;
-
-  for (const auto& block : layer) {
-    for (size_t i = 0; i < block.numVoxels(); ++i) {
-      const auto& voxel = block.getVoxel(i);
-      if (!voxel.on_surface) {
-        continue;
-      }
-
-      Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
-      tf2::convert(voxel_pos, marker_pos);
-      marker.points.push_back(marker_pos);
-
-      const auto dist = voxel.distance;
-      const auto color = visualizer::interpolateColorMap(colors, dist, -0.4, 0.4);
-      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
-    }
-  }
-
-  return marker;
-}
-
-Marker makeEsdfMarker(const GvdVisualizerConfig& config,
-                      const ColormapConfig& colors,
-                      const GvdLayer& layer,
-                      const std::string& ns) {
-  Marker marker;
-  marker.type = Marker::CUBE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  marker.scale.x = layer.voxel_size;
-  marker.scale.y = layer.voxel_size;
-  marker.scale.z = layer.voxel_size;
-
-  const float voxel_size = layer.voxel_size;
-  const float half_voxel_size = voxel_size / 2.0;
-  // rounds down and points the slice at the middle of the nearest voxel boundary
-  const float slice_height =
-      std::floor(config.slice_height / voxel_size) * voxel_size + half_voxel_size;
-
-  for (const auto& block : layer) {
-    for (size_t i = 0; i < block.numVoxels(); ++i) {
-      const auto& voxel = block.getVoxel(i);
-      if (!voxel.observed) {
-        continue;
-      }
-
-      Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
-      if (voxel_pos(2) < slice_height - half_voxel_size ||
-          voxel_pos(2) > slice_height + half_voxel_size) {
-        continue;
-      }
-
-      geometry_msgs::Point marker_pos;
-      tf2::convert(voxel_pos, marker_pos);
-      marker.points.push_back(marker_pos);
-
-      const auto color = visualizer::interpolateColorMap(
-          colors, voxel.distance, config.esdf_min_distance, config.esdf_max_distance);
-      marker.colors.push_back(visualizer::makeColorMsg(color, config.esdf_alpha));
-    }
-  }
-
-  return marker;
-}
-
-inline Eigen::Vector3d getOffset(double side_length,
-                                 bool x_high,
-                                 bool y_high,
-                                 bool z_high) {
-  Eigen::Vector3d offset;
-  offset(0) = x_high ? side_length : 0.0;
-  offset(1) = y_high ? side_length : 0.0;
-  offset(2) = z_high ? side_length : 0.0;
-  return offset;
-}
-
-geometry_msgs::Point getPointFromMatrix(const Eigen::MatrixXd& matrix, int col) {
-  geometry_msgs::Point point;
-  tf2::convert(matrix.block<3, 1>(0, col).eval(), point);
-  return point;
-}
-
-void fillMarkerFromBlock(Marker& marker,
-                         const Eigen::Vector3d& position,
-                         double side_length) {
-  Eigen::MatrixXd corners(3, 8);
-  for (int c = 0; c < corners.cols(); ++c) {
-    // x: lsb, y: second lsb, z: third lsb
-    corners.block<3, 1>(0, c) =
-        position +
-        getOffset(side_length, ((c & 0x01) != 0), ((c & 0x02) != 0), ((c & 0x04) != 0));
-  }
-
-  for (int c = 0; c < corners.cols(); ++c) {
-    // edges are 1-bit pertubations
-    int x_neighbor = c | 0x01;
-    int y_neighbor = c | 0x02;
-    int z_neighbor = c | 0x04;
-    if (c != x_neighbor) {
-      marker.points.push_back(getPointFromMatrix(corners, c));
-      marker.points.push_back(getPointFromMatrix(corners, x_neighbor));
-    }
-    if (c != y_neighbor) {
-      marker.points.push_back(getPointFromMatrix(corners, c));
-      marker.points.push_back(getPointFromMatrix(corners, y_neighbor));
-    }
-    if (c != z_neighbor) {
-      marker.points.push_back(getPointFromMatrix(corners, c));
-      marker.points.push_back(getPointFromMatrix(corners, z_neighbor));
-    }
-  }
-}
-
-template <typename BlockT>
-Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
-                            double scale,
-                            const std::string& ns) {
-  Marker marker;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-  marker.color.r = 0.662;
-  marker.color.g = 0.0313;
-  marker.color.b = 0.7607;
-  marker.color.a = 0.8;
-  marker.scale.x = scale;
-  marker.scale.y = scale;
-  marker.scale.z = scale;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  for (const auto& block : layer) {
-    Point position = block.origin();
-    fillMarkerFromBlock(marker, position.cast<double>(), block.block_size);
-  }
-
-  return marker;
-}
-
-Marker makeBlocksMarker(const TsdfLayer& layer, double scale, const std::string& ns) {
-  return makeBlocksMarkerImpl(layer, scale, ns);
-}
-
-Marker makeBlocksMarker(const GvdLayer& layer, double scale, const std::string& ns) {
-  return makeBlocksMarkerImpl(layer, scale, ns);
-}
-
-std_msgs::ColorRGBA makeGvdColor(const GvdVisualizerConfig& config,
-                                 const ColormapConfig& colors,
-                                 double distance,
-                                 uint8_t num_basis_points) {
-  Color c;
-  switch (static_cast<GvdVisualizationMode>(config.gvd_mode)) {
-    case GvdVisualizationMode::BASIS_POINTS:
-      c = visualizer::interpolateColorMap(colors,
-                                          static_cast<double>(num_basis_points),
-                                          static_cast<double>(config.min_num_basis),
-                                          static_cast<double>(config.max_num_basis));
-      break;
-    case GvdVisualizationMode::DISTANCE:
-    case GvdVisualizationMode::DEFAULT:
-    default:
-      c = visualizer::interpolateColorMap(
-          colors, distance, config.gvd_min_distance, config.gvd_max_distance);
-      break;
-  }
-
-  return visualizer::makeColorMsg(c, config.gvd_alpha);
-}
+using visualizer::DiscreteColormap;
+using visualizer::RangeColormap;
 
 using EdgeMap = std::unordered_map<uint64_t, std::unordered_set<uint64_t>>;
 
-std::unordered_set<uint64_t>& getNodeSet(EdgeMap& edge_map, uint64_t node) {
-  auto iter = edge_map.find(node);
-  if (iter == edge_map.end()) {
-    iter = edge_map.emplace(node, std::unordered_set<uint64_t>()).first;
+namespace {
+
+spark_dsg::Color getGvdColor(const GvdVisualizerConfig& config,
+                             const RangeColormap& colors,
+                             double distance,
+                             uint8_t num_basis_points) {
+  switch (static_cast<GvdVisualizationMode>(config.gvd_mode)) {
+    case GvdVisualizationMode::BASIS_POINTS:
+      return colors(static_cast<double>(num_basis_points),
+                    static_cast<double>(config.min_num_basis),
+                    static_cast<double>(config.max_num_basis));
+    case GvdVisualizationMode::DISTANCE:
+    case GvdVisualizationMode::DEFAULT:
+    default:
+      return colors(distance, config.gvd_min_distance, config.gvd_max_distance);
   }
-  return iter->second;
-}
-
-MarkerArray makeGvdGraphMarkers(const GvdGraph& graph,
-                                const GvdVisualizerConfig& config,
-                                const ColormapConfig& colors,
-                                const std::string& ns,
-                                size_t marker_id) {
-  MarkerArray marker;
-  if (graph.empty()) {
-    return marker;
-  }
-
-  const Eigen::Vector3d p_identity = Eigen::Vector3d::Zero();
-  const Eigen::Quaterniond q_identity = Eigen::Quaterniond::Identity();
-  {  // scope to make handling stuff a little easier
-    Marker nodes;
-    nodes.type = Marker::SPHERE_LIST;
-    nodes.id = marker_id;
-    nodes.ns = ns + "_nodes";
-    nodes.action = Marker::ADD;
-    nodes.scale.x = config.gvd_graph_scale;
-    nodes.scale.y = config.gvd_graph_scale;
-    nodes.scale.z = config.gvd_graph_scale;
-    tf2::convert(p_identity, nodes.pose.position);
-    tf2::convert(q_identity, nodes.pose.orientation);
-    marker.markers.push_back(nodes);
-  }
-
-  {  // scope to make handling stuff a little easier
-    Marker edges;
-    edges.type = Marker::LINE_LIST;
-    edges.id = marker_id;
-    edges.ns = ns + "_edges";
-    edges.action = Marker::ADD;
-    edges.scale.x = config.gvd_graph_scale;
-    tf2::convert(p_identity, edges.pose.position);
-    tf2::convert(q_identity, edges.pose.orientation);
-    marker.markers.push_back(edges);
-  }
-
-  auto& nodes = marker.markers[0];
-  auto& edges = marker.markers[1];
-
-  EdgeMap seen_edges;
-  for (const auto& id_node_pair : graph.nodes()) {
-    geometry_msgs::Point node_centroid;
-    tf2::convert(id_node_pair.second.position, node_centroid);
-    nodes.points.push_back(node_centroid);
-    nodes.colors.push_back(makeGvdColor(config,
-                                        colors,
-                                        id_node_pair.second.distance,
-                                        id_node_pair.second.num_basis_points));
-
-    auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
-    for (const auto sibling : id_node_pair.second.siblings) {
-      if (curr_seen.count(sibling)) {
-        continue;
-      }
-
-      curr_seen.insert(sibling);
-      getNodeSet(seen_edges, sibling).insert(id_node_pair.first);
-
-      edges.points.push_back(nodes.points.back());
-      edges.colors.push_back(nodes.colors.back());
-
-      const auto& other = *graph.getNode(sibling);
-      geometry_msgs::Point neighbor_centroid;
-      tf2::convert(other.position, neighbor_centroid);
-      edges.points.push_back(neighbor_centroid);
-      edges.colors.push_back(
-          makeGvdColor(config, colors, other.distance, other.num_basis_points));
-    }
-  }
-
-  return marker;
 }
 
 size_t fillColors(const CompressedNodeMap& clusters,
@@ -497,12 +121,287 @@ size_t fillColors(const CompressedNodeMap& clusters,
   return num_colors + 1;
 }
 
-MarkerArray showGvdClusters(const GvdGraph& graph,
+std::unordered_set<uint64_t>& getNodeSet(EdgeMap& edge_map, uint64_t node) {
+  auto iter = edge_map.find(node);
+  if (iter == edge_map.end()) {
+    iter = edge_map.emplace(node, std::unordered_set<uint64_t>()).first;
+  }
+  return iter->second;
+}
+
+template <typename BlockT>
+Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
+                            double scale,
+                            const std::string& ns,
+                            const Color& color) {
+  Marker marker;
+  marker.type = Marker::LINE_LIST;
+  marker.action = Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+  marker.color = visualizer::makeColorMsg(color);
+  marker.scale.x = scale;
+  marker.scale.y = scale;
+  marker.scale.z = scale;
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, marker.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
+
+  for (const auto& block : layer) {
+    Point position = block.origin();
+    spark_dsg::BoundingBox box(Eigen::Vector3f::Constant(block.block_size), position);
+    visualizer::drawBoundingBox(box, marker.color, marker);
+  }
+
+  return marker;
+}
+
+}  // namespace
+
+Marker drawEsdf(const GvdVisualizerConfig& config,
+                const RangeColormap& cmap,
+                const Eigen::Isometry3d& pose,
+                const GvdLayer& layer,
+                const std::string& ns) {
+  VoxelSliceConfig slice{config.slice_height, true};
+  return drawVoxelSlice<GvdVoxel>(
+      slice,
+      std_msgs::Header(),
+      layer,
+      pose,
+      [](const auto& voxel) { return voxel.observed; },
+      [&](const auto& voxel) {
+        return visualizer::makeColorMsg(
+            cmap(voxel.distance, -config.esdf_distance, config.esdf_distance),
+            config.esdf_alpha);
+      },
+      ns);
+}
+
+Marker drawGvd(const GvdVisualizerConfig& config,
+               const RangeColormap& colors,
+               const GvdLayer& layer,
+               const std::string& ns) {
+  Marker marker;
+  marker.type = Marker::CUBE_LIST;
+  marker.action = Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, marker.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
+
+  marker.scale.x = layer.voxel_size;
+  marker.scale.y = layer.voxel_size;
+  marker.scale.z = layer.voxel_size;
+
+  for (const auto& block : layer) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
+      if (!voxel.observed || voxel.num_extra_basis < config.basis_threshold) {
+        continue;
+      }
+
+      const Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
+      geometry_msgs::Point marker_pos;
+      tf2::convert(voxel_pos, marker_pos);
+      marker.points.push_back(marker_pos);
+
+      const auto color =
+          getGvdColor(config, colors, voxel.distance, voxel.num_extra_basis);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+    }
+  }
+
+  return marker;
+}
+
+Marker drawGvdSurface(const GvdVisualizerConfig& config,
+                      const RangeColormap& colors,
+                      const GvdLayer& layer,
+                      const std::string& ns) {
+  Marker marker;
+  marker.type = Marker::CUBE_LIST;
+  marker.action = Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, marker.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
+
+  marker.scale.x = layer.voxel_size;
+  marker.scale.y = layer.voxel_size;
+  marker.scale.z = layer.voxel_size;
+
+  for (const auto& block : layer) {
+    for (size_t i = 0; i < block.numVoxels(); ++i) {
+      const auto& voxel = block.getVoxel(i);
+      if (!voxel.on_surface) {
+        continue;
+      }
+
+      Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
+      geometry_msgs::Point marker_pos;
+      tf2::convert(voxel_pos, marker_pos);
+      marker.points.push_back(marker_pos);
+
+      const auto dist = voxel.distance;
+      const auto color = colors(dist, -0.4, 0.4);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+    }
+  }
+
+  return marker;
+}
+
+Marker drawGvdError(const GvdVisualizerConfig& config,
+                    const RangeColormap& colors,
+                    const GvdLayer& lhs,
+                    const GvdLayer& rhs,
+                    double threshold) {
+  Marker marker;
+  marker.type = Marker::CUBE_LIST;
+  marker.action = Marker::ADD;
+  marker.id = 0;
+  marker.ns = "error_locations";
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, marker.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
+
+  marker.scale.x = lhs.voxel_size;
+  marker.scale.y = lhs.voxel_size;
+  marker.scale.z = lhs.voxel_size;
+
+  for (const auto& lhs_block : lhs) {
+    const auto& rhs_block = rhs.getBlock(lhs_block.index);
+
+    for (size_t i = 0; i < lhs_block.numVoxels(); ++i) {
+      const auto& lvoxel = lhs_block.getVoxel(i);
+      const auto& rvoxel = rhs_block.getVoxel(i);
+
+      if (!lvoxel.observed || !rvoxel.observed) {
+        continue;
+      }
+
+      const double error = std::abs(lvoxel.distance - rvoxel.distance);
+      if (error <= threshold) {
+        continue;
+      }
+
+      const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
+      geometry_msgs::Point marker_pos;
+      tf2::convert(voxel_pos, marker_pos);
+      marker.points.push_back(marker_pos);
+
+      const auto color = colors(error, 0.0, 10.0);
+      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+    }
+  }
+
+  return marker;
+}
+
+Marker drawBlockExtents(const TsdfLayer& layer,
+                        double scale,
+                        const std::string& ns,
+                        const Color& color) {
+  return makeBlocksMarkerImpl(layer, scale, ns, color);
+}
+
+Marker drawBlockExtents(const GvdLayer& layer,
+                        double scale,
+                        const std::string& ns,
+                        const Color& color) {
+  return makeBlocksMarkerImpl(layer, scale, ns, color);
+}
+
+MarkerArray drawGvdGraph(const GvdGraph& graph,
+                         const GvdVisualizerConfig& config,
+                         const RangeColormap& colors,
+                         const std::string& ns,
+                         size_t marker_id) {
+  MarkerArray marker;
+  if (graph.empty()) {
+    return marker;
+  }
+
+  const Eigen::Vector3d p_identity = Eigen::Vector3d::Zero();
+  const Eigen::Quaterniond q_identity = Eigen::Quaterniond::Identity();
+  {  // scope to make handling stuff a little easier
+    Marker nodes;
+    nodes.type = Marker::SPHERE_LIST;
+    nodes.id = marker_id;
+    nodes.ns = ns + "_nodes";
+    nodes.action = Marker::ADD;
+    nodes.scale.x = config.gvd_graph_scale;
+    nodes.scale.y = config.gvd_graph_scale;
+    nodes.scale.z = config.gvd_graph_scale;
+    tf2::convert(p_identity, nodes.pose.position);
+    tf2::convert(q_identity, nodes.pose.orientation);
+    marker.markers.push_back(nodes);
+  }
+
+  {  // scope to make handling stuff a little easier
+    Marker edges;
+    edges.type = Marker::LINE_LIST;
+    edges.id = marker_id;
+    edges.ns = ns + "_edges";
+    edges.action = Marker::ADD;
+    edges.scale.x = config.gvd_graph_scale;
+    tf2::convert(p_identity, edges.pose.position);
+    tf2::convert(q_identity, edges.pose.orientation);
+    marker.markers.push_back(edges);
+  }
+
+  auto& nodes = marker.markers[0];
+  auto& edges = marker.markers[1];
+
+  EdgeMap seen_edges;
+  for (const auto& id_node_pair : graph.nodes()) {
+    geometry_msgs::Point node_centroid;
+    tf2::convert(id_node_pair.second.position, node_centroid);
+    nodes.points.push_back(node_centroid);
+    const auto color = getGvdColor(config,
+                                   colors,
+                                   id_node_pair.second.distance,
+                                   id_node_pair.second.num_basis_points);
+    nodes.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+
+    auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
+    for (const auto sibling : id_node_pair.second.siblings) {
+      if (curr_seen.count(sibling)) {
+        continue;
+      }
+
+      curr_seen.insert(sibling);
+      getNodeSet(seen_edges, sibling).insert(id_node_pair.first);
+
+      edges.points.push_back(nodes.points.back());
+      edges.colors.push_back(nodes.colors.back());
+
+      const auto& other = *graph.getNode(sibling);
+      geometry_msgs::Point neighbor_centroid;
+      tf2::convert(other.position, neighbor_centroid);
+      edges.points.push_back(neighbor_centroid);
+      const auto sibling_color =
+          getGvdColor(config, colors, other.distance, other.num_basis_points);
+      edges.colors.push_back(visualizer::makeColorMsg(sibling_color, config.gvd_alpha));
+    }
+  }
+
+  return marker;
+}
+
+MarkerArray drawGvdClusters(const GvdGraph& graph,
                             const CompressedNodeMap& clusters,
                             const std::unordered_map<uint64_t, uint64_t>& remapping,
                             const GvdVisualizerConfig& config,
-                            const ColormapConfig& colormap,
                             const std::string& ns,
+                            const DiscreteColormap& colormap,
                             size_t marker_id) {
   MarkerArray marker;
   if (graph.empty()) {
@@ -544,9 +443,7 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
   const size_t num_colors = fillColors(clusters, color_mapping);
   std::vector<std_msgs::ColorRGBA> colors;
   for (size_t i = 0; i < num_colors; ++i) {
-    const double ratio = static_cast<double>(i) / static_cast<double>(num_colors);
-    const auto color = visualizer::interpolateColorMap(colormap, ratio);
-    colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+    colors.push_back(visualizer::makeColorMsg(colormap(i), config.gvd_alpha));
   }
 
   EdgeMap seen_edges;
@@ -594,10 +491,10 @@ MarkerArray showGvdClusters(const GvdGraph& graph,
   return marker;
 }
 
-MarkerArray makePlaceSpheres(const std_msgs::Header& header,
-                             const SceneGraphLayer& layer,
-                             const std::string& ns,
-                             double alpha) {
+MarkerArray drawPlaceFreespace(const std_msgs::Header& header,
+                               const SceneGraphLayer& layer,
+                               const std::string& ns,
+                               const Color& color) {
   MarkerArray spheres;
   size_t id = 0;
   for (const auto& id_node_pair : layer.nodes()) {
@@ -619,8 +516,7 @@ MarkerArray makePlaceSpheres(const std_msgs::Header& header,
     marker.pose.orientation.z = 0.0;
     tf2::convert(id_node_pair.second->attributes().position, marker.pose.position);
 
-    Color desired_color(255, 0, 0);
-    marker.color = visualizer::makeColorMsg(desired_color, alpha);
+    marker.color = visualizer::makeColorMsg(color);
     spheres.markers.push_back(marker);
     ++id;
   }

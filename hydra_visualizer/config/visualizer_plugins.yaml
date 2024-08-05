@@ -1,0 +1,17 @@
+---
+plugins:
+  dsg_mesh:
+    type: MeshPlugin
+    use_color_adaptor: $(arg color_mesh_by_label)
+    coloring:
+      type: SemanticMeshColoring
+  places_basis_points:
+    type: BasisPointPlugin
+    show_voxblox_connections: false
+    draw_basis_points: true
+    basis_point_scale: 0.1
+    places_node_scale: 0.1
+# dynamic reconfigure settings
+places_basis_points:
+  graph:
+    visualize: true

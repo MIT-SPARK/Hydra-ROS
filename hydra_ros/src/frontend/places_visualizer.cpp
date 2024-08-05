@@ -40,10 +40,10 @@
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/compression_graph_extractor.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
+#include <hydra_visualizer/utils/visualizer_utilities.h>
 
 #include "hydra_ros/frontend/gvd_visualization_utilities.h"
-#include "hydra_ros/visualizer/colormap_utilities.h"
-#include "hydra_ros/visualizer/visualizer_utilities.h"
 
 namespace hydra {
 
@@ -54,6 +54,9 @@ using places::GvdLayer;
 using places::GvdVoxel;
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
+using visualizer::ContinuousPalette;
+using visualizer::DivergentPalette;
+using visualizer::RangeColormap;
 
 void declare_config(PlacesVisualizer::Config& config) {
   using namespace config;
@@ -65,9 +68,9 @@ PlacesVisualizer::PlacesVisualizer(const Config& config)
     : config(config),
       nh_(config.ns),
       pubs_(nh_),
-      colormap_(nh_, "colormap"),
       gvd_config_(nh_, "gvd"),
-      layer_config_(nh_, "graph") {}
+      layer_config_(nh_, "graph"),
+      colormap_(config.colormap) {}
 
 std::string PlacesVisualizer::printInfo() const {
   std::stringstream ss;
@@ -76,12 +79,18 @@ std::string PlacesVisualizer::printInfo() const {
 }
 
 void PlacesVisualizer::call(uint64_t timestamp_ns,
-                            const Eigen::Isometry3f&,
+                            const Eigen::Isometry3f& pose,
                             const GvdLayer& gvd,
                             const GraphExtractorInterface* extractor) const {
   std_msgs::Header header;
   header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
+
+  const RangeColormap sdf_cmap(
+      {config::VirtualConfig<ContinuousPalette>{DivergentPalette::Config()}});
+  pubs_.publish("esdf_viz", header, [&]() -> Marker {
+    return drawEsdf(gvd_config_.get(), sdf_cmap, pose.cast<double>(), gvd, "esdf");
+  });
 
   visualizeGvd(header, gvd);
   if (extractor) {
@@ -91,20 +100,16 @@ void PlacesVisualizer::call(uint64_t timestamp_ns,
 
 void PlacesVisualizer::visualizeGvd(const std_msgs::Header& header,
                                     const GvdLayer& gvd) const {
-  pubs_.publish("esdf_viz", header, [&]() -> Marker {
-    return makeEsdfMarker(gvd_config_.get(), colormap_.get(), gvd, "esdf");
-  });
-
   pubs_.publish("gvd_viz", header, [&]() -> Marker {
-    return makeGvdMarker(gvd_config_.get(), colormap_.get(), gvd, "gvd");
+    return drawGvd(gvd_config_.get(), colormap_, gvd, "gvd");
   });
 
   pubs_.publish("surface_viz", header, [&]() -> Marker {
-    return makeSurfaceVoxelMarker(gvd_config_.get(), colormap_.get(), gvd, "surface");
+    return drawGvdSurface(gvd_config_.get(), colormap_, gvd, "surface");
   });
 
   pubs_.publish("voxel_block_viz", header, [&]() -> Marker {
-    return makeBlocksMarker(gvd, gvd_config_.get().block_outline_scale, "blocks");
+    return drawBlockExtents(gvd, gvd_config_.get().block_outline_scale, "blocks");
   });
 }
 
@@ -114,19 +119,18 @@ void PlacesVisualizer::visualizeExtractor(
   pubs_.publish("graph_viz", header, [&]() -> MarkerArray {
     const auto d_min = gvd_config_.get().gvd_min_distance;
     const auto d_max = gvd_config_.get().gvd_max_distance;
-    const auto& cmap = colormap_.get();
 
-    visualizer::StaticLayerInfo info{hydra_ros::VisualizerConfig(),
+    visualizer::StaticLayerInfo info{hydra_visualizer::VisualizerConfig(),
                                      layer_config_.get()};
     info.graph.collapse_layers = true;
     info.graph.layer_z_step = 0.0;
     info.node_color = [&](const SceneGraphNode& node) {
       const auto dist = node.attributes<PlaceNodeAttributes>().distance;
-      return visualizer::interpolateColorMap(cmap, dist, d_min, d_max);
+      return colormap_(dist, d_min, d_max);
     };
     info.edge_color = [&](const auto&, const auto&, const auto& edge, bool) {
       const auto dist = edge.attributes().weight;
-      return visualizer::interpolateColorMap(cmap, dist, d_min, d_max);
+      return colormap_(dist, d_min, d_max);
     };
 
     MarkerArray msg;
@@ -142,14 +146,13 @@ void PlacesVisualizer::visualizeExtractor(
   });
 
   pubs_.publish("freespace_viz", header, [&]() -> MarkerArray {
-    // TODO(nathan) maybe add graph back
-    return makePlaceSpheres(
-        header, graph, "freespace", gvd_config_.get().freespace_sphere_alpha);
+    const Color color(255, 0, 0, 255 * gvd_config_.get().freespace_sphere_alpha);
+    return drawPlaceFreespace(header, graph, "freespace", color);
   });
 
   pubs_.publish("gvd_graph_viz", header, [&]() -> MarkerArray {
-    return makeGvdGraphMarkers(
-        extractor.getGvdGraph(), gvd_config_.get(), colormap_.get(), "gvd_graph");
+    return drawGvdGraph(
+        extractor.getGvdGraph(), gvd_config_.get(), colormap_, "gvd_graph");
   });
 
   const auto compression = dynamic_cast<const CompressionGraphExtractor*>(&extractor);
@@ -158,11 +161,10 @@ void PlacesVisualizer::visualizeExtractor(
   }
 
   pubs_.publish("gvd_cluster_viz", header, [&]() -> MarkerArray {
-    return showGvdClusters(compression->getGvdGraph(),
+    return drawGvdClusters(compression->getGvdGraph(),
                            compression->getCompressedNodeInfo(),
                            compression->getCompressedRemapping(),
                            gvd_config_.get(),
-                           colormap_.get(),
                            "gvd_cluster_graph");
   });
 }

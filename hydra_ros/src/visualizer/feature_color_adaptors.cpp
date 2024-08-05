@@ -7,6 +7,7 @@
 #include <hydra/common/config_utilities.h>
 #include <hydra/openset/embedding_distances.h>
 #include <hydra/openset/embedding_group.h>
+#include <spark_dsg/colormaps.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>
 
@@ -119,7 +120,7 @@ Color FeatureScoreColor::getColor(const DynamicSceneGraph&,
   }
 
   double ratio = (iter->second - range_.min) / (range_.max - range_.min);
-  return Color::ironbow(std::clamp(ratio, 0.0, 1.0));
+  return spark_dsg::colormaps::ironbow(std::clamp(ratio, 0.0, 1.0));
 }
 
 void FeatureScoreColor::setFeature(const Eigen::VectorXf& feature) {
@@ -147,7 +148,7 @@ Color NearestFeatureColor::getColor(const DynamicSceneGraph&,
   const auto& attrs = node.attributes<SemanticNodeAttributes>();
   const auto result = features_->getBestScore(*metric_, attrs.semantic_feature);
   const auto ratio = static_cast<double>(result.index) / features_->size();
-  return Color::rainbow(std::clamp(ratio, 0.0, 1.0));
+  return spark_dsg::colormaps::rainbow(std::clamp(ratio, 0.0, 1.0));
 }
 
 }  // namespace hydra

@@ -34,13 +34,14 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/reconstruction/reconstruction_module.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
+#include <hydra_visualizer/utils/marker_group_pub.h>
+#include <image_transport/image_transport.h>
 #include <ros/ros.h>
 
-#include "hydra_ros/ColormapConfig.h"
-#include "hydra_ros/visualizer/config_wrapper.h"
-#include "hydra_ros/visualizer/marker_group_pub.h"
-
 namespace hydra {
+
+struct ImageGroupPub;
 
 class ReconstructionVisualizer : public ReconstructionModule::Sink {
  public:
@@ -48,17 +49,17 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
     std::string ns = "~reconstruction";
     double min_weight = 0.0;
     double max_weight = 10.0;
-    double min_distance = 0.0;
-    double max_distance = 2.0;
     double marker_alpha = 0.5;
     bool use_relative_height = true;
     double slice_height = 0.0;
     double min_observation_weight = 1.0e-5;
+    visualizer::RangeColormap::Config colormap;
+    visualizer::CategoricalColormap::Config label_colormap;
   } const config;
 
   explicit ReconstructionVisualizer(const Config& config);
 
-  virtual ~ReconstructionVisualizer() = default;
+  virtual ~ReconstructionVisualizer();
 
   std::string printInfo() const override;
 
@@ -68,9 +69,13 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
             const ReconstructionOutput& msg) const override;
 
  protected:
+  void publishLabelImage(const ReconstructionOutput& output) const;
+
   ros::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
+  std::unique_ptr<ImageGroupPub> image_pubs_;
+  const visualizer::RangeColormap colormap_;
+  const visualizer::CategoricalColormap label_colormap_;
 
  private:
   inline static const auto registration_ =

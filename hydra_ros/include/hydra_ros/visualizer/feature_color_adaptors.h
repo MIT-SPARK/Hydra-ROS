@@ -1,9 +1,9 @@
 #pragma once
 #include <hydra/openset/embedding_distances.h>
+#include <hydra_visualizer/color/graph_color_adaptors.h>
 #include <ros/ros.h>
 
 #include "hydra_ros/openset/ros_embedding_group.h"
-#include "hydra_ros/visualizer/graph_color_adaptors.h"
 
 namespace hydra {
 

@@ -34,12 +34,12 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/gvd_place_extractor.h>
+#include <hydra_visualizer/LayerVisualizerConfig.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
+#include <hydra_visualizer/utils/config_wrapper.h>
+#include <hydra_visualizer/utils/marker_group_pub.h>
 
-#include "hydra_ros/ColormapConfig.h"
 #include "hydra_ros/GvdVisualizerConfig.h"
-#include "hydra_ros/LayerVisualizerConfig.h"
-#include "hydra_ros/visualizer/config_wrapper.h"
-#include "hydra_ros/visualizer/marker_group_pub.h"
 
 namespace hydra {
 namespace places {
@@ -50,6 +50,7 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
   struct Config {
     std::string ns = "~places";
+    visualizer::RangeColormap::Config colormap;
   } const config;
 
   explicit PlacesVisualizer(const Config& config);
@@ -75,9 +76,9 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  protected:
   ros::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::ColormapConfig> colormap_;
   visualizer::ConfigWrapper<hydra_ros::GvdVisualizerConfig> gvd_config_;
-  visualizer::ConfigWrapper<hydra_ros::LayerVisualizerConfig> layer_config_;
+  visualizer::ConfigWrapper<hydra_visualizer::LayerVisualizerConfig> layer_config_;
+  const visualizer::RangeColormap colormap_;
 
  private:
   inline static const auto registration_ =

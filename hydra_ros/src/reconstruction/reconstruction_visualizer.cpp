@@ -37,96 +37,45 @@
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
+#include <cv_bridge/cv_bridge.h>
 #include <hydra/common/global_info.h>
+#include <sensor_msgs/Image.h>
 #include <tf2_eigen/tf2_eigen.h>
 
-#include "hydra_ros/visualizer/colormap_utilities.h"
+#include "hydra_ros/visualizer/draw_voxel_slice.h"
 
 namespace hydra {
 
 using visualization_msgs::Marker;
 using visualization_msgs::MarkerArray;
+using visualizer::ContinuousPalette;
+using visualizer::DivergentPalette;
+using visualizer::RangeColormap;
 
-using ColorFunction =
-    std::function<std_msgs::ColorRGBA(const ReconstructionVisualizer::Config&,
-                                      const hydra_ros::ColormapConfig&,
-                                      const TsdfVoxel&)>;
+namespace {
+
+bool isVoxelObserved(const ReconstructionVisualizer::Config& config,
+                     const TsdfVoxel& voxel) {
+  return voxel.weight >= config.min_observation_weight;
+}
 
 std_msgs::ColorRGBA colorVoxelByDist(const ReconstructionVisualizer::Config& config,
-                                     const hydra_ros::ColormapConfig& cmap,
+                                     double truncation_distance,
+                                     const visualizer::RangeColormap& cmap,
                                      const TsdfVoxel& voxel) {
-  auto color = visualizer::interpolateColorMap(
-      cmap, voxel.distance, config.min_distance, config.max_distance);
+  auto color = cmap(voxel.distance, -truncation_distance, truncation_distance);
   return visualizer::makeColorMsg(color, config.marker_alpha);
 }
 
 std_msgs::ColorRGBA colorVoxelByWeight(const ReconstructionVisualizer::Config& config,
-                                       const hydra_ros::ColormapConfig& cmap,
+                                       const visualizer::RangeColormap& cmap,
                                        const TsdfVoxel& voxel) {
   // TODO(nathan) consider exponential
-  auto color = visualizer::interpolateColorMap(
-      cmap, voxel.weight, config.min_weight, config.max_weight);
+  auto color = cmap(voxel.weight, config.min_weight, config.max_weight);
   return visualizer::makeColorMsg(color, config.marker_alpha);
 }
 
-// adapted from khronos
-Marker makeTsdfMarker(const ReconstructionVisualizer::Config& config,
-                      const hydra_ros::ColormapConfig& cmap,
-                      const std_msgs::Header& header,
-                      const TsdfLayer& layer,
-                      const Eigen::Isometry3d& world_T_sensor,
-                      const ColorFunction& color_func,
-                      const std::string& ns) {
-  Marker msg;
-  msg.header = header;
-  msg.action = visualization_msgs::Marker::ADD;
-  msg.id = 0;
-  msg.ns = ns;
-  msg.type = visualization_msgs::Marker::CUBE_LIST;
-  msg.scale.x = layer.voxel_size;
-  msg.scale.y = layer.voxel_size;
-  msg.scale.z = layer.voxel_size;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, msg.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), msg.pose.orientation);
-
-  auto height = config.slice_height;
-  if (config.use_relative_height) {
-    height += world_T_sensor.translation().z();
-  }
-
-  const Point slice_pos(0, 0, height);
-  const auto slice_index = layer.getBlockIndex(slice_pos);
-  const auto origin =
-      spatial_hash::originPointFromIndex(slice_index, layer.blockSize());
-  const auto grid_index = spatial_hash::indexFromPoint<VoxelIndex>(
-      slice_pos - origin, layer.voxel_size_inv);
-
-  for (const auto& block : layer) {
-    if (block.index.z() != slice_index.z()) {
-      continue;
-    }
-
-    for (size_t x = 0; x < block.voxels_per_side; ++x) {
-      for (size_t y = 0; y < block.voxels_per_side; ++y) {
-        const VoxelIndex voxel_index(x, y, grid_index.z());
-        const auto& voxel = block.getVoxel(voxel_index);
-        if (voxel.weight < config.min_observation_weight) {
-          continue;
-        }
-
-        const Eigen::Vector3d pos = block.getVoxelPosition(voxel_index).cast<double>();
-        geometry_msgs::Point marker_pos;
-        tf2::convert(pos, marker_pos);
-        msg.points.push_back(marker_pos);
-        msg.colors.push_back(color_func(config, cmap, voxel));
-      }
-    }
-  }
-
-  return msg;
-}
+}  // namespace
 
 void declare_config(ReconstructionVisualizer::Config& config) {
   using namespace config;
@@ -134,16 +83,44 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.ns, "ns");
   field(config.min_weight, "min_weight");
   field(config.max_weight, "max_weight");
-  field(config.min_distance, "min_distance", "m");
-  field(config.max_distance, "max_distance", "m");
   field(config.marker_alpha, "marker_alpha");
   field(config.use_relative_height, "use_relative_height");
   field(config.slice_height, "slice_height", "m");
   field(config.min_observation_weight, "min_observation_weight");
+  field(config.colormap, "colormap");
+  field(config.label_colormap, "label_colormap");
 }
 
+struct ImageGroupPub {
+  using Callback = std::function<sensor_msgs::Image::ConstPtr()>;
+  explicit ImageGroupPub(ros::NodeHandle& nh) : nh_(nh), transport_(nh_) {}
+
+  void publish(const std::string& name, const Callback& callback) {
+    auto iter = pubs_.find(name);
+    if (iter == pubs_.end()) {
+      iter = pubs_.emplace(name, transport_.advertise(name, 1)).first;
+    }
+
+    if (!iter->second.getNumSubscribers()) {
+      return;  // don't do work if no subscription
+    }
+
+    iter->second.publish(callback());
+  }
+
+  ros::NodeHandle nh_;
+  image_transport::ImageTransport transport_;
+  std::map<std::string, image_transport::Publisher> pubs_;
+};
+
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
-    : config(config), nh_(config.ns), pubs_(nh_), colormap_(nh_, "colormap") {}
+    : config(config),
+      nh_(config.ns),
+      pubs_(nh_),
+      image_pubs_(std::make_unique<ImageGroupPub>(nh_)),
+      colormap_(config.colormap) {}
+
+ReconstructionVisualizer::~ReconstructionVisualizer() {}
 
 std::string ReconstructionVisualizer::printInfo() const {
   std::stringstream ss;
@@ -152,31 +129,66 @@ std::string ReconstructionVisualizer::printInfo() const {
 }
 
 void ReconstructionVisualizer::call(uint64_t timestamp_ns,
-                                    const Eigen::Isometry3d& world_T_sensor,
+                                    const Eigen::Isometry3d& pose,
                                     const TsdfLayer& tsdf,
-                                    const ReconstructionOutput&) const {
+                                    const ReconstructionOutput& output) const {
+  const auto& info = GlobalInfo::instance();
+  const auto truncation_distance = info.getMapConfig().truncation_distance;
   std_msgs::Header header;
-  header.frame_id = GlobalInfo::instance().getFrames().map;
+  header.frame_id = info.getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
+  const RangeColormap cmap(
+      {config::VirtualConfig<ContinuousPalette>{DivergentPalette::Config()}});
+
+  const VoxelSliceConfig slice{config.slice_height, config.use_relative_height};
+  const Filter<TsdfVoxel> filter = [&](const auto& voxel) {
+    return isVoxelObserved(config, voxel);
+  };
+
+  const auto distance_colormap = [&](const auto& voxel) {
+    return colorVoxelByDist(config, truncation_distance, cmap, voxel);
+  };
+  const auto weight_colormap = [&](const auto& voxel) {
+    return colorVoxelByWeight(config, colormap_, voxel);
+  };
+
   pubs_.publish("tsdf_viz", header, [&]() -> Marker {
-    return makeTsdfMarker(config,
-                          colormap_.get(),
-                          header,
-                          tsdf,
-                          world_T_sensor,
-                          colorVoxelByDist,
-                          "distances");
+    return drawVoxelSlice<TsdfVoxel>(
+        slice, header, tsdf, pose, filter, distance_colormap, "distances");
   });
 
   pubs_.publish("tsdf_weight_viz", header, [&]() -> Marker {
-    return makeTsdfMarker(config,
-                          colormap_.get(),
-                          header,
-                          tsdf,
-                          world_T_sensor,
-                          colorVoxelByWeight,
-                          "weights");
+    return drawVoxelSlice<TsdfVoxel>(
+        slice, header, tsdf, pose, filter, weight_colormap, "weights");
+  });
+
+  publishLabelImage(output);
+}
+
+void ReconstructionVisualizer::publishLabelImage(
+    const ReconstructionOutput& output) const {
+  if (!output.sensor_data) {
+    return;
+  }
+
+  const auto topic = output.sensor_data->getSensor().name + "/labels";
+  image_pubs_->publish(topic, [&]() {
+    const auto& labels = output.sensor_data->label_image;
+    cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
+    msg->encoding = "rgb8";
+    msg->image = cv::Mat(labels.rows, labels.cols, CV_8UC3);
+    for (int r = 0; r < labels.rows; ++r) {
+      for (int c = 0; c < labels.cols; ++c) {
+        auto pixel = msg->image.ptr<uint8_t>(r, c);
+        const auto label = labels.at<int>(r, c);
+        const auto color = label_colormap_(label);
+        *pixel = color.r;
+        *(pixel + 1) = color.g;
+        *(pixel + 2) = color.b;
+      }
+    }
+    return msg->toImageMsg();
   });
 }
 

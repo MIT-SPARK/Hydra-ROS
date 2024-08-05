@@ -1,0 +1,8 @@
+<launch>
+  <arg name="rviz_verbose" default="false" doc="set rviz to log to stdout"/>
+  <arg name="rviz_dir" default="$(find hydra_visualizer)/rviz" doc="top-level rviz directory"/>
+  <arg name="rviz_file" default="hydra_visualizer.rviz" doc="rviz file relative to the directory"/>
+  <arg name="rviz_path" default="$(arg rviz_dir)/$(arg rviz_file)" doc="rviz file to load"/>
+
+  <node name="rviz" pkg="rviz" type="rviz" output="$(eval 'screen' if arg('rviz_verbose') else 'log')" args="-d $(arg rviz_path)"/>
+</launch>

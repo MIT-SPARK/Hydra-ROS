@@ -16,6 +16,7 @@
   <depend>geometry_msgs</depend>
   <depend>hydra</depend>
   <depend>hydra_msgs</depend>
+  <depend>hydra_visualizer</depend>
   <depend>image_transport</depend>
   <depend>kimera_pgmo_ros</depend>
   <depend>kimera_pgmo_msgs</depend>

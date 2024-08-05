@@ -1,0 +1,18 @@
+<launch>
+
+  <arg name="frame_id" default="map" doc="frame id to use"/>
+  <arg name="draw_labels" default="true" doc="draw region labels"/>
+  <arg name="region_filepath" default="''" doc="path to region file"/>
+
+  <node name="region_publisher" type="region_publisher" pkg="hydra_visualizer">
+    <param name="frame_id" value="$(arg frame_id)"/>
+    <param name="region_filepath" value="$(arg gt_regions_filepath)"/>
+    <param name="draw_labels" value="$(arg draw_labels)"/>
+    <param name="label_offset" value="2.0"/>
+    <param name="fill_polygons" value="false"/>
+    <param name="use_boundary_color" value="true"/>
+    <param name="line_width" value="0.20"/>
+    <param name="label_scale" value="1.0"/>
+  </node>
+
+</launch>

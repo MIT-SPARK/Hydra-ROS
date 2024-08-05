@@ -75,7 +75,7 @@
     <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
     <group if="$(arg start_visualizer)">
         <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
-        <include file="$(find hydra_ros)/launch/visualizer/hydra_streaming_visualizer.launch" pass_all_args="true">
+        <include file="$(find hydra_visualizer)/launch/hydra_streaming_visualizer.launch" pass_all_args="true">
             <arg name="visualizer_frame" default="$(arg map_frame)"/>
         </include>
     </group>
@@ -83,7 +83,8 @@
     <!-- rviz -->
     <arg name="start_rviz" default="true" doc="start rviz"/>
     <group if="$(arg start_rviz)">
-        <include file="$(find hydra_ros)/launch/visualizer/hydra_rviz.launch">
+        <include file="$(find hydra_visualizer)/launch/hydra_rviz.launch">
+            <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
             <arg name="rviz_file" default="phoenix.rviz"/>
         </include>
     </group>
