@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <glog/logging.h>
 #include <hydra/input/camera.h>
 #include <hydra/input/sensor.h>
 
@@ -47,47 +46,57 @@ class Bag;
 
 namespace hydra {
 
-template <typename B, typename D>
-struct NoInstantiation {
-  NoInstantiation(const std::string& name) {
-    config::internal::ConfigFactory<B>::template addEntry<typename D::Config>(name);
-    config::internal::ModuleMapBase<std::function<B*(const YAML::Node&)>>::addEntry(
-        name,
-        [name](const YAML::Node&) -> B* {
-          // TODO(nathan) assert failure in a way that doesn't bring this into a header
-          LOG(FATAL) << "Cannot directly instantiate objects of type '" << name << "'";
-          return nullptr;
-        },
-        config::internal::typeInfo<D>());
+struct InvalidSensor : Sensor {
+  InvalidSensor() : Sensor(Sensor::Config(), "") {}
+  virtual ~InvalidSensor() = default;
+  float computeRayDensity(float, float) const override { return 0.0; }
+  bool finalizeRepresentations(InputData&, bool) const override { return false; }
+  bool projectPointToImagePlane(const Eigen::Vector3f&, float&, float&) const override {
+    return false;
   }
+  bool projectPointToImagePlane(const Eigen::Vector3f&, int&, int&) const override {
+    return false;
+  }
+  bool pointIsInViewFrustum(const Eigen::Vector3f&, float) const override {
+    return false;
+  };
 };
 
-struct RosExtrinsics {
+struct RosExtrinsics : SensorExtrinsics {
   struct Config {
     std::string sensor_frame = "";
   } const config;
 
+  explicit RosExtrinsics(const Config& config);
+
  private:
-  inline static const auto r_ = NoInstantiation<SensorExtrinsics, RosExtrinsics>("ros");
+  inline static const auto r_ =
+      config::RegistrationWithConfig<SensorExtrinsics, RosExtrinsics, Config>("ros");
 };
 
-struct RosCamera {
+struct RosCamera : InvalidSensor {
   struct Config : Sensor::Config {
     std::string ns = "";
   } const config;
 
+  explicit RosCamera(const Config& config);
+
  private:
-  inline static const auto r_ = NoInstantiation<Sensor, RosCamera>("camera_info");
+  inline static const auto r_ =
+      config::RegistrationWithConfig<Sensor, RosCamera, Config>("camera_info");
 };
 
-struct RosbagCamera {
+struct RosbagCamera : InvalidSensor {
   struct Config : Sensor::Config {
     std::string topic = "";
   } const config;
 
+  explicit RosbagCamera(const Config& config);
+
  private:
   inline static const auto r_ =
-      NoInstantiation<Sensor, RosbagCamera>("rosbag_camera_info");
+      config::RegistrationWithConfig<Sensor, RosbagCamera, Config>(
+          "rosbag_camera_info");
 };
 
 void declare_config(RosExtrinsics::Config& config);

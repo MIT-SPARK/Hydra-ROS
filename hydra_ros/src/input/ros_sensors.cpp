@@ -144,6 +144,24 @@ ParamSensorExtrinsics::Config lookupExtrinsics(const rosbag::Bag& bag,
   return config;
 }
 
+RosExtrinsics::RosExtrinsics(const Config&) {
+  throw std::runtime_error("Cannot directly insantiate RosExtrinsics object!");
+}
+
+RosCamera::RosCamera(const Config&) {
+  throw std::runtime_error("Cannot directly insantiate RosExtrinsics object!");
+}
+
+RosbagCamera::RosbagCamera(const Config&) {
+  throw std::runtime_error("Cannot directly insantiate RosExtrinsics object!");
+}
+
+void declare_config(RosExtrinsics::Config& config) {
+  using namespace config;
+  name("RosExtrinsics::Config");
+  field(config.sensor_frame, "sensor_frame");
+}
+
 void declare_config(RosCamera::Config& config) {
   using namespace config;
   name("RosCamera::Config");
@@ -157,12 +175,6 @@ void declare_config(RosbagCamera::Config& config) {
   base<Sensor::Config>(config);
   field(config.topic, "camera_info_topic");
   checkCondition(!config.topic.empty(), "camera info topic required");
-}
-
-void declare_config(RosExtrinsics::Config& config) {
-  using namespace config;
-  name("RosExtrinsics::Config");
-  field(config.sensor_frame, "sensor_frame");
 }
 
 namespace input {
