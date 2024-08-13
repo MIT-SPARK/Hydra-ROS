@@ -42,6 +42,7 @@
 #include <sensor_msgs/Image.h>
 #include <tf2_eigen/tf2_eigen.h>
 
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/draw_voxel_slice.h"
 
 namespace hydra {
@@ -87,6 +88,7 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.use_relative_height, "use_relative_height");
   field(config.slice_height, "slice_height", "m");
   field(config.min_observation_weight, "min_observation_weight");
+  field(config.tsdf_block_scale, "tsdf_block_scale");
   field(config.colormap, "colormap");
   field(config.label_colormap, "label_colormap");
 }
@@ -161,6 +163,10 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   pubs_.publish("tsdf_weight_viz", header, [&]() -> Marker {
     return drawVoxelSlice<TsdfVoxel>(
         slice, header, tsdf, pose, filter, weight_colormap, "weights");
+  });
+
+  pubs_.publish("tsdf_block_viz", header, [&]() -> Marker {
+    return drawBlockExtents(tsdf, config.tsdf_block_scale, "blocks");
   });
 
   publishLabelImage(output);

@@ -53,6 +53,7 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
     bool use_relative_height = true;
     double slice_height = 0.0;
     double min_observation_weight = 1.0e-5;
+    double tsdf_block_scale = 0.02;
     visualizer::RangeColormap::Config colormap;
     visualizer::CategoricalColormap::Config label_colormap;
   } const config;
