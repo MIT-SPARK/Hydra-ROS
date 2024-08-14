@@ -35,7 +35,6 @@
 #include "hydra_visualizer/utils/polygon_utilities.h"
 
 #include <glog/logging.h>
-//#include <hydra/utils/nearest_neighbor_utilities.h>
 #include <spark_dsg/bounding_box_extraction.h>
 #include <spark_dsg/graph_utilities.h>
 #include <spark_dsg/node_attributes.h>

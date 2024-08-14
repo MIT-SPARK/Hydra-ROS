@@ -176,8 +176,6 @@ void FootprintPlugin::reset(const std_msgs::Header& header) {
   if (!msg.markers.empty()) {
     pub_.publish(msg);
   }
-
-  pub_.publish(msg);
 }
 
 }  // namespace hydra

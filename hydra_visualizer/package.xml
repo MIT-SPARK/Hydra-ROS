@@ -6,6 +6,7 @@
 
   <author email="na26933@mit.edu">Nathan Hughes</author>
   <author email="yunchang@mit.edu">Yun Chang</author>
+  <author email="lschmid@mit.edu">Lukas Schmid</author>
   <maintainer email="na26933@mit.edu">Nathan Hughes</maintainer>
 
   <license>BSD</license>
@@ -19,6 +20,7 @@
   <depend>spark_dsg</depend>
   <depend>std_msgs</depend>
   <depend>tf2_eigen</depend>
+  <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
   <exec_depend>rviz</exec_depend>
   <exec_depend>kimera_pgmo_rviz</exec_depend>

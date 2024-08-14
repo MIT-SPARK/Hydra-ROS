@@ -48,10 +48,12 @@ struct convert<spark_dsg::Color> {
   }
 
   static bool decode(const Node& node, spark_dsg::Color& color) {
-    if (!node.IsSequence() || node.size() < 3 || node.size() > 4) {
-      throw std::runtime_error(
-          "Invalid color representation with '" +
-          (node.IsSequence() ? std::to_string(node.size()) : "n/a") + "' channels!");
+    if (!node.IsSequence()) {
+      throw std::runtime_error("Invalid color representation: Not a sequence!");
+    }
+    if (node.size() != 3 && node.size() != 4) {
+      throw std::runtime_error("Invalid color representation with '" +
+                               std::to_string(node.size()) + "' channels!");
     }
 
     color.r = node[0].as<uint16_t>();

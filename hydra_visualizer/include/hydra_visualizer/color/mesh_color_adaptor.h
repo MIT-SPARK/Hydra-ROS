@@ -81,7 +81,7 @@ struct UniformMeshColoring : public MeshColoring {
  private:
   inline static const auto registration_ =
       config::RegistrationWithConfig<MeshColoring, UniformMeshColoring, Config>(
-          "uniform");
+          "UniformMeshColoring");
 };
 
 void declare_config(UniformMeshColoring::Config& config);
@@ -103,7 +103,7 @@ struct SemanticMeshColoring : public MeshColoring {
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<MeshColoring, SemanticMeshColoring, Config>(
-          "semantic");
+          "SemanticMeshColoring");
 };
 
 void declare_config(SemanticMeshColoring::Config& config);
@@ -130,7 +130,7 @@ struct FirstSeenMeshColoring : public MeshColoring {
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<MeshColoring, FirstSeenMeshColoring, Config>(
-          "first_seen");
+          "FirstSeenMeshColoring");
 };
 
 void declare_config(FirstSeenMeshColoring::Config& config);
@@ -156,7 +156,7 @@ struct LastSeenMeshColoring : public MeshColoring {
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<MeshColoring, LastSeenMeshColoring, Config>(
-          "last_seen");
+          "LastSeenMeshColoring");
 };
 
 void declare_config(LastSeenMeshColoring::Config& config);
@@ -181,7 +181,7 @@ struct SeenDurationMeshColoring : public MeshColoring {
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<MeshColoring, SeenDurationMeshColoring, Config>(
-          "seen_duration");
+          "SeenDurationMeshColoring");
 };
 
 void declare_config(SeenDurationMeshColoring::Config& config);

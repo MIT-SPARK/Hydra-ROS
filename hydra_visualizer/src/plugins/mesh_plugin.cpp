@@ -41,6 +41,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
+#include "hydra_visualizer/utils/visualizer_utilities.h"
 
 namespace hydra {
 
@@ -49,6 +50,8 @@ using spark_dsg::DynamicSceneGraph;
 void declare_config(MeshPlugin::Config& config) {
   using namespace config;
   name("MeshPlugin::Config");
+  // TODO(lschmid): Not the most elegant, would be nice to dynamically set different
+  // colorings once config_utilities dynamic config is ready.
   field(config.use_color_adaptor, "use_color_adaptor");
   config.coloring.setOptional();
   field(config.coloring, "coloring");
@@ -59,7 +62,6 @@ MeshPlugin::MeshPlugin(const Config& config,
                        const std::string& name)
     : VisualizerPlugin(nh, name),
       config(config::checkValid(config)),
-      need_redraw_(true),
       use_color_adaptor_(config.use_color_adaptor),
       mesh_coloring_(config.coloring.create()) {
   if (mesh_coloring_) {
@@ -80,38 +82,12 @@ void MeshPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& g
   }
 
   if (use_color_adaptor_ && !mesh_coloring_) {
-    ROS_WARN_STREAM("Invalid colormap; defaulting to original vertex color");
+    ROS_WARN_STREAM(
+        "[MeshPlugin] Invalid colormap; defaulting to original vertex color");
   }
 
-  kimera_pgmo_msgs::KimeraPgmoMesh msg;
-  msg.header = header;
-  msg.ns = getMsgNamespace();
-
-  std::shared_ptr<const MeshColoring> default_func;
-  if (!mesh->has_colors) {
-    UniformMeshColoring::Config config{spark_dsg::Color::gray()};
-    default_func = std::make_shared<UniformMeshColoring>(config);
-  }
-
-  MeshColorAdaptor adaptor(*mesh, use_color_adaptor_ ? mesh_coloring_ : default_func);
-  msg.vertices.resize(mesh->points.size());
-  msg.vertex_colors.resize(mesh->points.size());
-  for (size_t i = 0; i < mesh->points.size(); ++i) {
-    auto& vertex = msg.vertices[i];
-    tf2::convert(mesh->points[i].cast<double>().eval(), vertex);
-    auto& color = msg.vertex_colors[i];
-    color = visualizer::makeColorMsg(adaptor.getVertexColor(i));
-  }
-
-  msg.triangles.resize(mesh->faces.size());
-  for (size_t i = 0; i < mesh->faces.size(); ++i) {
-    const auto& face = mesh->faces[i];
-    auto& triangle = msg.triangles[i].vertex_indices;
-    triangle[0] = face[0];
-    triangle[1] = face[1];
-    triangle[2] = face[2];
-  }
-
+  auto msg = visualizer::makeMeshMsg(
+      header, *mesh, getMsgNamespace(), use_color_adaptor_ ? mesh_coloring_ : nullptr);
   mesh_pub_.publish(msg);
 }
 
@@ -127,15 +103,11 @@ std::string MeshPlugin::getMsgNamespace() const {
   return "robot0/dsg_mesh";
 }
 
-bool MeshPlugin::hasChange() const { return need_redraw_; }
-
-void MeshPlugin::clearChangeFlag() { need_redraw_ = false; }
-
 bool MeshPlugin::handleService(std_srvs::SetBool::Request& req,
                                std_srvs::SetBool::Response& res) {
   use_color_adaptor_ = req.data;
   res.success = true;
-  need_redraw_ = true;
+  has_change_ = true;
   return true;
 }
 

@@ -17,6 +17,7 @@ find_package(
              roscpp
              std_msgs
              tf2_eigen
+             tf2_ros
              visualization_msgs
 )
 
@@ -32,6 +33,7 @@ catkin_package(
   roscpp
   std_msgs
   tf2_eigen
+  tf2_ros
   visualization_msgs
   DEPENDS config_utilities spark_dsg
   INCLUDE_DIRS include
@@ -51,6 +53,7 @@ add_library(
   src/groundtruth/region_publisher.cpp
   src/groundtruth/bounding_box_publisher.cpp
   src/plugins/basis_point_plugin.cpp
+  src/plugins/khronos_object_plugin.cpp
   src/plugins/mesh_plugin.cpp
   src/plugins/footprint_plugin.cpp
   src/utils/config_manager.cpp

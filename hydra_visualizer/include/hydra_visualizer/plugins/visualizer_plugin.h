@@ -53,12 +53,13 @@ class VisualizerPlugin {
   virtual void reset(const std_msgs::Header& header) = 0;
 
   // Let plugins request changes.
-  virtual bool hasChange() const { return false; }
+  virtual bool hasChange() const { return has_change_; }
 
-  virtual void clearChangeFlag() {}
+  virtual void clearChangeFlag() { has_change_ = false; }
 
  protected:
   ros::NodeHandle nh_;
+  bool has_change_ = false;
 };
 
 }  // namespace hydra

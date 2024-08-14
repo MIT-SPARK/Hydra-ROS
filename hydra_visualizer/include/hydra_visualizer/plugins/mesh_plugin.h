@@ -60,20 +60,15 @@ class MeshPlugin : public VisualizerPlugin {
 
   void reset(const std_msgs::Header& header) override;
 
-  bool hasChange() const override;
-
-  void clearChangeFlag() override;
-
  protected:
   bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
 
   std::string getMsgNamespace() const;
 
-  bool need_redraw_;
   bool use_color_adaptor_;
   ros::Publisher mesh_pub_;
   ros::ServiceServer toggle_service_;
-  std::shared_ptr<const MeshColoring> mesh_coloring_;
+  std::shared_ptr<MeshColoring> mesh_coloring_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<VisualizerPlugin,

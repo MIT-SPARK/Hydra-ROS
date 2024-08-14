@@ -33,12 +33,14 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
 #include <spark_dsg/bounding_box.h>
 #include <spark_dsg/color.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
 
+#include "hydra_visualizer/color/mesh_color_adaptor.h"
 #include "hydra_visualizer/utils/visualizer_types.h"
 
 namespace hydra::visualizer {
@@ -118,5 +120,10 @@ visualization_msgs::MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& hea
                                                      const DynamicSceneGraph& graph,
                                                      const EdgeContainer::Edges& edges,
                                                      const std::string& ns);
+
+kimera_pgmo_msgs::KimeraPgmoMesh makeMeshMsg(const std_msgs::Header& header,
+                                             const spark_dsg::Mesh& mesh,
+                                             const std::string& ns,
+                                             MeshColoring::Ptr coloring = nullptr);
 
 }  // namespace hydra::visualizer

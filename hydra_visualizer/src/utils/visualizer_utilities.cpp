@@ -737,4 +737,40 @@ MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& header,
   return msg;
 }
 
+kimera_pgmo_msgs::KimeraPgmoMesh makeMeshMsg(const std_msgs::Header& header,
+                                                const spark_dsg::Mesh& mesh,
+                                                const std::string& ns,
+                                                MeshColoring::Ptr coloring) {
+  kimera_pgmo_msgs::KimeraPgmoMesh msg;
+  msg.header = header;
+  msg.ns = ns;
+
+  // Setup default coloring (which is mesh color if available)
+  if (!coloring && !mesh.has_colors) {
+    UniformMeshColoring::Config config{spark_dsg::Color::gray()};
+    coloring = std::make_shared<UniformMeshColoring>(config);
+  }
+
+  MeshColorAdaptor adaptor(mesh, coloring);
+  msg.vertices.resize(mesh.points.size());
+  msg.vertex_colors.resize(mesh.points.size());
+  for (size_t i = 0; i < mesh.points.size(); ++i) {
+    auto& vertex = msg.vertices[i];
+    tf2::convert(mesh.points[i].cast<double>().eval(), vertex);
+    auto& color = msg.vertex_colors[i];
+    color = visualizer::makeColorMsg(adaptor.getVertexColor(i));
+  }
+
+  msg.triangles.resize(mesh.faces.size());
+  for (size_t i = 0; i < mesh.faces.size(); ++i) {
+    const auto& face = mesh.faces[i];
+    auto& triangle = msg.triangles[i].vertex_indices;
+    triangle[0] = face[0];
+    triangle[1] = face[1];
+    triangle[2] = face[2];
+  }
+
+  return msg;
+}
+
 }  // namespace hydra::visualizer
