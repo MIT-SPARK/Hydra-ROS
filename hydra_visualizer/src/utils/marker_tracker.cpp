@@ -54,8 +54,8 @@ inline Marker makeDeleteMarker(const std_msgs::Header& header,
 
 inline bool isValid(const Marker& marker) {
   if (marker.type != Marker::LINE_STRIP && marker.type != Marker::LINE_LIST &&
-      marker.type != Marker::SPHERE_LIST && marker.type != Marker::POINTS &&
-      marker.type != Marker::TRIANGLE_LIST) {
+      marker.type != Marker::CUBE_LIST && marker.type != Marker::SPHERE_LIST &&
+      marker.type != Marker::POINTS && marker.type != Marker::TRIANGLE_LIST) {
     return true;
   }
 
