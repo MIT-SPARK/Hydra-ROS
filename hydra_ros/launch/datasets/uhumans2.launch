@@ -14,10 +14,11 @@
 
     <!-- semantics -->
     <arg name="labelspace_name" default="$(eval 'uhumans2_office' if arg('use_gt_semantics') else 'ade20k_mp3d')" doc="semantic label space"/>
-    <arg name="semantic_map_dir" default="$(find hydra_ros)/config/color" if="$(arg use_gt_semantics)"/>
-    <arg name="semantic_map_dir" default="$(find semantic_inference)/config/colors" unless="$(arg use_gt_semantics)"/>
-    <arg name="semantic_map_path" default="$(arg semantic_map_dir)/$(arg labelspace_name).csv"/>
+    <arg name="semantic_map_path" default="$(find hydra_ros)/config/color/$(arg labelspace_name).csv" if="$(arg use_gt_semantics)"/>
     <arg name="semantic_label_remap_filepath" default="$(find hydra)/config/label_remaps/uhumans2_office.yaml" if="$(arg use_single_channel_label_image)"/>
+
+    <arg name="use_prerecorded_semantics" default="false" doc="Use precorded labels as input"/>
+    <arg name="prerecorded_topic" default="/oneformer/labels/image_raw" doc="Topic containing prerecorded labels"/>
 
     <arg name="rgb_topic" default="/tesse/left_cam/rgb/image_raw"/>
     <arg name="rgb_info_topic" default="/tesse/left_cam/camera_info"/>
@@ -25,7 +26,6 @@
     <arg name="label_topic" default="semantic_inference/semantic/image_raw" unless="$(arg use_gt_semantics)"/>
     <arg name="label_topic" default="$(eval '/tesse/seg_cam/converted/image_raw' if arg('use_single_channel_label_image') else '/tesse/seg_cam/rgb/image_raw')"
                             if="$(arg use_gt_semantics)"/>
-    <arg name="prerecorded_topic" default="/oneformer/labels/image_raw"/>
 
     <arg name="use_static_tfs" default="true" doc="publish static tfs from file"/>
     <group if="$(arg use_static_tfs)">
@@ -35,11 +35,9 @@
     </group>
 
     <group unless="$(arg use_gt_semantics)">
-        <remap from="semantic_inference/image_raw" to="$(arg rgb_topic)"/>
-        <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch"
-                 pass_all_args="true">
-            <arg name="enable_pointcloud" value="false"/>
-        </include>
+        <remap from="semantic_inference/color/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="semantic_inference/labels/image_raw" to="$(arg prerecorded_topic)" if="$(arg use_prerecorded_semantics)"/>
+        <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch" pass_all_args="true"/>
     </group>
 
     <arg name="use_openset_features" default="false" doc="assign clip features to places"/>

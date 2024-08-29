@@ -22,13 +22,9 @@
         <remap from="rgb/camera_info" to="/spot/camera/frontleft/camera_info"/>
         <remap from="depth/image_rect" to="/spot/depth/frontleft/depth_in_visual"/>
         <remap from="depth/camera_info" to="/spot/depth/frontleft/depth_in_visual/camera_info"/>
-        <remap from="semantic_inference/image_raw" to="/spot/camera/frontleft/image"/>
-
-        <remap from="rgb/image_rect_color" to="semantic_inference/semantic_color/image_raw"/>
+        <remap from="semantic_inference/color/image_raw" to="/spot/camera/frontleft/image"/>
 
         <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch">
-            <arg name="enable_pointcloud" value="false"/>
-            <arg name="enable_rectification" value="true"/>
             <arg name="rotation_type" value="ROTATE_90_CLOCKWISE"/>
         </include>
     </group>
@@ -37,13 +33,9 @@
         <remap from="rgb/camera_info" to="/spot/camera/frontright/camera_info"/>
         <remap from="depth/image_rect" to="/spot/depth/frontright/depth_in_visual"/>
         <remap from="depth/camera_info" to="/spot/depth/frontright/depth_in_visual/camera_info"/>
-        <remap from="semantic_inference/image_raw" to="/spot/camera/frontright/image"/>
-
-        <remap from="rgb/image_rect_color" to="semantic_inference/semantic_color/image_raw"/>
+        <remap from="semantic_inference/color/image_raw" to="/spot/camera/frontright/image"/>
 
         <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch">
-            <arg name="enable_pointcloud" value="false"/>
-            <arg name="enable_rectification" value="true"/>
             <arg name="rotation_type" value="ROTATE_90_CLOCKWISE"/>
         </include>
     </group>
