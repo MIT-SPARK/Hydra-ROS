@@ -90,8 +90,7 @@ void PlacesVisualizer::call(uint64_t timestamp_ns,
   header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
-  const RangeColormap sdf_cmap(
-      {config::VirtualConfig<ContinuousPalette>{DivergentPalette::Config()}});
+  const RangeColormap sdf_cmap(RangeColormap::Config{});
   pubs_.publish("esdf_viz", header, [&]() -> Marker {
     return drawEsdf(gvd_config_.get(), sdf_cmap, pose.cast<double>(), gvd, "esdf");
   });

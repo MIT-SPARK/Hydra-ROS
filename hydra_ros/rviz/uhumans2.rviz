@@ -80,12 +80,18 @@ Visualization Manager:
         "dynamic_edges_\x00": true
         "dynamic_label_\x00": true
         "dynamic_nodes_\x00": true
+        interlayer_edges_3_2: true
         interlayer_edges_4_3: true
+        layer_bounding_boxes_2: true
+        layer_edges_20: true
         layer_edges_3: true
-        layer_edges_4: true
+        layer_labels_2: true
         layer_labels_4: true
+        layer_nodes_2: true
+        layer_nodes_20: true
         layer_nodes_3: true
         layer_nodes_4: true
+        layer_polygon_boundaries_20: true
       Queue Size: 100
       Value: true
     - Class: kimera_pgmo_rviz/MeshDisplay

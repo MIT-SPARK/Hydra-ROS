@@ -145,7 +145,7 @@ Marker drawEsdf(const GvdVisualizerConfig& config,
       [](const auto& voxel) { return voxel.observed; },
       [&](const auto& voxel) {
         return visualizer::makeColorMsg(
-            cmap(voxel.distance, -config.esdf_distance, config.esdf_distance),
+            cmap(voxel.distance, 0, config.esdf_distance),
             config.esdf_alpha);
       },
       ns);

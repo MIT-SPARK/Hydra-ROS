@@ -146,9 +146,7 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   header.frame_id = info.getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
-  const RangeColormap cmap(
-      {config::VirtualConfig<ContinuousPalette>{DivergentPalette::Config()}});
-
+  const RangeColormap cmap(RangeColormap::Config{});
   const VoxelSliceConfig slice{config.slice_height, config.use_relative_height};
   const Filter<TsdfVoxel> filter = [&](const auto& voxel) {
     return isVoxelObserved(config, voxel);

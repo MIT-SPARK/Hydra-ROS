@@ -44,7 +44,7 @@
     <!-- parameter files -->
     <rosparam file="$(arg labelspace_path)" ns="hydra_ros_node"/>
     <rosparam file="$(arg input_config_path)" ns="hydra_ros_node/input" subst_value="true"/>
-    <rosparam file="$(arg reconstruction_config_path)" ns="hydra_ros_node/reconstruction"/>
+    <rosparam file="$(arg reconstruction_config_path)" ns="hydra_ros_node"/>
     <rosparam file="$(arg frontend_config_path)" ns="hydra_ros_node/frontend"/>
     <rosparam file="$(arg backend_config_path)" ns="hydra_ros_node/backend"/>
     <rosparam file="$(arg lcd_config_path)" ns="hydra_ros_node"/>
