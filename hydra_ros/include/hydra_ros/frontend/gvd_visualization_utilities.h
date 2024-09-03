@@ -76,16 +76,6 @@ visualization_msgs::Marker drawGvdError(const GvdVisualizerConfig& config,
                                         const places::GvdLayer& rhs,
                                         double threshold);
 
-visualization_msgs::Marker drawBlockExtents(const TsdfLayer& layer,
-                                            double scale,
-                                            const std::string& ns,
-                                            const spark_dsg::Color& color = {});
-
-visualization_msgs::Marker drawBlockExtents(const places::GvdLayer& layer,
-                                            double scale,
-                                            const std::string& ns,
-                                            const spark_dsg::Color& color = {});
-
 visualization_msgs::MarkerArray drawGvdGraph(const places::GvdGraph& graph,
                                              const GvdVisualizerConfig& config,
                                              const visualizer::RangeColormap& cmap,

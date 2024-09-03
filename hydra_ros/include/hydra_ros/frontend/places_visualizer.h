@@ -51,6 +51,7 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
   struct Config {
     std::string ns = "~places";
     visualizer::RangeColormap::Config colormap;
+    Color block_color = Color::purple();
   } const config;
 
   explicit PlacesVisualizer(const Config& config);

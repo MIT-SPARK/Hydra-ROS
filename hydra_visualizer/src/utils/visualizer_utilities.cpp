@@ -738,9 +738,9 @@ MarkerArray makeGraphEdgeMarkers(const std_msgs::Header& header,
 }
 
 kimera_pgmo_msgs::KimeraPgmoMesh makeMeshMsg(const std_msgs::Header& header,
-                                                const spark_dsg::Mesh& mesh,
-                                                const std::string& ns,
-                                                MeshColoring::Ptr coloring) {
+                                             const spark_dsg::Mesh& mesh,
+                                             const std::string& ns,
+                                             MeshColoring::Ptr coloring) {
   kimera_pgmo_msgs::KimeraPgmoMesh msg;
   msg.header = header;
   msg.ns = ns;

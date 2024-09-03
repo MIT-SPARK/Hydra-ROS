@@ -47,25 +47,13 @@ void declare_config(ObjectVisualizer::Config& config) {
   using namespace config;
   name("ObjectVisualizerConfig");
   field(config.module_ns, "module_ns");
-  field(config.enable_active_mesh_pub, "enable_active_mesh_pub");
-  field(config.enable_segmented_mesh_pub, "enable_segmented_mesh_pub");
   field(config.point_scale, "point_scale");
   field(config.point_alpha, "point_alpha");
   field(config.use_spheres, "use_spheres");
 }
 
 ObjectVisualizer::ObjectVisualizer(const Config& config)
-    : config(config::checkValid(config)), nh_(config.module_ns) {
-  if (config.enable_active_mesh_pub) {
-    active_vertices_pub_ = nh_.advertise<Marker>("active_vertices", 1, true);
-  }
-
-  if (config.enable_segmented_mesh_pub) {
-    segmented_vertices_pub_.reset(new ObjectCloudPub("object_vertices", nh_));
-  }
-}
-
-ObjectVisualizer::~ObjectVisualizer() { segmented_vertices_pub_.reset(); }
+    : config(config::checkValid(config)), nh_(config.module_ns), pubs_(nh_) {}
 
 std::string ObjectVisualizer::printInfo() const {
   std::stringstream ss;
@@ -77,41 +65,27 @@ void ObjectVisualizer::call(uint64_t timestamp_ns,
                             const kimera_pgmo::MeshDelta& delta,
                             const std::vector<size_t>& active,
                             const LabelIndices& label_indices) const {
-  publishActiveVertices(timestamp_ns, delta, active);
-  publishObjectClouds(timestamp_ns, delta, label_indices);
-}
-
-void ObjectVisualizer::publishActiveVertices(uint64_t timestamp_ns,
-                                             const kimera_pgmo::MeshDelta& delta,
-                                             const std::vector<size_t>& active) const {
-  if (active_vertices_pub_.getNumSubscribers() < 1) {
-    return;
-  }
-
-  visualization_msgs::Marker msg;
-  msg.header.stamp.fromNSec(timestamp_ns);
-  msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
-  msg.ns = "active_vertices";
-  msg.id = 0;
-  fillMarkerFromCloud(delta, active, msg);
-  active_vertices_pub_.publish(msg);
-}
-
-void ObjectVisualizer::publishObjectClouds(uint64_t timestamp_ns,
-                                           const kimera_pgmo::MeshDelta& delta,
-                                           const LabelIndices& label_indices) const {
-  if (!segmented_vertices_pub_) {
-    return;
-  }
-
-  for (auto&& [label, indices] : label_indices) {
+  pubs_.publish("active_vertices", [&]() {
     visualization_msgs::Marker msg;
     msg.header.stamp.fromNSec(timestamp_ns);
     msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
-    msg.ns = "label_vertices_" + std::to_string(label);
+    msg.ns = "active_vertices";
     msg.id = 0;
-    fillMarkerFromCloud(delta, indices, msg);
-    segmented_vertices_pub_->publish(label, msg);
+    fillMarkerFromCloud(delta, active, msg);
+    return msg;
+  });
+
+  for (const auto& id_label_pair : label_indices) {
+    pubs_.publish("object_vertices/label" + std::to_string(id_label_pair.first), [&]() {
+      const auto& [label, indices] = id_label_pair;
+      visualization_msgs::Marker msg;
+      msg.header.stamp.fromNSec(timestamp_ns);
+      msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
+      msg.ns = "label_vertices_" + std::to_string(label);
+      msg.id = 0;
+      fillMarkerFromCloud(delta, indices, msg);
+      return msg;
+    });
   }
 }
 

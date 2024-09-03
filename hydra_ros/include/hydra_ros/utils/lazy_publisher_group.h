@@ -33,50 +33,88 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/frontend/mesh_segmenter.h>
-#include <kimera_pgmo/mesh_delta.h>
 #include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
 
-#include "hydra_ros/utils/lazy_publisher_group.h"
+#include <map>
+#include <string>
 
 namespace hydra {
 
-class ObjectVisualizer : public MeshSegmenter::Sink {
+template <typename Derived>
+struct publisher_type_trait;
+
+// NOTE(nathan) CRTP or something similar seems necessary here becuase the various
+// publisher types need something common (the Derived class) to hold construction
+// information
+template <typename Derived>
+class LazyPublisherGroup {
  public:
-  struct Config {
-    std::string module_ns = "~objects";
-    double point_scale = 0.1;
-    double point_alpha = 0.7;
-    bool use_spheres = false;
-  } const config;
+  virtual ~LazyPublisherGroup() = default;
 
-  explicit ObjectVisualizer(const Config& config);
+  template <typename Callback>
+  void publish(const std::string& topic, const Callback& callback) const {
+    const auto derived = static_cast<const Derived*>(this);
+    auto iter = pubs_.find(topic);
+    if (iter == pubs_.end()) {
+      iter = pubs_.emplace(topic, derived->makePublisher(topic)).first;
+    }
 
-  ~ObjectVisualizer() = default;
+    if (!derived->shouldPublish(iter->second)) {
+      return;
+    }
 
-  std::string printInfo() const override;
-
-  void call(uint64_t timestamp_ns,
-            const kimera_pgmo::MeshDelta& delta,
-            const std::vector<size_t>& active,
-            const LabelIndices& label_indices) const override;
-
- protected:
-  void fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
-                           const std::vector<size_t>& indices,
-                           visualization_msgs::Marker& marker) const;
-
- protected:
-  ros::NodeHandle nh_;
-  RosPublisherGroup<visualization_msgs::Marker> pubs_;
+    derived->publishMsg(iter->second, callback());
+  }
 
  private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<MeshSegmenter::Sink, ObjectVisualizer, Config>(
-          "ObjectVisualizer");
+  friend Derived;
+  LazyPublisherGroup() = default;
+
+  using PublisherT = typename publisher_type_trait<Derived>::value;
+  mutable std::map<std::string, PublisherT> pubs_;
 };
 
-void declare_config(ObjectVisualizer::Config& conf);
+template <typename T>
+struct RosPublisherGroup;
+
+template <typename T>
+struct publisher_type_trait<RosPublisherGroup<T>> {
+  using value = ros::Publisher;
+};
+
+template <typename T>
+struct RosPublisherGroup : LazyPublisherGroup<RosPublisherGroup<T>> {
+ public:
+  using Base = LazyPublisherGroup<RosPublisherGroup<T>>;
+
+  explicit RosPublisherGroup(const ros::NodeHandle& nh,
+                             size_t queue_size = 1,
+                             bool latch = false)
+      : queue_size(queue_size), latch(latch), nh_(nh) {}
+
+  ros::Publisher makePublisher(const std::string& topic) const {
+    return nh_.advertise<T>(topic, queue_size, latch);
+  }
+
+  bool shouldPublish(const ros::Publisher& pub) const {
+    return pub.getNumSubscribers() > 0;
+  }
+
+  void publishMsg(const ros::Publisher& pub, const T& msg) const { pub.publish(msg); }
+
+  void publishMsg(const ros::Publisher& pub, const typename T::Ptr& msg) const {
+    pub.publish(msg);
+  }
+
+  void publishMsg(const ros::Publisher& pub, const typename T::ConstPtr& msg) const {
+    pub.publish(msg);
+  }
+
+  const size_t queue_size;
+  const bool latch;
+
+ private:
+  mutable ros::NodeHandle nh_;
+};
 
 }  // namespace hydra

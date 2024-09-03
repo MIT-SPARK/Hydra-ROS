@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra_visualizer/utils/visualizer_utilities.h>
 #include <spatial_hash/voxel_layer.h>
 #include <tf2_eigen/tf2_eigen.h>
 #include <visualization_msgs/Marker.h>
@@ -106,6 +107,59 @@ visualization_msgs::Marker drawVoxelSlice(const VoxelSliceConfig& config,
   }
 
   return msg;
+}
+
+template <typename Block>
+using BlockColoring = std::function<std_msgs::ColorRGBA(const Block&)>;
+
+struct ActiveBlockColoring {
+  ActiveBlockColoring(const spark_dsg::Color& active_color)
+      : active_color(active_color) {}
+
+  std_msgs::ColorRGBA call(const spatial_hash::Block& block) const {
+    return visualizer::makeColorMsg(block.updated ? active_color : spark_dsg::Color());
+  }
+
+  template <typename Block>
+  BlockColoring<Block> getCallback() const {
+    return [this](const auto& block) { return this->call(block); };
+  }
+
+  const spark_dsg::Color active_color;
+};
+
+template <typename Block>
+visualization_msgs::Marker drawSpatialGrid(const spatial_hash::BlockLayer<Block>& layer,
+                                           double scale,
+                                           const std::string& ns,
+                                           double alpha = 1.0,
+                                           const BlockColoring<Block>& cmap = {}) {
+  visualization_msgs::Marker marker;
+  marker.type = visualization_msgs::Marker::LINE_LIST;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.id = 0;
+  marker.ns = ns;
+  marker.scale.x = scale;
+  marker.scale.y = scale;
+  marker.scale.z = scale;
+
+  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
+  tf2::convert(identity_pos, marker.pose.position);
+  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
+
+  for (const auto& block : layer) {
+    const auto position = block.position();
+    spark_dsg::BoundingBox box(Eigen::Vector3f::Constant(block.block_size), position);
+    std_msgs::ColorRGBA color;
+    if (cmap) {
+      color = cmap(block);
+    }
+
+    color.a = alpha;
+    visualizer::drawBoundingBox(box, color, marker);
+  }
+
+  return marker;
 }
 
 }  // namespace hydra

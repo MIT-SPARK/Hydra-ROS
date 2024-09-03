@@ -37,13 +37,13 @@
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
-#include <cv_bridge/cv_bridge.h>
 #include <hydra/common/global_info.h>
-#include <sensor_msgs/Image.h>
+#include <hydra_visualizer/color/color_parsing.h>
+#include <hydra_visualizer/utils/visualizer_utilities.h>
 #include <tf2_eigen/tf2_eigen.h>
 
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
-#include "hydra_ros/visualizer/draw_voxel_slice.h"
+#include "hydra_ros/utils/input_data_to_messages.h"
+#include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
 
@@ -89,38 +89,44 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.slice_height, "slice_height", "m");
   field(config.min_observation_weight, "min_observation_weight");
   field(config.tsdf_block_scale, "tsdf_block_scale");
+  field(config.tsdf_block_color, "tsdf_block_color");
+  field(config.tsdf_block_alpha, "tsdf_block_alpha");
+  field(config.mesh_block_scale, "mesh_block_scale");
+  field(config.mesh_block_alpha, "mesh_block_alpha");
+  field(config.mesh_block_color, "mesh_block_color");
+  field(config.point_size, "point_size");
+  field(config.filter_points_by_range, "filter_points_by_range");
   field(config.colormap, "colormap");
   field(config.label_colormap, "label_colormap");
+  config.mesh_coloring.setOptional();
+  field(config.mesh_coloring, "mesh_coloring");
 }
 
-struct ImageGroupPub {
-  using Callback = std::function<sensor_msgs::Image::ConstPtr()>;
-  explicit ImageGroupPub(ros::NodeHandle& nh) : nh_(nh), transport_(nh_) {}
+ImagePublisherGroup::ImagePublisherGroup(ros::NodeHandle& nh) : transport_(nh) {}
 
-  void publish(const std::string& name, const Callback& callback) {
-    auto iter = pubs_.find(name);
-    if (iter == pubs_.end()) {
-      iter = pubs_.emplace(name, transport_.advertise(name, 1)).first;
-    }
+bool ImagePublisherGroup::shouldPublish(const image_transport::Publisher& pub) const {
+  return pub.getNumSubscribers() > 0;
+}
 
-    if (!iter->second.getNumSubscribers()) {
-      return;  // don't do work if no subscription
-    }
+image_transport::Publisher ImagePublisherGroup::makePublisher(
+    const std::string& topic) const {
+  return transport_.advertise(topic, 1);
+}
 
-    iter->second.publish(callback());
-  }
-
-  ros::NodeHandle nh_;
-  image_transport::ImageTransport transport_;
-  std::map<std::string, image_transport::Publisher> pubs_;
-};
+void ImagePublisherGroup::publishMsg(const image_transport::Publisher& pub,
+                                     const sensor_msgs::Image::Ptr& img) const {
+  pub.publish(img);
+}
 
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
     : config(config),
       nh_(config.ns),
       pubs_(nh_),
-      image_pubs_(std::make_unique<ImageGroupPub>(nh_)),
-      colormap_(config.colormap) {}
+      active_mesh_pub_(nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("mesh", 1)),
+      image_pubs_(nh_),
+      cloud_pubs_(nh_),
+      colormap_(config.colormap),
+      mesh_coloring_(config.mesh_coloring.create()) {}
 
 ReconstructionVisualizer::~ReconstructionVisualizer() {}
 
@@ -165,37 +171,68 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
         slice, header, tsdf, pose, filter, weight_colormap, "weights");
   });
 
+  ActiveBlockColoring block_cmap(config.tsdf_block_color);
   pubs_.publish("tsdf_block_viz", header, [&]() -> Marker {
-    return drawBlockExtents(tsdf, config.tsdf_block_scale, "blocks");
+    return drawSpatialGrid(tsdf,
+                           config.tsdf_block_scale,
+                           "blocks",
+                           config.tsdf_block_alpha,
+                           block_cmap.getCallback<TsdfBlock>());
   });
 
-  publishLabelImage(output);
+  publishMesh(output);
+
+  if (output.sensor_data) {
+    std_msgs::Header header;
+    header.stamp.fromNSec(output.timestamp_ns);
+    header.frame_id = GlobalInfo::instance().getFrames().map;
+
+    const auto sensor_name = output.sensor_data->getSensor().name;
+    image_pubs_.publish(sensor_name + "/labels", [&]() {
+      return makeImage(header, *output.sensor_data, [this](uint32_t label) {
+        return label_colormap_(label);
+      });
+    });
+    cloud_pubs_.publish(sensor_name + "/pointcloud", [&]() {
+      return makeCloud(header, *output.sensor_data, config.filter_points_by_range);
+    });
+  }
 }
 
-void ReconstructionVisualizer::publishLabelImage(
-    const ReconstructionOutput& output) const {
-  if (!output.sensor_data) {
+void ReconstructionVisualizer::publishMesh(const ReconstructionOutput& out) const {
+  std_msgs::Header header;
+  header.stamp.fromNSec(out.timestamp_ns);
+  header.frame_id = GlobalInfo::instance().getFrames().map;
+
+  const auto& mesh = out.map().getMeshLayer();
+  ActiveBlockColoring block_cmap(config.mesh_block_color);
+  pubs_.publish("mesh_block_viz", header, [&]() -> Marker {
+    return drawSpatialGrid(mesh,
+                           config.mesh_block_scale,
+                           "mesh_blocks",
+                           config.mesh_block_alpha,
+                           block_cmap.getCallback<MeshBlock>());
+  });
+
+  if (active_mesh_pub_.getNumSubscribers() == 0) {
     return;
   }
 
-  const auto topic = output.sensor_data->getSensor().name + "/labels";
-  image_pubs_->publish(topic, [&]() {
-    const auto& labels = output.sensor_data->label_image;
-    cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
-    msg->encoding = "rgb8";
-    msg->image = cv::Mat(labels.rows, labels.cols, CV_8UC3);
-    for (int r = 0; r < labels.rows; ++r) {
-      for (int c = 0; c < labels.cols; ++c) {
-        auto pixel = msg->image.ptr<uint8_t>(r, c);
-        const auto label = labels.at<int>(r, c);
-        const auto color = label_colormap_(label);
-        *pixel = color.r;
-        *(pixel + 1) = color.g;
-        *(pixel + 2) = color.b;
-      }
-    }
-    return msg->toImageMsg();
-  });
+  if (mesh.numBlocks() == 0) {
+    return;
+  }
+
+  auto iter = mesh.begin();
+  auto combined_mesh = iter->clone();
+  ++iter;
+  while (iter != mesh.end()) {
+    *combined_mesh += *iter;
+    ++iter;
+  }
+
+  auto msg = visualizer::makeMeshMsg(
+      header, *combined_mesh, "active_window_mesh", mesh_coloring_);
+  active_mesh_pub_.publish(msg);
 }
 
 }  // namespace hydra

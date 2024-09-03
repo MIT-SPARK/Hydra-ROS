@@ -78,6 +78,7 @@ add_library(
   src/utils/bag_reader.cpp
   src/utils/bow_subscriber.cpp
   src/utils/dsg_streaming_interface.cpp
+  src/utils/input_data_to_messages.cpp
   src/utils/node_utilities.cpp
   src/utils/occupancy_publisher.cpp
   src/utils/pose_cache.cpp

@@ -40,7 +40,7 @@
 
 #include <random>
 
-#include "hydra_ros/visualizer/draw_voxel_slice.h"
+#include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
 
@@ -127,34 +127,6 @@ std::unordered_set<uint64_t>& getNodeSet(EdgeMap& edge_map, uint64_t node) {
     iter = edge_map.emplace(node, std::unordered_set<uint64_t>()).first;
   }
   return iter->second;
-}
-
-template <typename BlockT>
-Marker makeBlocksMarkerImpl(const spatial_hash::BlockLayer<BlockT>& layer,
-                            double scale,
-                            const std::string& ns,
-                            const Color& color) {
-  Marker marker;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-  marker.color = visualizer::makeColorMsg(color);
-  marker.scale.x = scale;
-  marker.scale.y = scale;
-  marker.scale.z = scale;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  for (const auto& block : layer) {
-    Point position = block.origin();
-    spark_dsg::BoundingBox box(Eigen::Vector3f::Constant(block.block_size), position);
-    visualizer::drawBoundingBox(box, marker.color, marker);
-  }
-
-  return marker;
 }
 
 }  // namespace
@@ -303,20 +275,6 @@ Marker drawGvdError(const GvdVisualizerConfig& config,
   }
 
   return marker;
-}
-
-Marker drawBlockExtents(const TsdfLayer& layer,
-                        double scale,
-                        const std::string& ns,
-                        const Color& color) {
-  return makeBlocksMarkerImpl(layer, scale, ns, color);
-}
-
-Marker drawBlockExtents(const GvdLayer& layer,
-                        double scale,
-                        const std::string& ns,
-                        const Color& color) {
-  return makeBlocksMarkerImpl(layer, scale, ns, color);
 }
 
 MarkerArray drawGvdGraph(const GvdGraph& graph,

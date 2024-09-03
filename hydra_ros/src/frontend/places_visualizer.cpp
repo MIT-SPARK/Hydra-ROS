@@ -40,10 +40,12 @@
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra/places/compression_graph_extractor.h>
+#include <hydra_visualizer/color/color_parsing.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/utils/visualizer_utilities.h>
 
 #include "hydra_ros/frontend/gvd_visualization_utilities.h"
+#include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
 
@@ -62,6 +64,8 @@ void declare_config(PlacesVisualizer::Config& config) {
   using namespace config;
   name("PlacesVisualizerConfig");
   field(config.ns, "ns");
+  field(config.colormap, "colormap");
+  field(config.block_color, "block_color");
 }
 
 PlacesVisualizer::PlacesVisualizer(const Config& config)
@@ -108,8 +112,13 @@ void PlacesVisualizer::visualizeGvd(const std_msgs::Header& header,
     return drawGvdSurface(gvd_config_.get(), colormap_, gvd, "surface");
   });
 
+  ActiveBlockColoring block_cmap(config.block_color);
   pubs_.publish("voxel_block_viz", header, [&]() -> Marker {
-    return drawBlockExtents(gvd, gvd_config_.get().block_outline_scale, "blocks");
+    return drawSpatialGrid(gvd,
+                           gvd_config_.get().block_outline_scale,
+                           "blocks",
+                           1.0,
+                           block_cmap.getCallback<places::GvdBlock>());
   });
 }
 

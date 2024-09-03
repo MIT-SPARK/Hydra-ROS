@@ -163,11 +163,6 @@ class KhronosObjectPlugin : public VisualizerPlugin {
   MarkerTracker tracker_;                          // Dynamic objects.
   std::unordered_set<uint64_t> previous_objects_;  // Static objects.
 
-  // Time Tracking for viualization.
-  uint64_t time_start_;
-  uint64_t time_end_;
-  uint64_t current_query_time_;
-
   // Registration.
   inline static const auto registration_ =
       config::RegistrationWithConfig<VisualizerPlugin,
