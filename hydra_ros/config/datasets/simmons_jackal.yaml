@@ -1,14 +1,15 @@
 ---
-type: RosInput
-inputs:
-  - receiver:
-      type: ImageReceiver
-      queue_size: 30
-    sensor:
-      type: camera_info
-      min_range: $(arg sensor_min_range)
-      max_range: $(arg sensor_max_range)
-      camera_info_topic: $(arg rgb_info_topic)
-      extrinsics:
-        type: kimera
-        sensor_filepath: $(arg kimera_sensor_filepath)
+input:
+  type: RosInput
+  inputs:
+    - receiver:
+        type: ImageReceiver
+        queue_size: 30
+      sensor:
+        type: camera_info
+        min_range: $(arg sensor_min_range)
+        max_range: $(arg sensor_max_range)
+        camera_info_topic: $(arg rgb_info_topic)
+        extrinsics:
+          type: kimera
+          sensor_filepath: $(arg kimera_sensor_filepath)

@@ -1,14 +1,15 @@
 ---
-type: RosInput
-tf_verbosity: 1
-clear_queue_on_fail: true
-inputs:
-  left_cam:
-    receiver:
-      type: ImageReceiver
-    sensor:
-      type: camera_info
-      min_range: $(arg sensor_min_range)
-      max_range: $(arg sensor_max_range)
-      extrinsics:
-        type: ros
+input:
+  type: RosInput
+  tf_verbosity: 1
+  clear_queue_on_fail: true
+  inputs:
+    left_cam:
+      receiver:
+        type: ImageReceiver
+      sensor:
+        type: camera_info
+        min_range: $(arg sensor_min_range)
+        max_range: $(arg sensor_max_range)
+        extrinsics:
+          type: ros

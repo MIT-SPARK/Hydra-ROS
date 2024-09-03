@@ -15,7 +15,7 @@
     <arg name="enable_places" default="true"/>
     <arg name="bounding_box_type" default="AABB"/>
     <arg name="use_gt_frame" default="true"/>
-    <arg name="pose_graph_tracker_type" default="$(eval 'PoseGraphFromOdom' if arg('use_gt_frame') else 'RosPoseGraphs')"/>
+    <arg name="pose_graph_tracker_type" default="$(eval 'PoseGraphFromOdom' if use_gt_frame else 'RosPoseGraphs')"/>
 
     <!-- Backend configuration -->
     <arg name="add_initial_prior" default="true"/>
@@ -35,7 +35,7 @@
 
     <!-- Openset feature configuration -->
     <arg name="use_openset_features" default="false"/>
-    <arg name="feature_receiver_type" value="$(eval 'FeatureReceiver' if arg('use_openset_features') else '&quot;&quot;')"/>
+    <arg name="feature_receiver_type" value="$(eval 'FeatureReceiver' if use_openset_features else '&quot;&quot;')"/>
 
     <rosparam file="$(arg pipeline_path)" subst_value="true" ns="$(arg hydra_ros_ns)"/>
 </launch>

@@ -2,7 +2,7 @@
     <arg name="sim_time_required" default="false"/>
     <param name="use_sim_time" value="$(arg sim_time_required)"/>
 
-    <arg name="config_dir" default="$(find hydra)/config/spot"/>
+    <arg name="hydra_config_path" default="$(find hydra)/config/datasets/spot.yaml"/>
     <arg name="use_gt_frame" default="true" doc="use simulator-provided tf frame"/>
     <arg name="use_static_tfs" default="true" doc="publish static tfs from file"/>
 
@@ -54,7 +54,7 @@
 
         <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
             <arg name="dataset_name" default="lis_spot"/>
-            <arg name="pipeline_path" value="$(find hydra_ros)/config/datasets/lis_spot_pipeline.yaml"/>
+            <arg name="pipeline_path" value="$(find hydra_ros)/config/pipelines/lis_spot.yaml"/>
         </include>
     </group>
 
