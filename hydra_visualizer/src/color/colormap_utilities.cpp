@@ -201,7 +201,8 @@ CategoricalColormap::CategoricalColormap(const Config& config)
 }
 
 Color CategoricalColormap::getColor(size_t category) const {
-  if (category >= total_classes || category >= colors.size()) {
+  const bool color_out_of_bounds = total_classes > 0 && category >= total_classes;
+  if (color_out_of_bounds || category >= colors.size()) {
     return config.default_color;
   }
 

@@ -63,6 +63,19 @@ Color NodeColorAdaptor::getColor(const DynamicSceneGraph&,
   }
 }
 
+void declare_config(UniformColorAdaptor::Config& config) {
+  using namespace config;
+  name("UniformColorAdaptor::Config");
+  field(config.color, "color");
+}
+
+UniformColorAdaptor::UniformColorAdaptor(const Config& config) : config(config) {}
+
+Color UniformColorAdaptor::getColor(const DynamicSceneGraph&,
+                                    const SceneGraphNode& /* node */) const {
+  return config.color;
+}
+
 LabelColorAdaptor::LabelColorAdaptor(const Config& config)
     : config(config::checkValid(config)), colormap_(config.colormap) {}
 

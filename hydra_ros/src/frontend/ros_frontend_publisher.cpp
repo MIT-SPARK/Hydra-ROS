@@ -56,11 +56,9 @@ RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
 void RosFrontendPublisher::call(uint64_t timestamp_ns,
                                 const DynamicSceneGraph& graph,
                                 const BackendInput& backend_input) const {
-  if (backend_input.deformation_graph) {
-    auto msg = pose_graph_tools::toMsg(*backend_input.deformation_graph);
-    msg.header.stamp.fromNSec(timestamp_ns);
-    mesh_graph_pub_.publish(msg);
-  }
+  auto msg = pose_graph_tools::toMsg(backend_input.deformation_graph);
+  msg.header.stamp.fromNSec(timestamp_ns);
+  mesh_graph_pub_.publish(msg);
 
   if (backend_input.mesh_update) {
     mesh_update_pub_.publish(

@@ -113,6 +113,10 @@ BasisPointPlugin::BasisPointPlugin(const Config& config,
 
 void BasisPointPlugin::draw(const std_msgs::Header& header,
                             const DynamicSceneGraph& graph) {
+  if (pub_.getNumSubscribers() == 0) {
+    return;
+  }
+
   MarkerArray msg;
   fillMarkers(header, graph, msg);
   tracker_.clearPrevious(header, msg);

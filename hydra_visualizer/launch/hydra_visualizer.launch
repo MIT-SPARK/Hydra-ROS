@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="ISO-8859-15"?>
 <launch>
-  <arg name="scene_graph" doc="scene graph filename to show"/>
+  <arg name="scene_graph" doc="scene graph filename to show" default="''"/>
   <arg name="scene_graph_dir" default="$(find hydra)/output" doc="directory of scene graph file"/>
-  <arg name="scene_graph_path" value="$(arg scene_graph_dir)/$(arg scene_graph)" doc="full path to scene graph to show"/>
+  <arg name="scene_graph_path" default="$(arg scene_graph_dir)/$(arg scene_graph)" doc="full path to scene graph to show"/>
   <arg name="publish_view_transforms" default="false" doc="publish top-down and orthographic views"/>
-  <arg name="visualizer_ns" value="hydra_visualizer" doc="visualizer namespace"/>
+  <arg name="visualizer_ns" default="hydra_visualizer" doc="visualizer namespace"/>
 
   <arg name="visualizer_frame" default="map"/>
   <arg name="color_mesh_by_label" default="true"/>

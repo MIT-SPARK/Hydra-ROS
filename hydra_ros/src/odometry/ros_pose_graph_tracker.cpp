@@ -94,8 +94,7 @@ void RosPoseGraphTracker::odomCallback(const PoseGraphMsg& msg) {
   }
 
   std::unique_lock<std::mutex> lock(mutex_);
-  pose_graphs_.push_back(
-      std::make_shared<pose_graph_tools::PoseGraph>(pose_graph_tools::fromMsg(msg)));
+  pose_graphs_.push_back(pose_graph_tools::fromMsg(msg));
 }
 
 void RosPoseGraphTracker::priorCallback(const PoseGraphMsg& msg) {

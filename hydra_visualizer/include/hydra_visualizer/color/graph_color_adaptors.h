@@ -87,6 +87,21 @@ struct NodeColorAdaptor : GraphColorAdaptor {
 
 void declare_config(NodeColorAdaptor::Config& config);
 
+struct UniformColorAdaptor : GraphColorAdaptor {
+  struct Config {
+    spark_dsg::Color color;
+  } const config;
+
+  explicit UniformColorAdaptor(const Config& config);
+  spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
+                            const spark_dsg::SceneGraphNode& node) const override;
+
+ private:
+  REGISTER_COLOR_ADAPTOR(UniformColorAdaptor);
+};
+
+void declare_config(UniformColorAdaptor::Config& config);
+
 struct LabelColorAdaptor : GraphColorAdaptor {
   struct Config {
     visualizer::CategoricalColormap::Config colormap;

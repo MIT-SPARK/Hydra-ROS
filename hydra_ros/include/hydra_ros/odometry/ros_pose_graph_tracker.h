@@ -85,7 +85,7 @@ class RosPoseGraphTracker : public PoseGraphTracker {
   ros::Subscriber prior_sub_;
 
   std::mutex mutex_;
-  std::vector<pose_graph_tools::PoseGraph::ConstPtr> pose_graphs_;
+  std::vector<pose_graph_tools::PoseGraph> pose_graphs_;
   pose_graph_tools::PoseGraph::ConstPtr external_priors_;
 
   inline static const auto registration_ =
