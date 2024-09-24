@@ -68,11 +68,7 @@ RosInputModule::RosInputModule(const Config& config, const OutputQueue::Ptr& que
 
 RosInputModule::~RosInputModule() = default;
 
-std::string RosInputModule::printInfo() const {
-  std::stringstream ss;
-  ss << config::toString(config);
-  return ss.str();
-}
+std::string RosInputModule::printInfo() const { return config::toString(config); }
 
 PoseStatus RosInputModule::getBodyPose(uint64_t timestamp_ns) {
   const auto pose_status = lookup_.getBodyPose(timestamp_ns);

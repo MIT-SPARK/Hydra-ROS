@@ -38,13 +38,13 @@
 #include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
+#include <hydra/active_window/reconstruction_module.h>
 #include <hydra/backend/backend_module.h>
 #include <hydra/backend/zmq_interfaces.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/common/global_info.h>
-#include <hydra/frontend/frontend_module.h>
+#include <hydra/frontend/graph_builder.h>
 #include <hydra/loop_closure/loop_closure_module.h>
-#include <hydra/reconstruction/reconstruction_module.h>
 #include <pose_graph_tools_ros/conversions.h>
 
 #include <memory>
@@ -56,9 +56,12 @@
 
 namespace hydra {
 
-void declare_config(HydraRosConfig& config) {
+void declare_config(HydraRosPipeline::Config& config) {
   using namespace config;
   name("HydraRosConfig");
+  field(config.active_window, "active_window");
+  field(config.frontend, "frontend");
+  field(config.backend, "backend");
   field(config.enable_frontend_output, "enable_frontend_output");
   field(config.input, "input");
   config.features.setOptional();
@@ -67,73 +70,59 @@ void declare_config(HydraRosConfig& config) {
 
 HydraRosPipeline::HydraRosPipeline(const ros::NodeHandle& nh, int robot_id)
     : HydraPipeline(config::fromRos<PipelineConfig>(nh), robot_id),
-      config_(config::checkValid(config::fromRos<HydraRosConfig>(nh))),
+      config(config::checkValid(config::fromRos<Config>(nh))),
       nh_(nh) {
-  VLOG(1) << "Starting Hydra-ROS with\n" << config::toString(config_);
+  LOG(INFO) << "Starting Hydra-ROS with input configuration\n"
+            << config::toString(config.input);
 }
 
 HydraRosPipeline::~HydraRosPipeline() {}
 
 void HydraRosPipeline::init() {
   const auto& pipeline_config = GlobalInfo::instance().getConfig();
-  initFrontend();
-  initBackend();
-  initReconstruction();
+  const auto logs = GlobalInfo::instance().getLogs();
+
+  backend_ = config.backend.create(backend_dsg_, shared_state_, logs);
+  modules_["backend"] = CHECK_NOTNULL(backend_);
+
+  frontend_ = config.frontend.create(frontend_dsg_, shared_state_, logs);
+  modules_["frontend"] = CHECK_NOTNULL(frontend_);
+
+  active_window_ = config.active_window.create(frontend_->queue());
+  modules_["active_window"] = CHECK_NOTNULL(active_window_);
+
   if (pipeline_config.enable_lcd) {
     initLCD();
     bow_sub_.reset(new BowSubscriber(nh_));
   }
 
-  const auto reconstruction = getModule<ReconstructionModule>("reconstruction");
-  CHECK(reconstruction);
-  input_module_.reset(new RosInputModule(config_.input, reconstruction->queue()));
-
-  if (config_.features) {
-    modules_["features"] = config_.features.create();
-  }
-}
-
-void HydraRosPipeline::initFrontend() {
-  ros::NodeHandle fnh(nh_, "frontend");
-  const auto logs = GlobalInfo::instance().getLogs();
-  FrontendModule::Ptr frontend =
-      config::createFromROS<FrontendModule>(fnh, frontend_dsg_, shared_state_, logs);
-  if (config_.enable_frontend_output) {
-    CHECK(frontend) << "Frontend module required!";
-    frontend->addSink(std::make_shared<RosFrontendPublisher>(fnh));
-  }
-
-  modules_["frontend"] = frontend;
-}
-
-void HydraRosPipeline::initBackend() {
   ros::NodeHandle bnh(nh_, "backend");
-  const auto logs = GlobalInfo::instance().getLogs();
-  BackendModule::Ptr backend = config::createFromROS<BackendModule>(
-      bnh, backend_dsg_, shared_state_, GlobalInfo::instance().getLogs());
-  CHECK(backend) << "Failed to construct backend!";
-  backend->addSink(std::make_shared<RosBackendPublisher>(bnh));
+  backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
   const auto zmq_config = config::fromRos<ZmqSink::Config>(bnh, "zmq_sink");
-  backend->addSink(std::make_shared<ZmqSink>(zmq_config));
-  modules_["backend"] = backend;
+  backend_->addSink(std::make_shared<ZmqSink>(zmq_config));
 
-  const auto frontend = getModule<FrontendModule>("frontend");
-  if (!frontend) {
-    LOG(ERROR) << "Invalid frontend module! Not setting 2D places update";
-    return;
+  if (config.enable_frontend_output) {
+    CHECK(frontend_) << "Frontend module required!";
+    frontend_->addSink(
+        std::make_shared<RosFrontendPublisher>(ros::NodeHandle(nh_, "frontend")));
+  }
+
+  input_module_ =
+      std::make_shared<RosInputModule>(config.input, active_window_->queue());
+  if (config.features) {
+    modules_["features"] = config.features.create();  // has to come after input module
   }
 }
 
-void HydraRosPipeline::initReconstruction() {
-  const auto frontend = getModule<FrontendModule>("frontend");
-  if (!frontend) {
-    LOG(ERROR) << "Invalid frontend module: disabling reconstruction";
-    return;
-  }
+void HydraRosPipeline::stop() {
+  // enforce stop order to make sure every data packet is processed
+  input_module_->stop();
+  // TODO(nathan) push extracting active window objects to module stop
+  active_window_->stop();
+  frontend_->stop();
+  backend_->stop();
 
-  ros::NodeHandle rnh(nh_, "reconstruction");
-  modules_["reconstruction"] =
-      config::createFromROS<ReconstructionModule>(rnh, frontend->getQueue());
+  HydraPipeline::stop();
 }
 
 void HydraRosPipeline::initLCD() {

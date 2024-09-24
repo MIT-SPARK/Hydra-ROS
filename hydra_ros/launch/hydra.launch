@@ -17,7 +17,7 @@
     <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/$(arg dataset_name).yaml"/>
     <arg name="mesh_segmenter_sinks" default="$(find hydra_ros)/config/sinks/mesh_segmenter_sinks.yaml"/>
     <arg name="gvd_places_sinks" default="$(find hydra_ros)/config/sinks/gvd_places_sinks.yaml"/>
-    <arg name="reconstruction_sinks" default="$(find hydra_ros)/config/sinks/reconstruction_sinks.yaml"/>
+    <arg name="active_window_sinks" default="$(find hydra_ros)/config/sinks/active_window_sinks.yaml"/>
     <arg name="use_gnn_descriptors" default="false"/>
     <arg name="lcd_config_name" default="$(eval 'default_gnn.yaml' if use_gnn_descriptors else 'default.yaml')"/>
     <arg name="lcd_config_path" default="$(find hydra)/config/lcd/$(arg lcd_config_name)"/>
@@ -41,7 +41,7 @@
     <group ns="$(arg hydra_ros_ns)">
         <rosparam file="$(arg input_config_path)" subst_value="true"/>
         <rosparam file="$(arg labelspace_path)"/>
-        <rosparam file="$(arg hydra_config_path)"/>
+        <rosparam file="$(arg hydra_config_path)" subst_value="true"/>
         <rosparam file="$(arg lcd_config_path)"/>
     </group>
 
@@ -69,7 +69,7 @@
         <!-- visualization -->
         <rosparam file="$(arg mesh_segmenter_sinks)" ns="frontend/objects"/>
         <rosparam file="$(arg gvd_places_sinks)" ns="frontend/freespace_places"/>
-        <rosparam file="$(arg reconstruction_sinks)" ns="reconstruction"/>
+        <rosparam file="$(arg active_window_sinks)" ns="active_window"/>
     </node>
 
 </launch>

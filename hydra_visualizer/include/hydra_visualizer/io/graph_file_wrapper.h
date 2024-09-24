@@ -57,7 +57,7 @@ class GraphFileWrapper : public GraphWrapper {
 
   void clearChangeFlag() override;
 
-  spark_dsg::DynamicSceneGraph::Ptr get() const override;
+  StampedGraph get() const override;
 
   bool reload(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
 

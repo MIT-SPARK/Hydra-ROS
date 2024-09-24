@@ -76,11 +76,7 @@ PlacesVisualizer::PlacesVisualizer(const Config& config)
       layer_config_(nh_, "graph"),
       colormap_(config.colormap) {}
 
-std::string PlacesVisualizer::printInfo() const {
-  std::stringstream ss;
-  ss << std::endl << config::toString(config);
-  return ss.str();
-}
+std::string PlacesVisualizer::printInfo() const { return config::toString(config); }
 
 void PlacesVisualizer::call(uint64_t timestamp_ns,
                             const Eigen::Isometry3f& pose,

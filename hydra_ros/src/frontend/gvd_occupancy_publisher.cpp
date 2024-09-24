@@ -32,52 +32,57 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
+#include "hydra_ros/frontend/gvd_occupancy_publisher.h"
+
+#include <config_utilities/config.h>
 #include <config_utilities/factory.h>
-#include <spark_dsg/zmq_interface.h>
-
-#include <atomic>
-#include <mutex>
-#include <thread>
-
-#include "hydra_visualizer/io/graph_wrapper.h"
+#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 
 namespace hydra {
+namespace voxel_traits {
 
-class GraphZmqWrapper : public GraphWrapper {
- public:
-  struct Config {
-    std::string url = "tcp://127.0.0.1:8001";
-    size_t num_threads = 2;
-    size_t poll_time_ms = 10;
-  } const config;
+template <>
+bool isObserved(const places::GvdVoxel& voxel, float) {
+  return voxel.observed;
+}
 
-  explicit GraphZmqWrapper(const Config& config);
+template <>
+float getDistance(const places::GvdVoxel& voxel) {
+  return voxel.distance;
+}
 
-  virtual ~GraphZmqWrapper();
+}  // namespace voxel_traits
 
-  bool hasChange() const override;
+void declare_config(GvdOccupancyPublisher::Config& config) {
+  using namespace config;
+  name("GvdOccupancyPublisher::Config");
+  base<OccupancyPublisherConfig>(config);
+  field(config.ns, "ns");
+}
 
-  void clearChangeFlag() override;
+GvdOccupancyPublisher::GvdOccupancyPublisher(const Config& config)
+    : OccupancyPublisher<places::GvdBlock>(config, ros::NodeHandle(config.ns)),
+      config(config::checkValid(config)) {}
 
-  StampedGraph get() const override;
+std::string GvdOccupancyPublisher::printInfo() const {
+  return config::toString(config);
+}
 
- private:
-  void spin();
+void GvdOccupancyPublisher::call(uint64_t timestamp_ns,
+                                 const Eigen::Isometry3f& world_T_body,
+                                 const places::GvdLayer& gvd,
+                                 const places::GraphExtractorInterface*) const {
+  publish(timestamp_ns, world_T_body.cast<double>(), gvd);
+}
 
-  bool has_change_;
-  std::atomic<bool> should_shutdown_;
-  mutable std::mutex graph_mutex_;
-  std::unique_ptr<std::thread> recv_thread_;
-  std::unique_ptr<spark_dsg::ZmqReceiver> receiver_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
+namespace {
 
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphWrapper,
-                                     GraphZmqWrapper,
-                                     GraphZmqWrapper::Config>("GraphFromZmq");
-};
+static const auto registration_ =
+    config::RegistrationWithConfig<GvdPlaceExtractor::Sink,
+                                   GvdOccupancyPublisher,
+                                   GvdOccupancyPublisher::Config>(
+        "GvdOccupancyPublisher");
 
-void declare_config(GraphZmqWrapper::Config& config);
-
+}
 }  // namespace hydra

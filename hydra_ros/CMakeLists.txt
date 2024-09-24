@@ -59,7 +59,10 @@ catkin_package(
 add_library(
   ${PROJECT_NAME}
   src/hydra_ros_pipeline.cpp
+  src/active_window/reconstruction_visualizer.cpp
+  src/active_window/tsdf_occupancy_publisher.cpp
   src/backend/ros_backend_publisher.cpp
+  src/frontend/gvd_occupancy_publisher.cpp
   src/frontend/gvd_visualization_utilities.cpp
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
@@ -74,7 +77,6 @@ add_library(
   src/loop_closure/ros_lcd_registration.cpp
   src/odometry/ros_pose_graph_tracker.cpp
   src/openset/ros_embedding_group.cpp
-  src/reconstruction/reconstruction_visualizer.cpp
   src/utils/bag_reader.cpp
   src/utils/bow_subscriber.cpp
   src/utils/dsg_streaming_interface.cpp

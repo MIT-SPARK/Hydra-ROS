@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/reconstruction/reconstruction_visualizer.h"
+#include "hydra_ros/active_window/reconstruction_visualizer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/ros.h>
@@ -131,19 +131,18 @@ ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
 ReconstructionVisualizer::~ReconstructionVisualizer() {}
 
 std::string ReconstructionVisualizer::printInfo() const {
-  std::stringstream ss;
-  ss << config::toString(config);
-  return ss.str();
+  return config::toString(config);
 }
 
 void ReconstructionVisualizer::call(uint64_t timestamp_ns,
-                                    const Eigen::Isometry3d& pose,
-                                    const TsdfLayer& tsdf,
-                                    const ReconstructionOutput& output) const {
-  const auto& info = GlobalInfo::instance();
-  const auto truncation_distance = info.getMapConfig().truncation_distance;
+                                    const VolumetricMap& map,
+                                    const ActiveWindowOutput& output) const {
+  const auto truncation_distance = map.config.truncation_distance;
+  const auto& tsdf = map.getTsdfLayer();
+  const auto pose = output.world_T_body();
+
   std_msgs::Header header;
-  header.frame_id = info.getFrames().map;
+  header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp.fromNSec(timestamp_ns);
 
   const RangeColormap cmap(RangeColormap::Config{});
@@ -197,7 +196,7 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   }
 }
 
-void ReconstructionVisualizer::publishMesh(const ReconstructionOutput& out) const {
+void ReconstructionVisualizer::publishMesh(const ActiveWindowOutput& out) const {
   std_msgs::Header header;
   header.stamp.fromNSec(out.timestamp_ns);
   header.frame_id = GlobalInfo::instance().getFrames().map;

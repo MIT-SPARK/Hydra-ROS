@@ -53,7 +53,7 @@ class GraphRosWrapper : public GraphWrapper {
 
   void clearChangeFlag() override;
 
-  spark_dsg::DynamicSceneGraph::Ptr get() const override;
+  StampedGraph get() const override;
 
  private:
   void graphCallback(const hydra_msgs::DsgUpdate& msg);
@@ -61,6 +61,7 @@ class GraphRosWrapper : public GraphWrapper {
   bool has_change_;
   ros::NodeHandle nh_;
   ros::Subscriber sub_;
+  ros::Time last_time_;
   spark_dsg::DynamicSceneGraph::Ptr graph_;
 
   inline static const auto registration_ =

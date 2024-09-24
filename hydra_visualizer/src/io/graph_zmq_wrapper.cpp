@@ -77,13 +77,13 @@ void GraphZmqWrapper::clearChangeFlag() {
   has_change_ = false;
 }
 
-DynamicSceneGraph::Ptr GraphZmqWrapper::get() const {
+StampedGraph GraphZmqWrapper::get() const {
   std::lock_guard<std::mutex> lock(graph_mutex_);
   if (!graph_) {
-    return graph_;
+    return {nullptr};
   }
 
-  return graph_->clone();
+  return {graph_->clone()};
 }
 
 void GraphZmqWrapper::spin() {

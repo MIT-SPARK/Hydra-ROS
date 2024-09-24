@@ -3,7 +3,8 @@ Panels:
     Help Height: 0
     Name: Displays
     Property Tree Widget:
-      Expanded: ~
+      Expanded:
+        - /Static Object Meshes1
       Splitter Ratio: 0.7617647051811218
     Tree Height: 561
   - Class: rviz/Selection
@@ -23,7 +24,7 @@ Panels:
   - Class: rviz/Time
     Name: Time
     SyncMode: 0
-    SyncSource: Input Semantics
+    SyncSource: ""
 Preferences:
   PromptSaveOnExit: true
 Toolbars:
@@ -41,6 +42,64 @@ Visualization Manager:
         base_link_gt:
           Value: true
         front_lidar:
+          Value: true
+        khronos_object_0:
+          Value: true
+        khronos_object_1:
+          Value: true
+        khronos_object_10:
+          Value: true
+        khronos_object_11:
+          Value: true
+        khronos_object_12:
+          Value: true
+        khronos_object_13:
+          Value: true
+        khronos_object_14:
+          Value: true
+        khronos_object_15:
+          Value: true
+        khronos_object_16:
+          Value: true
+        khronos_object_17:
+          Value: true
+        khronos_object_18:
+          Value: true
+        khronos_object_19:
+          Value: true
+        khronos_object_2:
+          Value: true
+        khronos_object_20:
+          Value: true
+        khronos_object_21:
+          Value: true
+        khronos_object_22:
+          Value: true
+        khronos_object_23:
+          Value: true
+        khronos_object_24:
+          Value: true
+        khronos_object_25:
+          Value: true
+        khronos_object_26:
+          Value: true
+        khronos_object_27:
+          Value: true
+        khronos_object_28:
+          Value: true
+        khronos_object_3:
+          Value: true
+        khronos_object_4:
+          Value: true
+        khronos_object_5:
+          Value: true
+        khronos_object_6:
+          Value: true
+        khronos_object_7:
+          Value: true
+        khronos_object_8:
+          Value: true
+        khronos_object_9:
           Value: true
         left_cam:
           Value: true
@@ -60,6 +119,64 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
+          khronos_object_0:
+            {}
+          khronos_object_1:
+            {}
+          khronos_object_10:
+            {}
+          khronos_object_11:
+            {}
+          khronos_object_12:
+            {}
+          khronos_object_13:
+            {}
+          khronos_object_14:
+            {}
+          khronos_object_15:
+            {}
+          khronos_object_16:
+            {}
+          khronos_object_17:
+            {}
+          khronos_object_18:
+            {}
+          khronos_object_19:
+            {}
+          khronos_object_2:
+            {}
+          khronos_object_20:
+            {}
+          khronos_object_21:
+            {}
+          khronos_object_22:
+            {}
+          khronos_object_23:
+            {}
+          khronos_object_24:
+            {}
+          khronos_object_25:
+            {}
+          khronos_object_26:
+            {}
+          khronos_object_27:
+            {}
+          khronos_object_28:
+            {}
+          khronos_object_3:
+            {}
+          khronos_object_4:
+            {}
+          khronos_object_5:
+            {}
+          khronos_object_6:
+            {}
+          khronos_object_7:
+            {}
+          khronos_object_8:
+            {}
+          khronos_object_9:
+            {}
           world:
             base_link_gt:
               front_lidar:
@@ -80,18 +197,15 @@ Visualization Manager:
         "dynamic_edges_\x00": true
         "dynamic_label_\x00": true
         "dynamic_nodes_\x00": true
-        interlayer_edges_3_2: true
         interlayer_edges_4_3: true
         layer_bounding_boxes_2: true
-        layer_edges_20: true
         layer_edges_3: true
+        layer_edges_4: true
         layer_labels_2: true
         layer_labels_4: true
         layer_nodes_2: true
-        layer_nodes_20: true
         layer_nodes_3: true
         layer_nodes_4: true
-        layer_polygon_boundaries_20: true
       Queue Size: 100
       Value: true
     - Class: kimera_pgmo_rviz/MeshDisplay
@@ -109,6 +223,47 @@ Visualization Manager:
         robot0:
           Value: true
           dsg_mesh: true
+    - Class: kimera_pgmo_rviz/MeshDisplay
+      Cull Backfaces: false
+      Enable Lighting: false
+      Enabled: true
+      Name: Static Object Meshes
+      Queue Size: 10
+      Toggle Visibility All: true
+      Topic: /hydra_dsg_visualizer/khronos_objects/static_objects
+      Unreliable: false
+      Value: true
+      Visible:
+        5692549928996306944: true
+        5692549928996306945: true
+        5692549928996306946: true
+        5692549928996306947: true
+        5692549928996306948: true
+        5692549928996306949: true
+        5692549928996306950: true
+        5692549928996306951: true
+        5692549928996306952: true
+        5692549928996306953: true
+        5692549928996306954: true
+        5692549928996306955: true
+        5692549928996306956: true
+        5692549928996306957: true
+        5692549928996306958: true
+        5692549928996306959: true
+        5692549928996306960: true
+        5692549928996306961: true
+        5692549928996306962: true
+        5692549928996306963: true
+        5692549928996306964: true
+        5692549928996306965: true
+        5692549928996306966: true
+        5692549928996306967: true
+        5692549928996306968: true
+        5692549928996306969: true
+        5692549928996306970: true
+        5692549928996306971: true
+        5692549928996306972: true
+        Value: true
     - Class: rviz/Group
       Displays:
         - Alpha: 1
@@ -388,7 +543,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 67.33491516113281
+      Distance: 52.335853576660156
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -396,17 +551,17 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 12.750484466552734
-        Y: 30.170013427734375
-        Z: -8.183127403259277
+        X: 6.069394588470459
+        Y: 33.590938568115234
+        Z: -14.563905715942383
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7497957944869995
+      Pitch: 0.7997957468032837
       Target Frame: <Fixed Frame>
-      Yaw: 3.221688747406006
+      Yaw: 3.266683578491211
     Saved: ~
 Window Geometry:
   Depth:
@@ -433,4 +588,4 @@ Window Geometry:
     collapsed: true
   Width: 1912
   X: 4
-  Y: 36
+  Y: 38

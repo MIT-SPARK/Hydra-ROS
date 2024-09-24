@@ -52,11 +52,12 @@ bool GraphRosWrapper::hasChange() const { return has_change_; }
 
 void GraphRosWrapper::clearChangeFlag() { has_change_ = false; }
 
-DynamicSceneGraph::Ptr GraphRosWrapper::get() const { return graph_; }
+StampedGraph GraphRosWrapper::get() const { return {graph_, last_time_}; }
 
 void GraphRosWrapper::graphCallback(const hydra_msgs::DsgUpdate& msg) {
   // not designed to be threadsafe; should lock and clone graph on return if desired
   try {
+    last_time_ = msg.header.stamp;
     if (!graph_) {
       graph_ = spark_dsg::io::binary::readGraph(msg.layer_contents);
     } else {

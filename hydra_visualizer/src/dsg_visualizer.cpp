@@ -109,19 +109,19 @@ void DsgVisualizer::spinOnce(bool force) {
     return;
   }
 
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
-  header.frame_id = config.visualizer_frame;
-
-  const auto graph = graph_->get();
-  if (!graph) {
+  const auto stamped_graph = graph_->get();
+  if (!stamped_graph) {
     return;
   }
 
-  renderer_->draw(header, *graph);
+  std_msgs::Header header;
+  header.frame_id = config.visualizer_frame;
+  header.stamp = stamped_graph.timestamp.value_or(ros::Time::now());
+
+  renderer_->draw(header, *stamped_graph.graph);
   for (const auto& plugin : plugins_) {
     if (plugin) {
-      plugin->draw(header, *graph);
+      plugin->draw(header, *stamped_graph.graph);
     }
   }
 

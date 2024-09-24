@@ -33,7 +33,11 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra/active_window/active_window_module.h>
+#include <hydra/active_window/reconstruction_module.h>
+#include <hydra/backend/backend_module.h>
 #include <hydra/common/hydra_pipeline.h>
+#include <hydra/frontend/graph_builder.h>
 #include <ros/ros.h>
 
 #include "hydra_ros/input/feature_receiver.h"
@@ -43,32 +47,38 @@ namespace hydra {
 
 class BowSubscriber;
 
-struct HydraRosConfig {
-  bool enable_frontend_output = true;
-  RosInputModule::Config input;
-  config::VirtualConfig<FeatureReceiver> features;
-};
-
-void declare_config(HydraRosConfig& conf);
-
 class HydraRosPipeline : public HydraPipeline {
  public:
+  struct Config {
+    config::VirtualConfig<ActiveWindowModule> active_window{
+        ReconstructionModule::Config()};
+    config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
+    config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
+    bool enable_frontend_output = true;
+    RosInputModule::Config input;
+    config::VirtualConfig<FeatureReceiver> features;
+  } const config;
+
   HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
 
   virtual ~HydraRosPipeline();
 
   void init() override;
 
+  void stop() override;
+
  protected:
-  virtual void initFrontend();
-  virtual void initBackend();
-  virtual void initReconstruction();
   virtual void initLCD();
 
  protected:
-  const HydraRosConfig config_;
   ros::NodeHandle nh_;
+  std::shared_ptr<ActiveWindowModule> active_window_;
+  std::shared_ptr<GraphBuilder> frontend_;
+  std::shared_ptr<BackendModule> backend_;
+
   std::unique_ptr<BowSubscriber> bow_sub_;
 };
+
+void declare_config(HydraRosPipeline::Config& config);
 
 }  // namespace hydra

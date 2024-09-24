@@ -65,7 +65,7 @@ bool GraphFileWrapper::hasChange() const { return has_change_; }
 
 void GraphFileWrapper::clearChangeFlag() { has_change_ = false; }
 
-DynamicSceneGraph::Ptr GraphFileWrapper::get() const { return graph_; }
+StampedGraph GraphFileWrapper::get() const { return {graph_}; }
 
 bool GraphFileWrapper::reload(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
   graph_ = DynamicSceneGraph::load(filepath_);

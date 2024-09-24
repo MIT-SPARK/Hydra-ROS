@@ -33,10 +33,34 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/config_utilities.h>
+#include <config_utilities/external_registry.h>
+#include <config_utilities/logging/log_to_stdout.h>
 #include <config_utilities/parsing/ros.h>
+#include <config_utilities/settings.h>
 #include <glog/logging.h>
 
+#include <filesystem>
+
 #include "hydra_visualizer/dsg_visualizer.h"
+
+namespace hydra::visualizer {
+struct ExternalPluginConfig {
+  bool allow_plugins = true;
+  bool verbose_plugins = false;
+  bool trace_plugin_allocations = false;
+  std::vector<std::string> paths;
+};
+
+void declare_config(ExternalPluginConfig& config) {
+  using namespace config;
+  name("ExternalPluginConfig");
+  field(config.allow_plugins, "allow_plugins");
+  field(config.verbose_plugins, "verbose_plugins");
+  field(config.trace_plugin_allocations, "trace_plugin_allocations");
+  field(config.paths, "paths");
+}
+
+}  // namespace hydra::visualizer
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "hydra_visualizer_node");
@@ -50,12 +74,24 @@ int main(int argc, char** argv) {
   google::InstallFailureSignalHandler();
 
   ros::NodeHandle nh("~");
-  const auto config = config::fromRos<hydra::DsgVisualizer::Config>(nh);
-  ROS_INFO_STREAM("Config:\n" << config::toString(config));
+  const auto plugin_config =
+      config::fromRos<hydra::visualizer::ExternalPluginConfig>(nh, "external_plugins");
+  ROS_INFO_STREAM("Plugins:\n" << config::toString(plugin_config));
 
-  auto node = std::make_unique<hydra::DsgVisualizer>(config);
-  node->start();
+  auto& settings = config::Settings();
+  settings.allow_external_libraries = plugin_config.allow_plugins;
+  settings.verbose_external_load = plugin_config.verbose_plugins;
+  settings.print_external_allocations = plugin_config.trace_plugin_allocations;
+  const auto plugins = config::loadExternalFactories(plugin_config.paths);
 
-  ros::spin();
+  {  // start visualizer scope
+    const auto config = config::fromRos<hydra::DsgVisualizer::Config>(nh);
+    ROS_INFO_STREAM("Config:\n" << config::toString(config));
+    auto node = std::make_unique<hydra::DsgVisualizer>(config);
+    node->start();
+
+    ros::spin();
+  }  // end visualizer scope
+
   return 0;
 }

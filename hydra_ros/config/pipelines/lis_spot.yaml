@@ -4,7 +4,7 @@ semantic_label_remap_filepath: ''
 enable_frontend_output: true
 exit_after_clock: false
 frontend:
-  type: FrontendModule
+  type: GraphBuilder
   enable_places: true
   objects:
     bounding_box_type: AABB
@@ -20,7 +20,7 @@ backend:
     zmq_recv_url: tcp://127.0.0.1:8002
     zmq_send_url: tcp://127.0.0.1:8001
     zmq_send_mesh: true
-reconstruction:
+active_window:
   type: ReconstructionModule
 enable_lcd: false
 lcd_use_bow_vectors: true

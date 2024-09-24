@@ -33,51 +33,30 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <spark_dsg/zmq_interface.h>
+#include <hydra/active_window/reconstruction_module.h>
 
-#include <atomic>
-#include <mutex>
-#include <thread>
-
-#include "hydra_visualizer/io/graph_wrapper.h"
+#include "hydra_ros/utils/occupancy_publisher.h"
 
 namespace hydra {
 
-class GraphZmqWrapper : public GraphWrapper {
+class TsdfOccupancyPublisher : public ReconstructionModule::Sink,
+                               OccupancyPublisher<TsdfBlock> {
  public:
-  struct Config {
-    std::string url = "tcp://127.0.0.1:8001";
-    size_t num_threads = 2;
-    size_t poll_time_ms = 10;
+  struct Config : OccupancyPublisherConfig {
+    std::string ns = "~tsdf";
   } const config;
 
-  explicit GraphZmqWrapper(const Config& config);
+  explicit TsdfOccupancyPublisher(const Config& config);
 
-  virtual ~GraphZmqWrapper();
+  virtual ~TsdfOccupancyPublisher() = default;
 
-  bool hasChange() const override;
+  std::string printInfo() const override;
 
-  void clearChangeFlag() override;
-
-  StampedGraph get() const override;
-
- private:
-  void spin();
-
-  bool has_change_;
-  std::atomic<bool> should_shutdown_;
-  mutable std::mutex graph_mutex_;
-  std::unique_ptr<std::thread> recv_thread_;
-  std::unique_ptr<spark_dsg::ZmqReceiver> receiver_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphWrapper,
-                                     GraphZmqWrapper,
-                                     GraphZmqWrapper::Config>("GraphFromZmq");
+  void call(uint64_t timestamp_ns,
+            const VolumetricMap& map,
+            const ActiveWindowOutput& msg) const override;
 };
 
-void declare_config(GraphZmqWrapper::Config& config);
+void declare_config(TsdfOccupancyPublisher::Config& config);
 
 }  // namespace hydra

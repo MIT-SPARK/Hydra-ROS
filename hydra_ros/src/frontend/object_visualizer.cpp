@@ -55,11 +55,7 @@ void declare_config(ObjectVisualizer::Config& config) {
 ObjectVisualizer::ObjectVisualizer(const Config& config)
     : config(config::checkValid(config)), nh_(config.module_ns), pubs_(nh_) {}
 
-std::string ObjectVisualizer::printInfo() const {
-  std::stringstream ss;
-  ss << config::toString(config);
-  return ss.str();
-}
+std::string ObjectVisualizer::printInfo() const { return config::toString(config); }
 
 void ObjectVisualizer::call(uint64_t timestamp_ns,
                             const kimera_pgmo::MeshDelta& delta,

@@ -8,7 +8,7 @@ disable_timer_output: $(arg disable_timer_output)
 timing_disabled: $(arg timing_disabled)
 enable_frontend_output: $(arg enable_frontend_output)
 frontend:
-  type: FrontendModule
+  type: GraphBuilder
   enable_places: $(arg enable_places)
   objects:
     bounding_box_type: $(arg bounding_box_type)
@@ -25,7 +25,7 @@ backend:
   update_functors:
     zmq_labels:
       url: $(arg zmq_recv_url)
-reconstruction:
+active_window:
   type: ReconstructionModule
 enable_lcd: $(arg enable_dsg_lcd)
 lcd_use_bow_vectors: $(arg lcd_use_bow_vectors)

@@ -33,51 +33,32 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <spark_dsg/zmq_interface.h>
+#include <hydra/frontend/gvd_place_extractor.h>
+#include <hydra/places/gvd_voxel.h>
 
-#include <atomic>
-#include <mutex>
-#include <thread>
-
-#include "hydra_visualizer/io/graph_wrapper.h"
+#include "hydra_ros/utils/occupancy_publisher.h"
 
 namespace hydra {
 
-class GraphZmqWrapper : public GraphWrapper {
+class GvdOccupancyPublisher : public GvdPlaceExtractor::Sink,
+                              OccupancyPublisher<places::GvdBlock> {
  public:
-  struct Config {
-    std::string url = "tcp://127.0.0.1:8001";
-    size_t num_threads = 2;
-    size_t poll_time_ms = 10;
+  struct Config : OccupancyPublisherConfig {
+    std::string ns = "~gvd";
   } const config;
 
-  explicit GraphZmqWrapper(const Config& config);
+  explicit GvdOccupancyPublisher(const Config& config);
 
-  virtual ~GraphZmqWrapper();
+  virtual ~GvdOccupancyPublisher() = default;
 
-  bool hasChange() const override;
+  std::string printInfo() const override;
 
-  void clearChangeFlag() override;
-
-  StampedGraph get() const override;
-
- private:
-  void spin();
-
-  bool has_change_;
-  std::atomic<bool> should_shutdown_;
-  mutable std::mutex graph_mutex_;
-  std::unique_ptr<std::thread> recv_thread_;
-  std::unique_ptr<spark_dsg::ZmqReceiver> receiver_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphWrapper,
-                                     GraphZmqWrapper,
-                                     GraphZmqWrapper::Config>("GraphFromZmq");
+  void call(uint64_t timestamp_ns,
+            const Eigen::Isometry3f& world_T_sensor,
+            const places::GvdLayer& gvd,
+            const places::GraphExtractorInterface* extractor) const override;
 };
 
-void declare_config(GraphZmqWrapper::Config& config);
+void declare_config(GvdOccupancyPublisher::Config& config);
 
 }  // namespace hydra

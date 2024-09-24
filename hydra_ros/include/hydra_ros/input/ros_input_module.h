@@ -42,7 +42,6 @@ namespace hydra {
 
 class RosInputModule : public InputModule {
  public:
-  using OutputQueue = InputQueue<InputPacket::Ptr>;
   struct Config : InputModule::Config {
     //! Pose lookup configuration
     TFLookup::Config tf_lookup;

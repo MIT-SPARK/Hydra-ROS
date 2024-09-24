@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #include <config_utilities/config_utilities.h>
+#include <config_utilities/external_registry.h>
 #include <config_utilities/formatting/asl.h>
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/ros.h>
@@ -41,31 +42,72 @@
 #include "hydra_ros/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
 
+namespace hydra {
+
+struct RunSettings {
+  size_t robot_id = 0;
+  bool force_shutdown = false;
+  size_t print_width = 100;
+  size_t print_indent = 45;
+  bool print_missing = false;
+  bool allow_plugins = true;
+  bool verbose_plugins = false;
+  bool trace_plugin_allocations = false;
+  std::vector<std::string> paths;
+};
+
+void declare_config(RunSettings& config) {
+  using namespace config;
+  name("RunSettings");
+  field(config.robot_id, "robot_id");
+  field(config.force_shutdown, "force_shutdown");
+  field(config.print_width, "print_width");
+  field(config.print_indent, "print_indent");
+  field(config.print_missing, "print_missing");
+  field(config.allow_plugins, "allow_plugins");
+  field(config.verbose_plugins, "verbose_plugins");
+  field(config.trace_plugin_allocations, "trace_plugin_allocations");
+  field(config.paths, "paths");
+}
+
+}  // namespace hydra
+
 int main(int argc, char* argv[]) {
   ros::init(argc, argv, "hydra_node");
   ros::NodeHandle nh("~");
 
-  FLAGS_minloglevel = 3;
+  FLAGS_minloglevel = 0;
   FLAGS_logtostderr = 1;
   FLAGS_colorlogtostderr = 1;
 
   google::ParseCommandLineFlags(&argc, &argv, true);
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
+
+  const auto settings = config::fromRos<hydra::RunSettings>(nh);
+
   config::Settings().setLogger("glog");
-  config::Settings().print_width = 100;
-  config::Settings().print_indent = 45;
-  config::Settings().print_missing = nh.param<bool>("print_missing", false);
+  config::Settings().print_width = settings.print_width;
+  config::Settings().print_indent = settings.print_indent;
+  config::Settings().print_missing = settings.print_missing;
+  config::Settings().allow_external_libraries = settings.allow_plugins;
+  config::Settings().verbose_external_load = settings.verbose_plugins;
+  config::Settings().print_external_allocations = settings.trace_plugin_allocations;
+  const auto plugins = config::loadExternalFactories(settings.paths);
 
-  const int robot_id = nh.param<int>("robot_id", 0);
-  hydra::HydraRosPipeline hydra(nh, robot_id);
-  hydra.init();
+  hydra::GlobalInfo::instance().setForceShutdown(settings.force_shutdown);
 
-  hydra.start();
-  hydra::spinAndWait(nh);
-  hydra.stop();
-  hydra.save();
-  hydra::GlobalInfo::exit();
+  {  // start hydra scope
+    hydra::HydraRosPipeline hydra(nh, settings.robot_id);
+    hydra.init();
+
+    hydra.start();
+    hydra::spinAndWait(nh);
+    hydra.stop();
+    hydra.save();
+    // TODO(nathan) save full config
+    hydra::GlobalInfo::exit();
+  }  // end hydra scope
 
   return 0;
 }

@@ -33,20 +33,22 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/frontend/frontend_module.h>
+#include <hydra/frontend/graph_builder.h>
 #include <ros/ros.h>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
 namespace hydra {
 
-class RosFrontendPublisher : public FrontendModule::Sink {
+class RosFrontendPublisher : public GraphBuilder::Sink {
  public:
   RosFrontendPublisher(const ros::NodeHandle& nh);
 
   void call(uint64_t timestamp_ns,
             const DynamicSceneGraph& graph,
             const BackendInput& backend_input) const override;
+
+  std::string printInfo() const override { return "RosFrontendPublisher"; }
 
  protected:
   ros::NodeHandle nh_;

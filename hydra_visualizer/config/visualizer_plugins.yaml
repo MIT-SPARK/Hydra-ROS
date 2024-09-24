@@ -11,6 +11,9 @@ plugins:
     draw_basis_points: true
     basis_point_scale: 0.1
     places_node_scale: 0.1
+  khronos_objects:
+    type: KhronosObjectPlugin
+    dynamic_color_mode: CONSTANT # ID, SEMANTIC, CONSTANT
 # dynamic reconfigure settings
 places_basis_points:
   graph:

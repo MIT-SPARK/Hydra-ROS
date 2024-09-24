@@ -32,52 +32,56 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
+#include "hydra_ros/active_window/tsdf_occupancy_publisher.h"
+
+#include <config_utilities/config.h>
 #include <config_utilities/factory.h>
-#include <spark_dsg/zmq_interface.h>
-
-#include <atomic>
-#include <mutex>
-#include <thread>
-
-#include "hydra_visualizer/io/graph_wrapper.h"
+#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 
 namespace hydra {
+namespace voxel_traits {
 
-class GraphZmqWrapper : public GraphWrapper {
- public:
-  struct Config {
-    std::string url = "tcp://127.0.0.1:8001";
-    size_t num_threads = 2;
-    size_t poll_time_ms = 10;
-  } const config;
+template <>
+float getDistance(const TsdfVoxel& voxel) {
+  return voxel.distance;
+}
 
-  explicit GraphZmqWrapper(const Config& config);
+template <>
+bool isObserved(const TsdfVoxel& voxel, float min_weight) {
+  return voxel.weight >= min_weight;
+}
 
-  virtual ~GraphZmqWrapper();
+}  // namespace voxel_traits
 
-  bool hasChange() const override;
+void declare_config(TsdfOccupancyPublisher::Config& config) {
+  using namespace config;
+  name("TsdfOccupancyPublisher::Config");
+  base<OccupancyPublisherConfig>(config);
+  field(config.ns, "ns");
+}
 
-  void clearChangeFlag() override;
+TsdfOccupancyPublisher::TsdfOccupancyPublisher(const Config& config)
+    : OccupancyPublisher(config, ros::NodeHandle(config.ns)),
+      config(config::checkValid(config)) {}
 
-  StampedGraph get() const override;
+std::string TsdfOccupancyPublisher::printInfo() const {
+  return config::toString(config);
+}
 
- private:
-  void spin();
+void TsdfOccupancyPublisher::call(uint64_t timestamp_ns,
+                                  const VolumetricMap& map,
+                                  const ActiveWindowOutput& output) const {
+  publish(timestamp_ns, output.world_T_body(), map.getTsdfLayer());
+}
 
-  bool has_change_;
-  std::atomic<bool> should_shutdown_;
-  mutable std::mutex graph_mutex_;
-  std::unique_ptr<std::thread> recv_thread_;
-  std::unique_ptr<spark_dsg::ZmqReceiver> receiver_;
-  spark_dsg::DynamicSceneGraph::Ptr graph_;
+namespace {
 
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphWrapper,
-                                     GraphZmqWrapper,
-                                     GraphZmqWrapper::Config>("GraphFromZmq");
-};
+static const auto registration_ =
+    config::RegistrationWithConfig<ReconstructionModule::Sink,
+                                   TsdfOccupancyPublisher,
+                                   TsdfOccupancyPublisher::Config>(
+        "TsdfOccupancyPublisher");
 
-void declare_config(GraphZmqWrapper::Config& config);
-
+}
 }  // namespace hydra

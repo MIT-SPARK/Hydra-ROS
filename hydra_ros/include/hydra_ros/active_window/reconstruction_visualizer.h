@@ -33,7 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/reconstruction/reconstruction_module.h>
+#include <hydra/active_window/reconstruction_module.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/color/mesh_color_adaptor.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
@@ -77,10 +77,10 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
     double min_observation_weight = 1.0e-5;
     double tsdf_block_scale = 0.02;
     double tsdf_block_alpha = 1.0;
-    Color tsdf_block_color = Color::green();
+    spark_dsg::Color tsdf_block_color = spark_dsg::Color::green();
     double mesh_block_scale = 0.02;
     double mesh_block_alpha = 1.0;
-    Color mesh_block_color = Color::red();
+    spark_dsg::Color mesh_block_color = spark_dsg::Color::red();
     double point_size = 0.04;
     bool filter_points_by_range = true;
     visualizer::RangeColormap::Config colormap;
@@ -95,12 +95,11 @@ class ReconstructionVisualizer : public ReconstructionModule::Sink {
   std::string printInfo() const override;
 
   void call(uint64_t timestamp_ns,
-            const Eigen::Isometry3d& world_T_sensor,
-            const TsdfLayer& tsdf,
-            const ReconstructionOutput& msg) const override;
+            const VolumetricMap& tsdf,
+            const ActiveWindowOutput& msg) const override;
 
  protected:
-  void publishMesh(const ReconstructionOutput& output) const;
+  void publishMesh(const ActiveWindowOutput& output) const;
 
   ros::NodeHandle nh_;
   MarkerGroupPub pubs_;
