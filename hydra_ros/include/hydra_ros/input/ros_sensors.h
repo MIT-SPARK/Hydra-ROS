@@ -49,6 +49,7 @@ namespace hydra {
 struct InvalidSensor : Sensor {
   InvalidSensor() : Sensor(Sensor::Config(), "") {}
   virtual ~InvalidSensor() = default;
+  float getPointDepth(const Eigen::Vector3f&) const override { return 0.0; }
   float computeRayDensity(float, float) const override { return 0.0; }
   bool finalizeRepresentations(InputData&, bool) const override { return false; }
   bool projectPointToImagePlane(const Eigen::Vector3f&, float&, float&) const override {
