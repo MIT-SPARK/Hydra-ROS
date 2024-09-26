@@ -37,97 +37,114 @@
 #include <config_utilities/config.h>
 #include <cv_bridge/cv_bridge.h>
 #include <glog/logging.h>
+#include <image_transport/image_transport.h>
+#include <image_transport/subscriber_filter.h>
 
 namespace hydra {
+namespace {
 
-using image_transport::ImageTransport;
-using image_transport::SubscriberFilter;
-
-std::string showImageDim(const sensor_msgs::Image::ConstPtr& image) {
-  std::stringstream ss;
-  ss << "[" << image->width << ", " << image->height << "]";
-  return ss.str();
-}
-
-image_transport::TransportHints getHints(const ros::NodeHandle& nh,
-                                         const std::string& ns) {
+inline image_transport::TransportHints getHints(const ros::NodeHandle& nh,
+                                                const std::string& ns) {
   namespace it = image_transport;
   return it::TransportHints("raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
 }
 
-void declare_config(ImageReceiver::Config& config) {
+}  // namespace
+
+struct ImageSubImpl {
+  ImageSubImpl(const ros::NodeHandle& nh,
+               const std::string& camera_name,
+               const std::string& image_name,
+               uint32_t queue_size);
+
+  image_transport::ImageTransport transport;
+  image_transport::SubscriberFilter subscriber;
+};
+
+ImageSubImpl::ImageSubImpl(const ros::NodeHandle& nh,
+                           const std::string& cam_name,
+                           const std::string& img_name,
+                           uint32_t queue_size)
+    : transport(ros::NodeHandle(nh, cam_name)),
+      subscriber(transport, img_name, queue_size, getHints(nh, cam_name)) {}
+
+ColorSubscriber::ColorSubscriber() = default;
+
+ColorSubscriber::ColorSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
+    : impl_(std::make_shared<ImageSubImpl>(nh, "rgb", "image_raw", queue_size)) {}
+
+ColorSubscriber::~ColorSubscriber() = default;
+
+ImageSimpleFilter& ColorSubscriber::getFilter() const {
+  return CHECK_NOTNULL(impl_)->subscriber;
+}
+
+void ColorSubscriber::fillInput(const sensor_msgs::Image& img,
+                                ImageInputPacket& packet) const {
+  try {
+    packet.color = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert color image: " << e.what();
+  }
+}
+
+DepthSubscriber::DepthSubscriber() = default;
+
+DepthSubscriber::DepthSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
+    : impl_(std::make_shared<ImageSubImpl>(
+          nh, "depth_registered", "image_rect", queue_size)) {}
+
+DepthSubscriber::~DepthSubscriber() = default;
+
+ImageSimpleFilter& DepthSubscriber::getFilter() const {
+  return CHECK_NOTNULL(impl_)->subscriber;
+}
+
+void DepthSubscriber::fillInput(const sensor_msgs::Image& img,
+                                ImageInputPacket& packet) const {
+  try {
+    packet.depth = cv_bridge::toCvCopy(img)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert depth image: " << e.what();
+  }
+}
+
+LabelSubscriber::LabelSubscriber() = default;
+
+LabelSubscriber::LabelSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
+    : impl_(std::make_shared<ImageSubImpl>(nh, "semantic", "image_raw", queue_size)) {}
+
+LabelSubscriber::~LabelSubscriber() = default;
+
+ImageSimpleFilter& LabelSubscriber::getFilter() const {
+  return CHECK_NOTNULL(impl_)->subscriber;
+}
+
+void LabelSubscriber::fillInput(const sensor_msgs::Image& img,
+                                ImageInputPacket& packet) const {
+  try {
+    packet.labels = cv_bridge::toCvCopy(img)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert label image: " << e.what();
+  }
+}
+
+void declare_config(ClosedSetImageReceiver::Config& config) {
   using namespace config;
-  name("ImageReceiver::Config");
+  name("ClosedSetImageReceiver::Config");
   base<RosDataReceiver::Config>(config);
 }
 
-ImageSubscriber::ImageSubscriber() {}
+ClosedSetImageReceiver::ClosedSetImageReceiver(const Config& config,
+                                               const std::string& sensor_name)
+    : ImageReceiverImpl<LabelSubscriber>(config, sensor_name) {}
 
-ImageSubscriber::ImageSubscriber(const ros::NodeHandle& nh,
-                                 const std::string& cam_name,
-                                 const std::string& img_name,
-                                 uint32_t queue_size)
-    : transport(std::make_shared<ImageTransport>(ros::NodeHandle(nh, cam_name))),
-      sub(std::make_shared<SubscriberFilter>(
-          *transport, img_name, queue_size, getHints(nh, cam_name))) {}
-
-ImageReceiver::ImageReceiver(const Config& config, const std::string& sensor_name)
-    : RosDataReceiver(config, sensor_name), config(config) {}
-
-bool ImageReceiver::initImpl() {
-  // TODO(nathan) subscribe to image subsets
-  color_sub_ = ImageSubscriber(nh_, "rgb");
-  depth_sub_ = ImageSubscriber(nh_, "depth_registered", "image_rect");
-  label_sub_ = ImageSubscriber(nh_, "semantic");
-  synchronizer_.reset(new Synchronizer(SyncPolicy(config.queue_size),
-                                       *color_sub_.sub,
-                                       *depth_sub_.sub,
-                                       *label_sub_.sub));
-  synchronizer_->registerCallback(&ImageReceiver::callback, this);
-  return true;
-}
-
-void ImageReceiver::callback(const sensor_msgs::Image::ConstPtr& color,
-                             const sensor_msgs::Image::ConstPtr& depth,
-                             const sensor_msgs::Image::ConstPtr& labels) {
-  if (color && (color->width != depth->width || color->height != depth->height)) {
-    LOG(ERROR) << "color dimensions do not match depth dimensions: "
-               << showImageDim(color) << " != " << showImageDim(depth);
-    return;
-  }
-
-  if (labels && (labels->width != depth->width || labels->height != depth->height)) {
-    LOG(ERROR) << "label dimensions do not match depth dimensions: "
-               << showImageDim(labels) << " != " << showImageDim(depth);
-    return;
-  }
-
-  if (!checkInputTimestamp(depth->header.stamp.toNSec())) {
-    return;
-  }
-
-  auto packet =
-      std::make_shared<ImageInputPacket>(color->header.stamp.toNSec(), sensor_name_);
-  try {
-    const auto cv_depth = cv_bridge::toCvShare(depth);
-    packet->depth = cv_depth->image.clone();
-    if (color && color->encoding == sensor_msgs::image_encodings::RGB8) {
-      auto cv_color = cv_bridge::toCvShare(color);
-      packet->color = cv_color->image.clone();
-    } else if (color) {
-      auto cv_color = cv_bridge::toCvCopy(color, sensor_msgs::image_encodings::RGB8);
-      packet->color = cv_color->image;
-    }
-
-    if (labels) {
-      auto cv_labels = cv_bridge::toCvShare(labels);
-      packet->labels = cv_labels->image.clone();
-    }
-  } catch (const cv_bridge::Exception& e) {
-    LOG(ERROR) << "unable to read images from ros: " << e.what();
-  }
-
-  queue.push(packet);
+namespace {
+static const auto registration =
+    config::RegistrationWithConfig<DataReceiver,
+                                   ClosedSetImageReceiver,
+                                   ClosedSetImageReceiver::Config,
+                                   std::string>("ClosedSetImageReceiver");
 }
 
 }  // namespace hydra

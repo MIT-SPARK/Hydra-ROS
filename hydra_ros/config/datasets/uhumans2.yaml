@@ -6,7 +6,7 @@ input:
   inputs:
     left_cam:
       receiver:
-        type: ImageReceiver
+        type: ClosedSetImageReceiver
       sensor:
         type: camera_info
         min_range: $(arg sensor_min_range)

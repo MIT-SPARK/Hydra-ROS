@@ -46,8 +46,8 @@ struct FeatureSubscriber;
 class FeatureReceiver : public Module {
  public:
   struct Config {
-    //! Node handle namespace
-    std::string ns = "~";
+    //! Node handle namespace (defaults to matching data receivers)
+    std::string ns = "~input";
     //! Individual subscriber queue size
     size_t queue_size = 10;
     //! Lookup settings for poses
