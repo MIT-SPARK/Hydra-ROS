@@ -6,7 +6,7 @@ namespace hydra {
 
 struct RosEmbeddingGroup : public EmbeddingGroup {
   struct Config {
-    std::string service_ns = "";
+    std::string ns = "~";
     bool silent_wait = false;
     std::vector<std::string> prompts;
   };

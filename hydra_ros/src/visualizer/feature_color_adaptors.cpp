@@ -133,11 +133,18 @@ void FeatureScoreColor::setFeature(const Eigen::VectorXf& feature) {
 void declare_config(NearestFeatureColor::Config& config) {
   using namespace config;
   name("NearestFeatureColor::Config");
+  config.metric.setOptional();
   field(config.metric, "metric");
+  config.features.setOptional();
   field(config.features, "features");
+  field(config.colormap, "colormap");
 }
 
-NearestFeatureColor::NearestFeatureColor(const Config& config) : config(config) {}
+NearestFeatureColor::NearestFeatureColor(const Config& config)
+    : config(config::checkValid(config)),
+      metric_(config.metric.create()),
+      features_(config.features.create()),
+      colormap_(config.colormap) {}
 
 Color NearestFeatureColor::getColor(const DynamicSceneGraph&,
                                     const SceneGraphNode& node) const {
@@ -147,8 +154,7 @@ Color NearestFeatureColor::getColor(const DynamicSceneGraph&,
 
   const auto& attrs = node.attributes<SemanticNodeAttributes>();
   const auto result = features_->getBestScore(*metric_, attrs.semantic_feature);
-  const auto ratio = static_cast<double>(result.index) / features_->size();
-  return spark_dsg::colormaps::rainbow(std::clamp(ratio, 0.0, 1.0));
+  return colormap_.getColor(result.index);
 }
 
 }  // namespace hydra

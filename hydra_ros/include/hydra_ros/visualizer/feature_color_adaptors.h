@@ -55,6 +55,7 @@ class NearestFeatureColor : public GraphColorAdaptor {
   struct Config {
     config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
     config::VirtualConfig<EmbeddingGroup> features{RosEmbeddingGroup::Config()};
+    visualizer::DiscreteColormap::Config colormap;
   } const config;
 
   explicit NearestFeatureColor(const Config& config);
@@ -63,8 +64,9 @@ class NearestFeatureColor : public GraphColorAdaptor {
 
  private:
   ros::NodeHandle nh_;
-  std::unique_ptr<EmbeddingGroup> features_;
   std::unique_ptr<EmbeddingDistance> metric_;
+  std::unique_ptr<EmbeddingGroup> features_;
+  const visualizer::DiscreteColormap colormap_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<GraphColorAdaptor, NearestFeatureColor, Config>(
