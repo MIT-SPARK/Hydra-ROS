@@ -10,7 +10,8 @@ layer2:
   marker_alpha: 0.8
   use_sphere_marker: false
   use_label: true
-  use_collapsed_label: true
+  collapse_label: true
+  label_mode: NameLabelAdaptor
   label_height: 0.5
   label_scale: 0.45
   use_bounding_box: true

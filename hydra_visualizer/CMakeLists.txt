@@ -58,6 +58,7 @@ add_library(
   src/plugins/footprint_plugin.cpp
   src/utils/config_manager.cpp
   src/utils/ear_clipping.cpp
+  src/utils/label_adaptors.cpp
   src/utils/marker_group_pub.cpp
   src/utils/marker_tracker.cpp
   src/utils/node_filter.cpp

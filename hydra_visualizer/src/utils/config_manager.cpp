@@ -107,6 +107,54 @@ void ColorManager::callback(const std_msgs::String& msg) {
   setAdaptor();
 }
 
+LabelManager::LabelManager(const ros::NodeHandle& nh)
+    : has_change_(false), nh_(nh, "label_settings") {
+  // NOTE(nathan) this is ugly but probably the easiest way to parse the current
+  // settings from ros
+  std::stringstream ss;
+  ss << config::internal::rosToYaml(nh_);
+  curr_contents_ = ss.str();
+  sub_ = nh_.subscribe("", 1, &LabelManager::callback, this);
+}
+
+LabelManager::LabelFunc LabelManager::get() const {
+  if (!adaptor_) {
+    return DefaultNodeLabelFunction();
+  }
+
+  return [this](const SceneGraphNode& node) { return adaptor_->getLabel(node); };
+}
+
+void LabelManager::set(const std::string& mode) {
+  if (mode_ != mode) {
+    mode_ = mode;
+    setAdaptor();
+  }
+}
+
+void LabelManager::setAdaptor() {
+  has_change_ = true;
+  try {
+    auto node = YAML::Load(curr_contents_);
+    node["type"] = mode_;
+    adaptor_ = config::createFromYaml<GraphLabelAdaptor>(node);
+    VLOG(5) << "Attempting creation from " << node << " success: (" << std::boolalpha
+            << (adaptor_ != nullptr) << ")";
+  } catch (const std::exception& e) {
+    LOG(ERROR) << "Failed to parse adaptor settings from: " << curr_contents_;
+    adaptor_.reset();
+  }
+}
+
+bool LabelManager::hasChange() const { return has_change_; }
+
+void LabelManager::clearChangeFlag() { has_change_ = false; }
+
+void LabelManager::callback(const std_msgs::String& msg) {
+  curr_contents_ = msg.data;
+  setAdaptor();
+}
+
 ConfigManager::ConfigManager() : nh_("~") {}
 
 ConfigManager::~ConfigManager() {

@@ -1,6 +1,7 @@
 #pragma once
 #include <hydra/openset/embedding_distances.h>
 #include <hydra_visualizer/color/graph_color_adaptors.h>
+#include <hydra_visualizer/utils/label_adaptors.h>
 #include <ros/ros.h>
 
 #include "hydra_ros/openset/ros_embedding_group.h"
@@ -74,5 +75,27 @@ class NearestFeatureColor : public GraphColorAdaptor {
 };
 
 void declare_config(NearestFeatureColor::Config& config);
+
+class NearestFeatureLabel : public visualizer::GraphLabelAdaptor {
+ public:
+  struct Config {
+    config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
+    config::VirtualConfig<EmbeddingGroup> features{RosEmbeddingGroup::Config()};
+    //! Breaks label around spaces to meet max width if > 0
+    size_t label_width = 0;
+  } const config;
+
+  explicit NearestFeatureLabel(const Config& config);
+  std::string getLabel(const spark_dsg::SceneGraphNode& node) const override;
+
+ private:
+  ros::NodeHandle nh_;
+  std::unique_ptr<EmbeddingDistance> metric_;
+  std::unique_ptr<EmbeddingGroup> features_;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<GraphLabelAdaptor, NearestFeatureLabel, Config>(
+          "NearestFeatureLabel");
+};
 
 }  // namespace hydra

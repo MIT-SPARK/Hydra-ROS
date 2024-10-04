@@ -48,6 +48,8 @@ using FilterFunction = std::function<bool(const spark_dsg::SceneGraphNode&)>;
 using NodeColorFunction =
     std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
 
+using NodeLabelFunction = std::function<std::string(const spark_dsg::SceneGraphNode&)>;
+
 using EdgeColorFunction =
     std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&,
                                    const spark_dsg::SceneGraphNode&,
@@ -56,6 +58,10 @@ using EdgeColorFunction =
 
 struct DefaultNodeColorFunction {
   spark_dsg::Color operator()(const spark_dsg::SceneGraphNode& node) const;
+};
+
+struct DefaultNodeLabelFunction {
+  std::string operator()(const spark_dsg::SceneGraphNode& node) const;
 };
 
 struct DefaultEdgeColorFunction {
@@ -70,6 +76,7 @@ struct LayerInfo {
   hydra_visualizer::VisualizerConfig graph;
   ConfigT layer;
   NodeColorFunction node_color = DefaultNodeColorFunction();
+  NodeLabelFunction node_label = DefaultNodeLabelFunction();
   EdgeColorFunction edge_color = DefaultEdgeColorFunction();
   mutable FilterFunction filter = {};
 

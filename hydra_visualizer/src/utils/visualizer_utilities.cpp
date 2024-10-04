@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_visualizer/utils/visualizer_utilities.h"
 
+#include <glog/logging.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>
@@ -394,6 +395,11 @@ MarkerArray makeLayerLabelMarkers(const std_msgs::Header& header,
                                   const SceneGraphLayer& layer,
                                   const std::string& ns) {
   MarkerArray msg;
+  if (!info.node_label) {
+    LOG(WARNING) << "Missing node label function!";
+    return msg;
+  }
+
   for (const auto& [node_id, node] : layer.nodes()) {
     if (info.filter && !info.filter(*node)) {
       continue;
@@ -407,10 +413,9 @@ MarkerArray makeLayerLabelMarkers(const std_msgs::Header& header,
     marker.action = Marker::ADD;
     marker.lifetime = ros::Duration(0);
 
-    std::string name;
-    try {
-      name = node->attributes<SemanticNodeAttributes>().name;
-    } catch (const std::exception&) {
+    const auto name = info.node_label(*node);
+    if (name.empty()) {
+      continue;
     }
 
     marker.text = name.empty() ? NodeSymbol(node->id).getLabel() : name;
@@ -420,7 +425,7 @@ MarkerArray makeLayerLabelMarkers(const std_msgs::Header& header,
     fillPoseWithIdentity(marker.pose);
     tf2::convert(node->attributes().position, marker.pose.position);
     marker.pose.position.z += info.layer.label_height;
-    if (!info.layer.use_collapsed_label) {
+    if (!info.layer.collapse_label) {
       marker.pose.position.z += info.getZOffset();
     }
 
@@ -668,11 +673,7 @@ Marker makeDynamicLabelMarker(const std_msgs::Header& header,
   marker.color = makeColorMsg(Color());
 
   const auto& node = layer.getNodeByIndex(layer.numNodes() - 1);
-  try {
-    marker.text = node.attributes<SemanticNodeAttributes>().name;
-  } catch (const std::bad_cast&) {
-  }
-
+  marker.text = info.node_label(node);
   if (marker.text.empty()) {
     marker.text = std::to_string(layer.id) + ":" + layer.prefix.str();
   }

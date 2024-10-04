@@ -39,6 +39,7 @@
 
 #include "hydra_visualizer/color/graph_color_adaptors.h"
 #include "hydra_visualizer/utils/config_wrapper.h"
+#include "hydra_visualizer/utils/label_adaptors.h"
 #include "hydra_visualizer/utils/visualizer_types.h"
 
 namespace hydra::visualizer {
@@ -69,6 +70,27 @@ class ColorManager {
   std::unique_ptr<GraphColorAdaptor> adaptor_;
 };
 
+class LabelManager {
+ public:
+  using LabelFunc = std::function<std::string(const spark_dsg::SceneGraphNode&)>;
+  explicit LabelManager(const ros::NodeHandle& nh);
+  LabelFunc get() const;
+  void set(const std::string& mode);
+  bool hasChange() const;
+  void clearChangeFlag();
+
+ private:
+  void setAdaptor();
+  void callback(const std_msgs::String& msg);
+
+  bool has_change_;
+  std::string mode_;
+  ros::NodeHandle nh_;
+  ros::Subscriber sub_;
+  std::string curr_contents_;
+  GraphLabelAdaptor::Ptr adaptor_;
+};
+
 template <typename ConfigT>
 class LayerConfig {
  public:
@@ -76,6 +98,7 @@ class LayerConfig {
               const std::string& ns,
               spark_dsg::LayerId layer)
       : color(std::make_unique<ColorManager>(ros::NodeHandle(nh, ns), layer)),
+        label(std::make_unique<LabelManager>(ros::NodeHandle(nh, ns))),
         config(std::make_unique<ConfigWrapper<ConfigT>>(nh, ns)) {
     setCallback();
   }
@@ -85,12 +108,15 @@ class LayerConfig {
   LayerConfig& operator=(const LayerConfig& other) = delete;
 
   LayerConfig(LayerConfig&& other)
-      : color(std::move(other.color)), config(std::move(other.config)) {
+      : color(std::move(other.color)),
+        label(std::move(other.label)),
+        config(std::move(other.config)) {
     setCallback();
   }
 
   LayerConfig& operator=(LayerConfig&& other) {
     color = std::move(other.color);
+    label = std::move(other.label);
     config = std::move(other.config);
     setCallback();
     return *this;
@@ -98,19 +124,29 @@ class LayerConfig {
 
   LayerInfo<ConfigT> getInfo(const spark_dsg::DynamicSceneGraph& graph) const;
 
-  bool hasChange() const { return color->hasChange() || config->hasChange(); }
+  bool hasChange() const {
+    return color->hasChange() || label->hasChange() || config->hasChange();
+  }
+
   void clearChangeFlag() {
     color->clearChangeFlag();
+    label->clearChangeFlag();
     config->clearChangeFlag();
   }
 
   std::unique_ptr<ColorManager> color;
+  std::unique_ptr<LabelManager> label;
   std::unique_ptr<ConfigWrapper<ConfigT>> config;
 
  private:
   void setCallback() {
-    color->set(getColorMode(config->get()));
-    config->setUpdateCallback([this](const auto& c) { color->set(getColorMode(c)); });
+    const auto c = config->get();
+    color->set(getColorMode(c));
+    label->set(c.label_mode);
+    config->setUpdateCallback([this](const auto& c) {
+      color->set(getColorMode(c));
+      label->set(c.label_mode);
+    });
   }
 };
 
@@ -160,6 +196,7 @@ LayerInfo<ConfigT> LayerConfig<ConfigT>::getInfo(
   info.graph = ConfigManager::instance().getVisualizerConfig();
   info.layer = config->get();
   info.node_color = color->get(graph);
+  info.node_label = label->get();
   return info;
 }
 

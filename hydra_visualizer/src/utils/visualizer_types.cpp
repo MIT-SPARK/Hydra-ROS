@@ -50,6 +50,14 @@ Color DefaultNodeColorFunction::operator()(const SceneGraphNode& node) const {
   }
 }
 
+std::string DefaultNodeLabelFunction::operator()(const SceneGraphNode& node) const {
+  try {
+    return node.attributes<SemanticNodeAttributes>().name;
+  } catch (const std::bad_cast&) {
+    return "";
+  }
+}
+
 Color DefaultEdgeColorFunction::operator()(const SceneGraphNode&,
                                            const SceneGraphNode&,
                                            const SceneGraphEdge&,

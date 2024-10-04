@@ -21,6 +21,46 @@ namespace hydra {
 
 using namespace spark_dsg;
 
+namespace {
+
+std::string wrapLabel(const std::string& original, size_t width) {
+  if (width == 0) {
+    return original;
+  }
+
+  std::vector<std::string> words;
+  size_t pos = 0;
+  while (pos < original.size()) {
+    const auto prev_pos = pos;
+    pos = original.find(' ', pos);
+    const auto count = pos == std::string::npos ? pos : pos - prev_pos;
+    words.push_back(original.substr(prev_pos, count));
+    if (pos != std::string::npos) {
+      ++pos;
+    }
+  }
+
+  size_t curr_width = 0;
+  std::string to_return;
+  auto iter = words.begin();
+  while (iter != words.end()) {
+    to_return += *iter;
+    curr_width += iter->size();
+    ++iter;
+    if (iter != words.end()) {
+      if (curr_width >= width) {
+        to_return += "\n";
+        curr_width = 0;
+      } else {
+        to_return += " ";
+        ++curr_width;
+      }
+    }
+  }
+
+  return to_return;
+}
+
 std::string showVec(const Eigen::MatrixXf& vec, size_t max_length = 100) {
   if (vec.rows() * vec.cols() == 0) {
     return "[]";
@@ -43,6 +83,8 @@ std::string showVec(const Eigen::MatrixXf& vec, size_t max_length = 100) {
 
   return ss.str();
 }
+
+}  // namespace
 
 void declare_config(FeatureScoreColor::Config& config) {
   using namespace config;
@@ -155,6 +197,36 @@ Color NearestFeatureColor::getColor(const DynamicSceneGraph&,
   const auto& attrs = node.attributes<SemanticNodeAttributes>();
   const auto result = features_->getBestScore(*metric_, attrs.semantic_feature);
   return colormap_.getColor(result.index);
+}
+
+void declare_config(NearestFeatureLabel::Config& config) {
+  using namespace config;
+  name("NearestFeatureColor::Config");
+  config.metric.setOptional();
+  field(config.metric, "metric");
+  config.features.setOptional();
+  field(config.features, "features");
+  field(config.label_width, "label_width");
+}
+
+NearestFeatureLabel::NearestFeatureLabel(const Config& config)
+    : config(config::checkValid(config)),
+      metric_(config.metric.create()),
+      features_(config.features.create()) {}
+
+std::string NearestFeatureLabel::getLabel(const SceneGraphNode& node) const {
+  if (!features_ || !metric_) {
+    return "";
+  }
+
+  const auto& attrs = node.attributes<SemanticNodeAttributes>();
+  const auto result = features_->getBestScore(*metric_, attrs.semantic_feature);
+  if (result.index >= features_->names.size()) {
+    return "";
+  }
+
+  auto name = features_->names[result.index];
+  return wrapLabel(name, config.label_width);
 }
 
 }  // namespace hydra
