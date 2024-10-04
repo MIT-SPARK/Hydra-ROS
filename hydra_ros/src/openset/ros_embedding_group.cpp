@@ -19,7 +19,7 @@ struct MessageWaitFunctor {
   void callback(const T& msg) { msg_ = msg; }
 
   std::optional<T> wait() {
-    ros::Rate r(10.0);
+    ros::WallRate r(10.0);
     while (ros::ok() && !msg_) {
       r.sleep();
       ros::spinOnce();
@@ -66,12 +66,15 @@ RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
         names.push_back(msg->names[i]);
       }
     }
+
+    LOG_IF(INFO, !config.silent_wait)
+        << "Got embeddings from '" << nh.resolveName("features") << "'!";
     return;
   }
 
   const std::string service_name = ros::names::append(config.ns, "embed");
   LOG_IF(INFO, !config.silent_wait) << "Waiting for embedding encoder on '"
-                                    << ros::names::resolve(service_name) << "'";
+                                    << ros::names::resolve(service_name) << "'...";
   ros::service::waitForService(service_name);
 
   for (const auto& prompt : config.prompts) {
@@ -82,6 +85,9 @@ RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
     const auto& vec = msg.response.feature.feature.data;
     embeddings.emplace_back(Eigen::Map<const FeatureVector>(vec.data(), vec.size()));
   }
+
+  LOG_IF(INFO, !config.silent_wait) << "Finished embedding prompts on using '"
+                                    << ros::names::resolve(service_name) << "'!";
 #else
   LOG(ERROR) << "Hydra not built with semantic_inference. Not encoding prompts";
 #endif
