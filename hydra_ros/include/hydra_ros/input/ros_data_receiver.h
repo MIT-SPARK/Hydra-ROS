@@ -52,4 +52,6 @@ class RosDataReceiver : public DataReceiver {
   ros::NodeHandle nh_;
 };
 
+void declare_config(RosDataReceiver::Config& config);
+
 }  // namespace hydra
