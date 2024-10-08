@@ -51,8 +51,14 @@ static const auto id_reg =
                                    IdLabelAdaptor::Config>("IdLabelAdaptor");
 
 static const auto name_reg =
-    config::Registration<GraphLabelAdaptor, NameLabelAdaptor, NameLabelAdaptor::Config>(
-        "NameLabelAdaptor");
+    config::RegistrationWithConfig<GraphLabelAdaptor,
+                                   NameLabelAdaptor,
+                                   NameLabelAdaptor::Config>("NameLabelAdaptor");
+
+static const auto name_id_reg =
+    config::RegistrationWithConfig<GraphLabelAdaptor,
+                                   NameIdLabelAdaptor,
+                                   NameIdLabelAdaptor::Config>("NameIdLabelAdaptor");
 
 }  // namespace
 
@@ -69,6 +75,17 @@ std::string NameLabelAdaptor::getLabel(const SceneGraphNode& node) const {
     return node.attributes<SemanticNodeAttributes>().name;
   } catch (const std::bad_cast&) {
     return "";
+  }
+}
+void declare_config(NameIdLabelAdaptor::Config&) {}
+
+std::string NameIdLabelAdaptor::getLabel(const SceneGraphNode& node) const {
+  std::string id = NodeSymbol(node.id).getLabel();
+  try {
+    std::string name = node.attributes<SemanticNodeAttributes>().name;
+    return name + " : " + id;
+  } catch (const std::bad_cast&) {
+    return id;
   }
 }
 

@@ -61,4 +61,12 @@ struct NameLabelAdaptor : GraphLabelAdaptor {
 
 void declare_config(NameLabelAdaptor::Config& config);
 
+struct NameIdLabelAdaptor : GraphLabelAdaptor {
+  struct Config {};
+  explicit NameIdLabelAdaptor(const Config&) {}
+  virtual ~NameIdLabelAdaptor() = default;
+  std::string getLabel(const spark_dsg::SceneGraphNode& node) const override;
+};
+void declare_config(NameIdLabelAdaptor::Config& config);
+
 }  // namespace hydra::visualizer
