@@ -139,7 +139,8 @@ void declare_config(IdColorAdaptor::Config& config);
 struct ParentColorAdaptor : GraphColorAdaptor {
   struct Config {
     spark_dsg::Color default_color;
-    visualizer::DiscreteColormap::Config colormap;
+    config::VirtualConfig<GraphColorAdaptor> parent_adaptor{
+        IdColorAdaptor::Config{visualizer::DiscretePalette::COLORBREWER}};
   } const config;
 
   explicit ParentColorAdaptor(const Config& config);
@@ -147,7 +148,7 @@ struct ParentColorAdaptor : GraphColorAdaptor {
                             const spark_dsg::SceneGraphNode& node) const override;
 
  private:
-  const visualizer::DiscreteColormap colormap_;
+  const GraphColorAdaptor::Ptr parent_adaptor_;
 
   REGISTER_COLOR_ADAPTOR(ParentColorAdaptor);
 };

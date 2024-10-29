@@ -112,22 +112,24 @@ void declare_config(IdColorAdaptor::Config& config) {
 }
 
 ParentColorAdaptor::ParentColorAdaptor(const Config& config)
-    : config(config::checkValid(config)), colormap_(config.colormap) {}
+    : config(config::checkValid(config)),
+      parent_adaptor_(config.parent_adaptor.create()) {}
 
-Color ParentColorAdaptor::getColor(const DynamicSceneGraph&,
+Color ParentColorAdaptor::getColor(const DynamicSceneGraph& graph,
                                    const SceneGraphNode& node) const {
   auto parent = node.getParent();
-  if (!parent) {
+  if (!parent || !parent_adaptor_) {
     return config.default_color;
   }
 
-  return colormap_.getColor(NodeSymbol(*parent).categoryId());
+  return parent_adaptor_->getColor(graph, graph.getNode(*parent));
 }
 
 void declare_config(ParentColorAdaptor::Config& config) {
   using namespace config;
   name("ParentColorAdaptor::Config");
-  field(config.colormap, "colormap");
+  config.parent_adaptor.setOptional();
+  field(config.parent_adaptor, "parent_adaptor");
   field(config.default_color, "default_color");
 }
 
