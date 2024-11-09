@@ -55,7 +55,7 @@ namespace hydra {
 struct Reconstructor {
   struct Config {
     VolumetricMap::Config map;
-    ProjectiveIntegratorConfig integrator;
+    ProjectiveIntegrator::Config integrator;
   } const config;
 
   explicit Reconstructor(const Config& config)
