@@ -42,6 +42,15 @@
 #include "hydra_ros/input/ros_sensors.h"
 
 namespace hydra {
+namespace {
+
+inline bool isNumber(const std::string& name) {
+  return std::find_if(name.begin(), name.end(), [](char c) {
+           return !std::isdigit(c);
+         }) == name.end();
+}
+
+}  // namespace
 
 void declare_config(RosInputModule::Config& config) {
   using namespace config;
@@ -52,9 +61,19 @@ void declare_config(RosInputModule::Config& config) {
 }
 
 InputModule::Config RosInputModule::Config::remapSensors() const {
-  InputModule::Config to_return = *this;
+  InputModule::Config to_return;
   for (const auto& [name, input_pair] : inputs) {
-    to_return.inputs[name].sensor = input::loadSensor(input_pair.sensor, name);
+    auto sensor_name = name;
+    if (isNumber(sensor_name)) {
+      // this happens when the yaml receiver list is specified without a name
+      sensor_name = "sensor" + name;
+      LOG(WARNING) << "Invalid ROS name found for sensor: '" << name
+                   << "'. Remapping to '" << sensor_name << "'";
+    }
+
+    to_return.inputs[sensor_name] = input_pair;
+    to_return.inputs[sensor_name].sensor =
+        input::loadSensor(input_pair.sensor, sensor_name);
   }
 
   return to_return;
