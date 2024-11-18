@@ -72,4 +72,15 @@
         <rosparam file="$(arg active_window_sinks)" ns="active_window"/>
     </node>
 
+    <!-- visualizer for converting dsg to visualization markers -->
+    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
+    <arg name="start_rviz" default="true" doc="start rviz"/>
+    <group if="$(eval start_visualizer or start_rviz)">
+        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
+        <remap from="hydra_dsg_visualizer/feature" to="hydra_ros_node/input/left_cam/feature"/>
+        <include file="$(find hydra_visualizer)/launch/hydra_streaming_visualizer.launch" pass_all_args="true">
+            <arg name="visualizer_frame" default="map"/>
+        </include>
+    </group>
+
 </launch>

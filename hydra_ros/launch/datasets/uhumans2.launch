@@ -1,4 +1,5 @@
 <launch>
+
     <arg name="sim_time_required" default="true"/>
     <param name="use_sim_time" value="$(arg sim_time_required)"/>
 
@@ -51,33 +52,13 @@
         <include file="$(find semantic_inference_ros)/launch/clip_publisher.launch"/>
     </group>
 
-    <arg name="start_hydra" default="true"/>
-    <group if="$(arg start_hydra)">
-        <remap from="hydra_ros_node/input/left_cam/depth_registered/image_rect" to="$(arg depth_topic)"/>
-        <remap from="hydra_ros_node/input/left_cam/rgb/image_raw" to="$(arg rgb_topic)"/>
-        <remap from="hydra_ros_node/input/left_cam/rgb/camera_info" to="$(arg rgb_info_topic)"/>
-        <remap from="hydra_ros_node/input/left_cam/semantic/image_raw" to="$(arg label_topic)"/>
-        <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
-            <arg name="dataset_name" default="uhumans2"/>
-        </include>
-    </group>
+    <remap from="hydra_ros_node/input/left_cam/depth_registered/image_rect" to="$(arg depth_topic)"/>
+    <remap from="hydra_ros_node/input/left_cam/rgb/image_raw" to="$(arg rgb_topic)"/>
+    <remap from="hydra_ros_node/input/left_cam/rgb/camera_info" to="$(arg rgb_info_topic)"/>
+    <remap from="hydra_ros_node/input/left_cam/semantic/image_raw" to="$(arg label_topic)"/>
+    <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+        <arg name="dataset_name" default="uhumans2"/>
+        <arg name="rviz_path" default="$(find hydra_ros)/rviz/uhumans2.rviz"/>
+    </include>
 
-    <!-- visualizer for converting dsg to visualization markers -->
-    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
-    <group if="$(arg start_visualizer)">
-        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
-        <remap from="hydra_dsg_visualizer/feature" to="hydra_ros_node/input/left_cam/feature"/>
-        <include file="$(find hydra_visualizer)/launch/hydra_streaming_visualizer.launch" pass_all_args="true">
-            <arg name="visualizer_frame" default="map"/>
-        </include>
-    </group>
-
-    <!-- rviz -->
-    <arg name="start_rviz" default="true" doc="start rviz"/>
-    <group if="$(arg start_rviz)">
-        <include file="$(find hydra_visualizer)/launch/hydra_rviz.launch">
-            <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
-            <arg name="rviz_file" default="uhumans2.rviz"/>
-        </include>
-    </group>
 </launch>

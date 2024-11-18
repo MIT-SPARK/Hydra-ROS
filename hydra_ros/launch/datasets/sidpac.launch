@@ -1,4 +1,5 @@
 <launch>
+
     <arg name="sim_time_required" default="true"/>
     <param name="use_sim_time" value="$(arg sim_time_required)"/>
 
@@ -35,23 +36,7 @@
 
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="dataset_name" default="sidpac"/>
+        <arg name="rviz_path" default="$(find hydra_ros)/rviz/sidpac.rviz"/>
     </include>
 
-    <!-- visualizer for converting dsg to visualization markers -->
-    <arg name="start_visualizer" default="true" doc="start hydra visualizer"/>
-    <group if="$(arg start_visualizer)">
-        <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
-        <include file="$(find hydra_visualizer)/launch/hydra_streaming_visualizer.launch" pass_all_args="true">
-            <arg name="visualizer_frame" default="map"/>
-        </include>
-    </group>
-
-    <!-- rviz -->
-    <arg name="start_rviz" default="true" doc="start rviz"/>
-    <group if="$(arg start_rviz)">
-        <include file="$(find hydra_visualizer)/launch/hydra_rviz.launch">
-            <arg name="rviz_dir" default="$(find hydra_ros)/rviz"/>
-            <arg name="rviz_file" default="sidpac.rviz"/>
-        </include>
-    </group>
 </launch>

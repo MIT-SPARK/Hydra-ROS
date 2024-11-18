@@ -5,7 +5,6 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Global Options1
-        - /Scene Graph1
       Splitter Ratio: 0.5
     Tree Height: 725
   - Class: rviz/Selection
@@ -51,67 +50,36 @@ Visualization Manager:
       Plane Cell Count: 1000
       Reference Frame: <Fixed Frame>
       Value: false
-    - Class: rviz/Group
-      Displays:
-        - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /hydra_visualizer/dsg_markers
-          Name: Scene Graph (Static)
-          Namespaces:
-            interlayer_edges_3_2: true
-            interlayer_edges_4_3: true
-            interlayer_edges_5_4: true
-            layer_bounding_boxes_2: true
-            layer_bounding_boxes_edges_2: true
-            layer_edges_20: true
-            layer_edges_3: true
-            layer_edges_4: true
-            layer_labels_2: true
-            layer_labels_4: true
-            layer_labels_5: true
-            layer_nodes_2: true
-            layer_nodes_20: true
-            layer_nodes_3: true
-            layer_nodes_4: true
-            layer_nodes_5: true
-            layer_polygon_boundaries_20: true
-          Queue Size: 100
-          Value: true
-        - Class: rviz/MarkerArray
-          Enabled: true
-          Marker Topic: /hydra_visualizer/dynamic_layers_viz
-          Name: Scene Graph (Dynamic)
-          Namespaces:
-            "dynamic_edges_\x00": true
-            "dynamic_label_\x00": true
-            "dynamic_nodes_\x00": true
-          Queue Size: 100
-          Value: true
-        - Class: kimera_pgmo_rviz/MeshDisplay
-          Cull Backfaces: true
-          Enable Lighting: false
-          Enabled: true
-          Name: Mesh
-          Queue Size: 10
-          Toggle Visibility All: true
-          Topic: /hydra_visualizer/dsg_mesh
-          Unreliable: false
-          Value: true
-          Visible:
-            Value: true
-            robot0:
-              Value: true
-              dsg_mesh: true
-      Enabled: true
-      Name: Scene Graph
     - Class: rviz/MarkerArray
-      Enabled: false
-      Marker Topic: /hydra_visualizer/dsg_regions
-      Name: Region Polygons
+      Enabled: true
+      Marker Topic: /hydra_dsg_visualizer/dsg_markers
+      Name: Scene Graph
       Namespaces:
-        {}
+        "dynamic_edges_\x00": true
+        "dynamic_label_\x00": true
+        "dynamic_nodes_\x00": true
+        interlayer_edges_4_3: true
+        layer_edges_3: true
+        layer_labels_4: true
+        layer_nodes_3: true
+        layer_nodes_4: true
       Queue Size: 100
-      Value: false
+      Value: true
+    - Class: kimera_pgmo_rviz/MeshDisplay
+      Cull Backfaces: true
+      Enable Lighting: false
+      Enabled: true
+      Name: Mesh
+      Queue Size: 10
+      Toggle Visibility All: true
+      Topic: /hydra_dsg_visualizer/dsg_mesh
+      Unreliable: false
+      Value: true
+      Visible:
+        Value: true
+        robot0:
+          Value: true
+          dsg_mesh: true
     - Class: rviz/MarkerArray
       Enabled: true
       Marker Topic: /hydra_visualizer/place_footprints
@@ -156,7 +124,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 42.272823333740234
+      Distance: 35.42363357543945
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -164,9 +132,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: -21.187664031982422
-        Y: 27.811574935913086
-        Z: 23.85295867919922
+        X: -15.626291275024414
+        Y: 1.3694945573806763
+        Z: 17.89348793029785
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
@@ -178,11 +146,11 @@ Visualization Manager:
     Saved: ~
 Window Geometry:
   Displays:
-    collapsed: true
+    collapsed: false
   Height: 1016
-  Hide Left Dock: true
+  Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd0000000400000000000001560000035efc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073000000003b0000035e000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000027d0000078ffc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730200000781000000200000027f00000438fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000030700fffffffb0000000800540069006d00650100000000000004500000000000000000000007800000035e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd0000000400000000000001560000035efc0200000008fb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003b0000035e000000c700fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261000000010000027d0000078ffc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a005600690065007700730200000781000000200000027f00000438fb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d00650100000000000007800000030700fffffffb0000000800540069006d00650100000000000004500000000000000000000006240000035e00000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
