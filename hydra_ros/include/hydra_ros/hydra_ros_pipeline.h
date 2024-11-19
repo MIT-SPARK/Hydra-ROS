@@ -55,6 +55,7 @@ class HydraRosPipeline : public HydraPipeline {
     config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
     config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
     bool enable_frontend_output = true;
+    bool enable_zmq_interface = true;
     RosInputModule::Config input;
     config::VirtualConfig<FeatureReceiver> features;
   } const config;

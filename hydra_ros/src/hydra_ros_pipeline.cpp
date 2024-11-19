@@ -63,6 +63,7 @@ void declare_config(HydraRosPipeline::Config& config) {
   field(config.frontend, "frontend");
   field(config.backend, "backend");
   field(config.enable_frontend_output, "enable_frontend_output");
+  field(config.enable_zmq_interface, "enable_zmq_interface");
   field(config.input, "input");
   config.features.setOptional();
   field(config.features, "features");
@@ -98,8 +99,10 @@ void HydraRosPipeline::init() {
 
   ros::NodeHandle bnh(nh_, "backend");
   backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
-  const auto zmq_config = config::fromRos<ZmqSink::Config>(bnh, "zmq_sink");
-  backend_->addSink(std::make_shared<ZmqSink>(zmq_config));
+  if (config.enable_zmq_interface) {
+    const auto zmq_config = config::fromRos<ZmqSink::Config>(bnh, "zmq_sink");
+    backend_->addSink(std::make_shared<ZmqSink>(zmq_config));
+  }
 
   if (config.enable_frontend_output) {
     CHECK(frontend_) << "Frontend module required!";

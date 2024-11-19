@@ -20,6 +20,7 @@
     <!-- Backend configuration -->
     <arg name="add_initial_prior" default="true"/>
     <arg name="optimize_on_lc" default="true"/>
+    <arg name="enable_zmq_interface" default="true"/>
     <arg name="zmq_ip" default="127.0.0.1"/>
     <arg name="zmq_send_url" default="tcp://$(arg zmq_ip):8001"/>
     <arg name="zmq_recv_url" default="tcp://$(arg zmq_ip):8002"/>
