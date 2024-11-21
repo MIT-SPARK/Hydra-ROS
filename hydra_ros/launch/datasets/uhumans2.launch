@@ -56,6 +56,7 @@
     <remap from="hydra_ros_node/input/left_cam/rgb/image_raw" to="$(arg rgb_topic)"/>
     <remap from="hydra_ros_node/input/left_cam/rgb/camera_info" to="$(arg rgb_info_topic)"/>
     <remap from="hydra_ros_node/input/left_cam/semantic/image_raw" to="$(arg label_topic)"/>
+    <remap from="hydra_ros_node/pose_graph" to="kimera_vio_ros/pose_graph_incremental" unless="$(arg use_gt_frame)"/>
     <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
         <arg name="dataset_name" default="uhumans2"/>
         <arg name="rviz_path" default="$(find hydra_ros)/rviz/uhumans2.rviz"/>

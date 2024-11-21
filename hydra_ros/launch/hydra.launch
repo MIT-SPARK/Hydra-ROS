@@ -79,7 +79,7 @@
         <remap from="hydra_dsg_visualizer/dsg" to="hydra_ros_node/backend/dsg"/>
         <remap from="hydra_dsg_visualizer/feature" to="hydra_ros_node/input/left_cam/feature"/>
         <include file="$(find hydra_visualizer)/launch/hydra_streaming_visualizer.launch" pass_all_args="true">
-            <arg name="visualizer_frame" default="map"/>
+            <arg name="visualizer_frame" default="$(arg map_frame)"/>
         </include>
     </group>
 

@@ -13,3 +13,4 @@ input:
         max_range: $(arg sensor_max_range)
         extrinsics:
           type: ros
+          sensor_frame: $(arg sensor_frame)
