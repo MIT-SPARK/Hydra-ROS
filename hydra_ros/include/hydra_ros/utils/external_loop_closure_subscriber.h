@@ -33,55 +33,21 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/active_window/active_window_module.h>
-#include <hydra/active_window/reconstruction_module.h>
-#include <hydra/backend/backend_module.h>
-#include <hydra/common/hydra_pipeline.h>
-#include <hydra/frontend/graph_builder.h>
+#include <pose_graph_tools_msgs/PoseGraph.h>
 #include <ros/ros.h>
-
-#include "hydra_ros/input/feature_receiver.h"
-#include "hydra_ros/input/ros_input_module.h"
 
 namespace hydra {
 
-class BowSubscriber;
-class ExternalLoopClosureSubscriber;
-
-class HydraRosPipeline : public HydraPipeline {
+class ExternalLoopClosureSubscriber {
  public:
-  struct Config {
-    config::VirtualConfig<ActiveWindowModule> active_window{
-        ReconstructionModule::Config()};
-    config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
-    config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
-    bool enable_frontend_output = true;
-    bool enable_zmq_interface = true;
-    RosInputModule::Config input;
-    config::VirtualConfig<FeatureReceiver> features;
-  } const config;
-
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
-
-  virtual ~HydraRosPipeline();
-
-  void init() override;
-
-  void stop() override;
+  explicit ExternalLoopClosureSubscriber(const ros::NodeHandle& nh);
 
  protected:
-  virtual void initLCD();
+  void callback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
 
  protected:
   ros::NodeHandle nh_;
-  std::shared_ptr<ActiveWindowModule> active_window_;
-  std::shared_ptr<GraphBuilder> frontend_;
-  std::shared_ptr<BackendModule> backend_;
-
-  std::unique_ptr<BowSubscriber> bow_sub_;
-  std::unique_ptr<ExternalLoopClosureSubscriber> external_loop_closure_sub_;
+  ros::Subscriber sub_;
 };
-
-void declare_config(HydraRosPipeline::Config& config);
 
 }  // namespace hydra

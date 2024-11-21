@@ -32,56 +32,20 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/active_window/active_window_module.h>
-#include <hydra/active_window/reconstruction_module.h>
-#include <hydra/backend/backend_module.h>
-#include <hydra/common/hydra_pipeline.h>
-#include <hydra/frontend/graph_builder.h>
-#include <ros/ros.h>
+#include "hydra_ros/utils/external_loop_closure_subscriber.h"
 
-#include "hydra_ros/input/feature_receiver.h"
-#include "hydra_ros/input/ros_input_module.h"
+#include <hydra/common/pipeline_queues.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
-class BowSubscriber;
-class ExternalLoopClosureSubscriber;
+ExternalLoopClosureSubscriber::ExternalLoopClosureSubscriber(const ros::NodeHandle& nh) : nh_(nh) {
+  sub_ = nh_.subscribe("external_loop_closures", 100, &ExternalLoopClosureSubscriber::callback, this);
+}
 
-class HydraRosPipeline : public HydraPipeline {
- public:
-  struct Config {
-    config::VirtualConfig<ActiveWindowModule> active_window{
-        ReconstructionModule::Config()};
-    config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
-    config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
-    bool enable_frontend_output = true;
-    bool enable_zmq_interface = true;
-    RosInputModule::Config input;
-    config::VirtualConfig<FeatureReceiver> features;
-  } const config;
-
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id);
-
-  virtual ~HydraRosPipeline();
-
-  void init() override;
-
-  void stop() override;
-
- protected:
-  virtual void initLCD();
-
- protected:
-  ros::NodeHandle nh_;
-  std::shared_ptr<ActiveWindowModule> active_window_;
-  std::shared_ptr<GraphBuilder> frontend_;
-  std::shared_ptr<BackendModule> backend_;
-
-  std::unique_ptr<BowSubscriber> bow_sub_;
-  std::unique_ptr<ExternalLoopClosureSubscriber> external_loop_closure_sub_;
-};
-
-void declare_config(HydraRosPipeline::Config& config);
-
+void ExternalLoopClosureSubscriber::callback(const pose_graph_tools_msgs::PoseGraph& msg) {
+  auto& queue = PipelineQueues::instance().external_loop_closure_queue;
+  
+  queue.push(pose_graph_tools::fromMsg(msg));
+}
 }  // namespace hydra

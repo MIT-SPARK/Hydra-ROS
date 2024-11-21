@@ -53,6 +53,7 @@
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/loop_closure/ros_lcd_registration.h"
 #include "hydra_ros/utils/bow_subscriber.h"
+#include "hydra_ros/utils/external_loop_closure_subscriber.h"
 
 namespace hydra {
 
@@ -96,6 +97,8 @@ void HydraRosPipeline::init() {
     initLCD();
     bow_sub_.reset(new BowSubscriber(nh_));
   }
+
+  external_loop_closure_sub_.reset(new ExternalLoopClosureSubscriber(nh_));
 
   ros::NodeHandle bnh(nh_, "backend");
   backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
