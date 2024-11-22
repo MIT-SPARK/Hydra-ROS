@@ -103,7 +103,10 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
   }
 
   const auto& pose_graph = *dgraph.getPoseGraph(id_timestamps);
-  pose_graph_pub_.publish(pose_graph_tools::toMsg(pose_graph));
+  const auto map_frame = GlobalInfo::instance().getFrames().map;
+  auto pose_graph_msg = pose_graph_tools::toMsg(pose_graph);
+  pose_graph_msg.header.frame_id = map_frame;
+  pose_graph_pub_.publish(pose_graph_msg);
 }
 
 void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgraph,
