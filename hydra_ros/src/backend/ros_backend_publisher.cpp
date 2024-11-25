@@ -102,7 +102,7 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
     times.push_back(node->timestamp.value().count());
   }
 
-  const auto& pose_graph = *dgraph.getPoseGraph(id_timestamps);
+  const auto pose_graph = *dgraph.getPoseGraph(id_timestamps);
   const auto map_frame = GlobalInfo::instance().getFrames().map;
   auto pose_graph_msg = pose_graph_tools::toMsg(pose_graph);
   pose_graph_msg.header.frame_id = map_frame;
