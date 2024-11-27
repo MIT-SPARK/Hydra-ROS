@@ -1,0 +1,103 @@
+<launch>
+    <arg name="sim_time_required" default="true"/>
+    <param name="use_sim_time" value="$(arg sim_time_required)"/>
+
+    <arg name="robot_name" default="acl_jackal2" doc="NOTE(HL): For '10_14' datasets, all their sensor frame prefixs are 'acl_jackal2`."/>
+    <arg name="sensor_type" default="rgbd" doc="'rgbd', 'velodyne16', or 'ouster64'"/>
+
+    <arg name="use_gt_frame" default="false" doc="use simulator-provided tf frame"/>
+    <arg name="use_offline_semantics" default="false" doc="use more precise semantics from offline semantic segmentation"/>
+    <arg name="use_compressed_transport" default="true" doc="If Kimera-VIO is used as the odometry this should be set to false. If LiDAR odometry is used, it should be set to true."/>
+    <arg name="use_lidar_depth" default="$(eval 'true' if arg('sensor_type') in ['ouster64', 'velodyne16'] else 'false')" doc="Whether to use LiDAR setup or RGB-D setup"/>
+    <arg name="color_mesh_by_label" default="false" doc="display mesh colored by semantic label"/>
+    <arg name="pose_graph_tracker_type" default="PoseGraphFromOdom" doc="'RosPoseGraphs' or PoseGraphFromOdom'"/>
+
+    <arg name="robot_frame" default="$(arg robot_name)/base" doc="robot body tf frame"/>
+    <arg name="odom_frame" default="$(arg robot_name)/odom" doc="odometry (map) frame"/>
+
+    <!-- Sensor frame for volumetric mapping. LiDAR uses LiDAR frame, camera uses camera's pose frame -->
+    <arg name="sensor_frame" default="$(eval arg('robot_name') + '/velodyne_link' if arg('sensor_type') == 'velodyne16' else
+                                             (arg('robot_name') + '/left_cam' if arg('sensor_type') == 'rgbd' else
+                                             arg('robot_name') + '/ouster_link'))"/> 
+
+  <arg name="hydra_config_path" default="$(find hydra)/config/datasets/kimera_multi_$(arg sensor_type).yaml" 
+        doc="config path to set params for meshes and layers. It should be different depending on the sensor setups."/>
+
+    <!-- semantics -->
+    <arg name="labelspace_name" default="ade20k_mit" doc="semantic label space"/>
+    <arg name="semantic_map_path" default="$(find hydra_ros)/config/color/$(arg labelspace_name).csv"/>
+    <!-- If uncomment below line, the color of Hydra become more distinguisable (in other words, it has different color patterns -->
+    <arg name="colormap_path" default="$(find hydra_ros)/config/color/$(arg labelspace_name).csv" doc="Once you off the debug mode"/>
+
+    <arg name="use_prerecorded_semantics" default="false" doc="Use precorded labels as input"/>
+
+    <arg name="rgb_topic" default="/$(arg robot_name)/forward/color/image_raw/compressed"/>
+    <arg name="rgb_info_topic" default="/$(arg robot_name)/forward/color/camera_info"/>
+    <arg name="depth_topic" default="/$(arg robot_name)/forward/depth/image_rect_raw"/>
+    <arg name="label_topic" default="semantic_inference/semantic/image_raw" unless="$(arg use_offline_semantics)"/>
+   
+    <!-- Semantic inference -->
+    <arg name="need_compressed"
+         value="$(eval arg('use_compressed_transport') and not arg('use_prerecorded_semantics'))"/>
+
+    <group unless="$(arg use_offline_semantics)">
+        <remap from="semantic_inference/color/image_raw/compressed" to="$(arg rgb_topic)"/>
+        <remap from="semantic_inference/labels/image_raw" to="$(arg label_topic)" if="$(arg use_prerecorded_semantics)"/>
+        <include file="$(find semantic_inference_ros)/launch/semantic_inference.launch" pass_all_args="true">
+            <arg name="rgb_image_transport" value="compressed" if="$(arg need_compressed)"/>
+            <arg name="rgb_image_transport" value="raw" unless="$(arg need_compressed)"/>
+        </include>
+    </group>
+
+    <!-- (NOTE) it share the `nodelet manager` from "semantic_inference" -->
+    <arg name="semantic_topic" default="/semantic_inference/semantic/image_raw" doc="It should be from `semantic_inference/semantic`, not from `semantic_inference/semantic_color`"/>
+    <arg name="lidar_topic" default="/$(arg robot_name)/locus/cloud_registered_lidar" doc="LiDAR point cloud from SPARK-Fast-LIO2"/>
+    <arg name="labeled_pointcloud_topic" default="/$(arg robot_name)/semantic_pointcloud"/>
+    <arg name="colored_pointcloud_topic" default="/$(arg robot_name)/semantic_colored_pointcloud"/>
+    <arg name="output_cloud_reference_frame" default="lidar" doc="'lidar' or 'camera'. It should be 'lidar' when you directly run Hydra in LiDAR mode"/>
+
+    <node if="$(arg use_lidar_depth)" pkg="nodelet" type="nodelet" name="semantic_projector"
+              args="load semantic_pointcloud/projection nodelet_manager --no-bond"
+              output="screen"
+              required="true">
+        <param name="projector/output_cloud_reference_frame" value="$(arg output_cloud_reference_frame)"/>
+        <param name="projector/colormap_path" value="$(arg semantic_map_path)"/>
+        <param name="output_queue_size" value="10"/>
+        <param name="output_cloud_reference_frame" value="$(arg output_cloud_reference_frame)"/>
+        <param name="create_color_with_label" value="true"/>
+        <remap from="~semantic_image" to="$(arg semantic_topic)"/>
+        <remap from="~camera_info" to="$(arg rgb_info_topic)"/>
+        <remap from="~cloud" to="$(arg lidar_topic)"/>
+        <remap from="~semantic_pointcloud" to="$(arg labeled_pointcloud_topic)"/>
+        <remap from="~semantic_colored_pointcloud" to="$(arg colored_pointcloud_topic)"/>
+    </node>
+
+    <!-- For LiDAR mode -->
+    <group if="$(arg use_lidar_depth)">
+        <arg name="sensor_min_range" default="0.4" doc="minimum sensor range in meters"/>
+        <arg name="sensor_max_range" default="40.0" doc="maximum sensor range in meters"/>
+
+        <remap from="hydra_ros_node/input/lidar_sensor/pointcloud" to="$(arg labeled_pointcloud_topic)"/>
+        <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+             <arg name="dataset_name" default="$(eval 'kimera_multi_' + arg('robot_name') + '_lidar')" doc="`dataset_name` calls the sensor type, so this should be changed depending on the robot mode"/>
+             <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/kimera_multi_$(arg sensor_type).yaml"/>
+        </include>
+    </group>
+
+    <!-- For depth mode -->
+    <group if="$(eval not arg('use_lidar_depth'))">
+        <arg name="sensor_min_range" default="0.5" doc="minimum sensor range in meters"/>
+        <arg name="sensor_max_range" default="5.0" doc="maximum sensor range in meters"/>
+
+        <remap from="hydra_ros_node/input/left_cam/depth_registered/image_rect" to="$(arg depth_topic)"/>
+        <remap from="hydra_ros_node/input/left_cam/rgb/image_raw" to="$(arg rgb_topic)"/>
+        <remap from="hydra_ros_node/input/left_cam/rgb/camera_info" to="$(arg rgb_info_topic)"/>
+        <remap from="hydra_ros_node/input/left_cam/semantic/image_raw" to="$(arg label_topic)"/>
+        <include file="$(find hydra_ros)/launch/hydra.launch" pass_all_args="true">
+          <arg name="rgb_image_transport" value="$(eval 'compressed' arg('use_compressed_transport') else 'raw')"/>
+          <arg name="dataset_name" default="$(eval 'kimera_multi_' + arg('sensor_type'))" doc="`dataset_name` calls the sensor type, so this should be changed depending on the robot mode"/>
+          <arg name="input_config_path" default="$(find hydra_ros)/config/datasets/kimera_multi_$(arg sensor_type).yaml"/>
+          <arg name="rviz_path" default="$(find hydra_ros)/rviz/kimera_multi_$(arg robot_name).rviz"/>
+        </include>
+    </group>
+</launch>

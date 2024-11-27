@@ -1,0 +1,590 @@
+Panels:
+  - Class: rviz/Displays
+    Help Height: 0
+    Name: Displays
+    Property Tree Widget:
+      Expanded:
+        - /Global Options1
+        - /TF1
+        - /Mesh1
+        - /Mesh1/Visible1
+        - /Input1
+        - /Input1/Depth1
+        - /Input1/Semantics1
+        - /Input1/RGB1
+        - /Factor Graph1
+        - /Factor Graph1/Mesh Edges1
+        - /Factor Graph1/Pose-Mesh Edges1
+        - /Reconstruction1
+        - /Input Semantics1
+        - /PointCloud21
+      Splitter Ratio: 0.4404761791229248
+    Tree Height: 352
+  - Class: rviz/Selection
+    Name: Selection
+  - Class: rviz/Tool Properties
+    Expanded:
+      - /2D Pose Estimate1
+      - /2D Nav Goal1
+      - /Publish Point1
+    Name: Tool Properties
+    Splitter Ratio: 0.5886790156364441
+  - Class: rviz/Views
+    Expanded:
+      - /Current View1
+    Name: Views
+    Splitter Ratio: 0.5
+  - Class: rviz/Time
+    Name: Time
+    SyncMode: 0
+    SyncSource: RGB
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz/TF
+      Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: true
+        acl_jackal2/base:
+          Value: true
+        acl_jackal2/base_link:
+          Value: true
+        acl_jackal2/chassis_link:
+          Value: true
+        acl_jackal2/embedded_imu_link:
+          Value: true
+        acl_jackal2/forward_accel_frame:
+          Value: true
+        acl_jackal2/forward_accel_optical_frame:
+          Value: true
+        acl_jackal2/forward_bottom_screw_frame:
+          Value: true
+        acl_jackal2/forward_camera_link:
+          Value: true
+        acl_jackal2/forward_color_frame:
+          Value: true
+        acl_jackal2/forward_color_optical_frame:
+          Value: true
+        acl_jackal2/forward_depth_frame:
+          Value: true
+        acl_jackal2/forward_depth_optical_frame:
+          Value: true
+        acl_jackal2/forward_gyro_frame:
+          Value: true
+        acl_jackal2/forward_imu_optical_frame:
+          Value: true
+        acl_jackal2/forward_infra1_frame:
+          Value: true
+        acl_jackal2/forward_infra1_optical_frame:
+          Value: true
+        acl_jackal2/forward_infra2_frame:
+          Value: true
+        acl_jackal2/forward_infra2_optical_frame:
+          Value: true
+        acl_jackal2/forward_left_ir_frame:
+          Value: true
+        acl_jackal2/forward_left_ir_optical_frame:
+          Value: true
+        acl_jackal2/forward_link:
+          Value: true
+        acl_jackal2/forward_right_ir_frame:
+          Value: true
+        acl_jackal2/forward_right_ir_optical_frame:
+          Value: true
+        acl_jackal2/front_fender_link:
+          Value: true
+        acl_jackal2/front_mount:
+          Value: true
+        acl_jackal2/imu_link:
+          Value: true
+        acl_jackal2/imu_link_ned:
+          Value: true
+        acl_jackal2/map:
+          Value: true
+        acl_jackal2/mid_mount:
+          Value: true
+        acl_jackal2/navsat_link:
+          Value: true
+        acl_jackal2/odom:
+          Value: true
+        acl_jackal2/os_sensor:
+          Value: true
+        acl_jackal2/ouster_link:
+          Value: true
+        acl_jackal2/realsense_base:
+          Value: true
+        acl_jackal2/rear_fender_link:
+          Value: true
+        acl_jackal2/rear_mount:
+          Value: true
+        acl_jackal2/sensor_plate_link:
+          Value: true
+        acl_jackal2/velodyne:
+          Value: true
+        acl_jackal2/velodyne_base_link:
+          Value: true
+        acl_jackal2/velodyne_link:
+          Value: true
+        map:
+          Value: true
+        robot:
+          Value: true
+        world:
+          Value: true
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        acl_jackal2/odom:
+          acl_jackal2/base:
+            acl_jackal2/base_link:
+              acl_jackal2/chassis_link:
+                acl_jackal2/embedded_imu_link:
+                  {}
+                acl_jackal2/front_fender_link:
+                  {}
+                acl_jackal2/mid_mount:
+                  acl_jackal2/front_mount:
+                    {}
+                  acl_jackal2/rear_mount:
+                    {}
+                acl_jackal2/navsat_link:
+                  {}
+                acl_jackal2/rear_fender_link:
+                  {}
+              acl_jackal2/sensor_plate_link:
+                acl_jackal2/forward_link:
+                  acl_jackal2/forward_accel_frame:
+                    acl_jackal2/forward_accel_optical_frame:
+                      {}
+                  acl_jackal2/forward_bottom_screw_frame:
+                    acl_jackal2/forward_camera_link:
+                      {}
+                  acl_jackal2/forward_color_frame:
+                    acl_jackal2/forward_color_optical_frame:
+                      {}
+                  acl_jackal2/forward_depth_frame:
+                    acl_jackal2/forward_depth_optical_frame:
+                      {}
+                    acl_jackal2/forward_left_ir_frame:
+                      acl_jackal2/forward_left_ir_optical_frame:
+                        {}
+                    acl_jackal2/forward_right_ir_frame:
+                      acl_jackal2/forward_right_ir_optical_frame:
+                        {}
+                  acl_jackal2/forward_gyro_frame:
+                    acl_jackal2/forward_imu_optical_frame:
+                      {}
+                  acl_jackal2/forward_infra1_frame:
+                    {}
+                  acl_jackal2/forward_infra2_frame:
+                    {}
+                acl_jackal2/imu_link:
+                  acl_jackal2/imu_link_ned:
+                    {}
+                acl_jackal2/velodyne_link:
+                  acl_jackal2/velodyne_base_link:
+                    acl_jackal2/velodyne:
+                      {}
+        acl_jackal2/ouster_link:
+          acl_jackal2/os_sensor:
+            {}
+        acl_jackal2/realsense_base:
+          acl_jackal2/forward_infra1_optical_frame:
+            {}
+          acl_jackal2/forward_infra2_optical_frame:
+            {}
+        map:
+          robot:
+            {}
+        world:
+          acl_jackal2/map:
+            {}
+      Update Interval: 0
+      Value: true
+    - Class: rviz/MarkerArray
+      Enabled: false
+      Marker Topic: /hydra_dsg_visualizer/dsg_markers
+      Name: Scene Graph
+      Namespaces:
+        {}
+      Queue Size: 100
+      Value: false
+    - Class: kimera_pgmo_rviz/MeshDisplay
+      Cull Backfaces: false
+      Enable Lighting: false
+      Enabled: true
+      Name: Mesh
+      Queue Size: 10
+      Toggle Visibility All: true
+      Topic: /hydra_dsg_visualizer/dsg_mesh
+      Unreliable: false
+      Value: true
+      Visible:
+        Value: true
+        robot0:
+          Value: true
+          dsg_mesh: true
+    - Class: rviz/Group
+      Displays:
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: Input Pointcloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.009999999776482582
+          Style: Flat Squares
+          Topic: /semantic_pointcloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+        - Class: rviz/Image
+          Enabled: true
+          Image Topic: /acl_jackal2/forward/depth/image_rect_raw
+          Max Value: 1
+          Median window: 300
+          Min Value: 0
+          Name: Depth
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+        - Class: rviz/Image
+          Enabled: false
+          Image Topic: /semantic_inference/semantic_color/image_raw
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: Semantics
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: false
+        - Class: rviz/Image
+          Enabled: true
+          Image Topic: /acl_jackal2/forward/color/image_raw
+          Max Value: 1
+          Median window: 5
+          Min Value: 0
+          Name: RGB
+          Normalize Range: true
+          Queue Size: 2
+          Transport Hint: raw
+          Unreliable: false
+          Value: true
+      Enabled: true
+      Name: Input
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /hydra_ros_node/backend/deformation_graph_mesh_mesh
+          Name: Mesh Edges
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+        - Class: rviz/Marker
+          Enabled: true
+          Marker Topic: /hydra_ros_node/backend/deformation_graph_pose_mesh
+          Name: Pose-Mesh Edges
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: true
+      Enabled: true
+      Name: Factor Graph
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/esdf_viz
+          Name: EsdfSlice
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/freespace_viz
+          Name: Freespace Spheres
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/graph_viz
+          Name: Sparse GVD Graph
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/gvd_cluster_viz
+          Name: GVD Clusters
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/gvd_graph_viz
+          Name: GVD Graph
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/gvd_viz
+          Name: GVD Voxels
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/surface_viz
+          Name: GVD Surface
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/places/voxel_block_viz
+          Name: GVD Block Extents
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_dsg_visualizer/places_basis_points
+          Name: Basis Points
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+      Enabled: true
+      Name: Places
+    - Class: rviz/Group
+      Displays:
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/reconstruction/tsdf_viz
+          Name: TSDF Distances
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/reconstruction/tsdf_weight_viz
+          Name: TSDF Weights
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/reconstruction/tsdf_block_viz
+          Name: TSDF Allocated Blocks
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: rviz/MarkerArray
+          Enabled: false
+          Marker Topic: /hydra_ros_node/reconstruction/mesh_block_viz
+          Name: Active Mesh Block Extents
+          Namespaces:
+            {}
+          Queue Size: 100
+          Value: false
+        - Class: kimera_pgmo_rviz/MeshDisplay
+          Cull Backfaces: true
+          Enable Lighting: false
+          Enabled: false
+          Name: Active Mesh
+          Queue Size: 10
+          Toggle Visibility All: true
+          Topic: /hydra_ros_node/reconstruction/mesh
+          Unreliable: false
+          Value: false
+          Visible: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz/PointCloud2
+          Color: 255; 255; 255
+          Color Transformer: RGB8
+          Decay Time: 0
+          Enabled: false
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Min Color: 0; 0; 0
+          Name: Input Pointcloud
+          Position Transformer: XYZ
+          Queue Size: 10
+          Selectable: true
+          Size (Pixels): 3
+          Size (m): 0.009999999776482582
+          Style: Flat Squares
+          Topic: /hydra_ros_node/reconstruction/left_cam/pointcloud
+          Unreliable: false
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: false
+      Enabled: true
+      Name: Reconstruction
+    - Class: rviz/Image
+      Enabled: true
+      Image Topic: /semantic_inference/semantic_color/image_raw
+      Max Value: 1
+      Median window: 5
+      Min Value: 0
+      Name: Input Semantics
+      Normalize Range: true
+      Queue Size: 2
+      Transport Hint: raw
+      Unreliable: false
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: intensity
+      Class: rviz/PointCloud2
+      Color: 255; 255; 255
+      Color Transformer: RGB8
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Min Color: 0; 0; 0
+      Name: PointCloud2
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 3
+      Size (m): 0.20000000298023224
+      Style: Spheres
+      Topic: /acl_jackal2/semantic_colored_pointcloud
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+  Enabled: true
+  Global Options:
+    Background Color: 255; 255; 255
+    Default Light: true
+    Fixed Frame: acl_jackal2/map
+    Frame Rate: 30
+  Name: root
+  Tools:
+    - Class: rviz/Interact
+      Hide Inactive Objects: true
+    - Class: rviz/MoveCamera
+    - Class: rviz/Select
+    - Class: rviz/FocusCamera
+    - Class: rviz/Measure
+    - Class: rviz/SetInitialPose
+      Theta std deviation: 0.2617993950843811
+      Topic: /initialpose
+      X std deviation: 0.5
+      Y std deviation: 0.5
+    - Class: rviz/SetGoal
+      Topic: /move_base_simple/goal
+    - Class: rviz/PublishPoint
+      Single click: true
+      Topic: /clicked_point
+  Value: true
+  Views:
+    Current:
+      Class: rviz/Orbit
+      Distance: 207.17344665527344
+      Enable Stereo Rendering:
+        Stereo Eye Separation: 0.05999999865889549
+        Stereo Focal Distance: 1
+        Swap Stereo Eyes: false
+        Value: false
+      Field of View: 0.7853981852531433
+      Focal Point:
+        X: 4.001810073852539
+        Y: -102.85115051269531
+        Z: 10.972491264343262
+      Focal Shape Fixed Size: false
+      Focal Shape Size: 0.05000000074505806
+      Invert Z Axis: false
+      Name: Current View
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 1.3547968864440918
+      Target Frame: <Fixed Frame>
+      Yaw: 0.23540587723255157
+    Saved: ~
+Window Geometry:
+  Depth:
+    collapsed: false
+  Displays:
+    collapsed: false
+  Height: 1403
+  Hide Left Dock: false
+  Hide Right Dock: true
+  Input Semantics:
+    collapsed: false
+  QMainWindow State: 000000ff00000000fd00000004000000000000022400000521fc020000000cfb0000001200530065006c0065006300740069006f006e000000003b0000018f0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000005fb000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000003d0000019d000000c900fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000000a0044006500700074006801000001e00000022d0000001600fffffffb0000001200530065006d0061006e007400690063007300000002dc000000a70000001600fffffffb000000060052004700420100000413000000700000001600fffffffb0000001e0049006e007000750074002000530065006d0061006e00740069006300730100000489000000d50000001600ffffff000000010000010f00000521fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073000000003d00000521000000a400fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000007800000003efc0100000002fb0000000800540069006d006502000001880000025800000418000001e0fb0000000800540069006d006501000000000000045000000000000000000000078e0000052100000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  RGB:
+    collapsed: false
+  Selection:
+    collapsed: false
+  Semantics:
+    collapsed: false
+  Time:
+    collapsed: false
+  Tool Properties:
+    collapsed: false
+  Views:
+    collapsed: true
+  Width: 2488
+  X: 4072
+  Y: 313
