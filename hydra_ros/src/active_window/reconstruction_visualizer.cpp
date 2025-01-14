@@ -43,6 +43,7 @@
 #include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_ros/utils/input_data_to_messages.h"
+#include "hydra_ros/utils/node_handle_factory.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
@@ -120,7 +121,7 @@ void ImagePublisherGroup::publishMsg(const image_transport::Publisher& pub,
 
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
     : config(config),
-      nh_(config.ns),
+      nh_(NodeHandleFactory::getNodeHandle(config.ns)),
       pubs_(nh_),
       active_mesh_pub_(nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("mesh", 1)),
       image_pubs_(nh_),

@@ -41,6 +41,8 @@
 
 #include "hydra_ros/hydra_ros_pipeline.h"
 #include "hydra_ros/utils/node_utilities.h"
+#include "hydra_ros/utils/node_handle_factory.h"
+
 
 namespace hydra {
 

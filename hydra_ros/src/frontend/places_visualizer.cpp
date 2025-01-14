@@ -46,6 +46,7 @@
 
 #include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
+#include "hydra_ros/utils/node_handle_factory.h"
 
 namespace hydra {
 
@@ -70,7 +71,7 @@ void declare_config(PlacesVisualizer::Config& config) {
 
 PlacesVisualizer::PlacesVisualizer(const Config& config)
     : config(config),
-      nh_(config.ns),
+      nh_(NodeHandleFactory::getNodeHandle(config.ns)),
       pubs_(nh_),
       gvd_config_(nh_, "gvd"),
       layer_config_(nh_, "graph"),
