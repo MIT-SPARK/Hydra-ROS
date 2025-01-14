@@ -116,6 +116,9 @@ class KhronosObjectPlugin : public VisualizerPlugin {
 
     //! Number of color revolutions used to recolor integer IDs.
     int id_color_revolutions = 10;
+
+    //! Layer to draw objects for
+    spark_dsg::LayerId layer = spark_dsg::DsgLayers::OBJECTS;
   } const config;
 
   // Construction.

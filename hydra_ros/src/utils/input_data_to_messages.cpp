@@ -122,10 +122,13 @@ sensor_msgs::PointCloud2::Ptr makeCloud(const std_msgs::Header& header,
       size_t offset = r * cloud->row_step + c * cloud->point_step;
       const auto range = ranges.at<float>(r, c);
       const auto& p = points.at<cv::Vec3f>(r, c);
-      Eigen::Vector3f p_C;
-      p_C << p[0], p[1], p[2];
 
-      Eigen::Vector3f p_W = world_T_sensor * p_C;
+      Eigen::Vector3f point;
+      point << p[0], p[1], p[2];
+      if (!sensor_data.points_in_world_frame) {
+        point = (world_T_sensor * point).eval();
+      }
+
       auto xyz = reinterpret_cast<float*>(cloud->data.data() + offset);
       if (filter_by_range &&
           (range < sensor.min_range() || range > sensor.max_range())) {
@@ -134,9 +137,9 @@ sensor_msgs::PointCloud2::Ptr makeCloud(const std_msgs::Header& header,
         *(xyz + 2) = std::numeric_limits<float>::quiet_NaN();
 
       } else {
-        *xyz = p_W.x();
-        *(xyz + 1) = p_W.y();
-        *(xyz + 2) = p_W.z();
+        *xyz = point.x();
+        *(xyz + 1) = point.y();
+        *(xyz + 2) = point.z();
       }
       offset += 3 * sizeof(float);
 

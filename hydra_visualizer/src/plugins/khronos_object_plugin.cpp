@@ -101,6 +101,7 @@ void declare_config(KhronosObjectPlugin::Config& config) {
   field(config.id_color_revolutions, "id_color_revolutions");
   field(config.dynamic_color, "dynamic_color");
   field(config.dynamic_bbox_scale, "dynamic_bbox_scale", "m");
+  field(config.layer, "layer");
 
   check(config.queue_size, GE, 0, "queue_size");
   check(config.id_color_revolutions, GT, 0, "id_color_revolutions");
@@ -118,7 +119,7 @@ KhronosObjectPlugin::KhronosObjectPlugin(const Config& config,
 
 void KhronosObjectPlugin::draw(const std_msgs::Header& header,
                                const DynamicSceneGraph& graph) {
-  if (!graph.hasLayer(spark_dsg::DsgLayers::OBJECTS)) {
+  if (!graph.hasLayer(config.layer)) {
     return;
   }
   drawDynamicObjects(header, graph);
@@ -147,7 +148,7 @@ void KhronosObjectPlugin::drawDynamicObjects(const std_msgs::Header& header,
   }
 
   // For dynamic objects show the start and end bbox with a line for the trajectory.
-  const auto& objects = graph.getLayer(spark_dsg::DsgLayers::OBJECTS);
+  const auto& objects = graph.getLayer(config.layer);
   MarkerArray msg;
 
   for (const auto& [node_id, node] : objects.nodes()) {
@@ -215,7 +216,7 @@ void KhronosObjectPlugin::drawStaticObjects(const std_msgs::Header& header,
   }
 
   std::unordered_set<uint64_t> present_objects;
-  const auto& objects = dsg.getLayer(spark_dsg::DsgLayers::OBJECTS);
+  const auto& objects = dsg.getLayer(config.layer);
   for (const auto& [node_id, node] : objects.nodes()) {
     const auto attrs =
         dynamic_cast<const KhronosObjectAttributes*>(node->getAttributesPtr());
