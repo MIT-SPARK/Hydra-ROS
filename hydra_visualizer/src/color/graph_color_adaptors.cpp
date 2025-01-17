@@ -222,6 +222,11 @@ double DistanceFunctor::eval(const DynamicSceneGraph&,
   return node.attributes<PlaceNodeAttributes>().distance;
 }
 
+double LastUpdatedFunctor::eval(const DynamicSceneGraph&,
+                                const SceneGraphNode& node) const {
+  return node.attributes().last_update_time_ns;
+}
+
 ValueColorAdaptor::ValueColorAdaptor(const Config& config)
     : config(config),
       min_value_(0.0),

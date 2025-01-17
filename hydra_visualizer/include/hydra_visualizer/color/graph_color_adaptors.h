@@ -249,6 +249,14 @@ struct DistanceFunctor : ValueFunctor {
       config::Registration<ValueFunctor, DistanceFunctor>("place_distance");
 };
 
+struct LastUpdatedFunctor : ValueFunctor {
+  double eval(const spark_dsg::DynamicSceneGraph& graph,
+              const spark_dsg::SceneGraphNode& node) const override;
+
+  inline static const auto registration =
+      config::Registration<ValueFunctor, LastUpdatedFunctor>("last_updated");
+};
+
 struct ValueColorAdaptor : GraphColorAdaptor {
   struct Config {
     visualizer::RangeColormap::Config colormap;
