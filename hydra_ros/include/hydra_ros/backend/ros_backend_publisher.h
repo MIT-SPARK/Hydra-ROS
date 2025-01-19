@@ -56,6 +56,9 @@ class RosBackendPublisher : public BackendModule::Sink {
   std::string printInfo() const override;
 
  protected:
+  virtual void publishMeshGraph(const DynamicSceneGraph& graph,
+                                const kimera_pgmo::DeformationGraph& dgraph) const;
+
   virtual void publishPoseGraph(const DynamicSceneGraph& graph,
                                 const kimera_pgmo::DeformationGraph& dgraph) const;
 
@@ -67,6 +70,7 @@ class RosBackendPublisher : public BackendModule::Sink {
   ros::Publisher mesh_mesh_edges_pub_;
   ros::Publisher pose_mesh_edges_pub_;
   ros::Publisher pose_graph_pub_;
+  ros::Publisher mesh_graph_pub_;
   std::unique_ptr<DsgSender> dsg_sender_;
 };
 

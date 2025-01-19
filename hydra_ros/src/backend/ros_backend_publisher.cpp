@@ -65,6 +65,7 @@ RosBackendPublisher::RosBackendPublisher(const ros::NodeHandle& nh)
   pose_mesh_edges_pub_ =
       nh_.advertise<Marker>("deformation_graph_pose_mesh", 10, false);
   pose_graph_pub_ = nh_.advertise<PoseGraph>("pose_graph", 10, false);
+  mesh_graph_pub_ = nh_.advertise<PoseGraph>("mesh_graph", 10, false);
 
   const auto map_frame = GlobalInfo::instance().getFrames().map;
   dsg_sender_.reset(
@@ -80,6 +81,10 @@ void RosBackendPublisher::call(uint64_t timestamp_ns,
 
   if (pose_graph_pub_.getNumSubscribers() > 0) {
     publishPoseGraph(graph, dgraph);
+  }
+
+  if (mesh_graph_pub_.getNumSubscribers() > 0) {
+    publishMeshGraph(graph, dgraph);
   }
 
   if (mesh_mesh_edges_pub_.getNumSubscribers() > 0 ||
@@ -102,11 +107,21 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
     times.push_back(node->timestamp.value().count());
   }
 
-  const auto pose_graph = *dgraph.getPoseGraph(id_timestamps);
+  const auto pose_graph = *dgraph.getPoseGraph(id_timestamps, false, true);
   const auto map_frame = GlobalInfo::instance().getFrames().map;
   auto pose_graph_msg = pose_graph_tools::toMsg(pose_graph);
   pose_graph_msg.header.frame_id = map_frame;
   pose_graph_pub_.publish(pose_graph_msg);
+}
+
+void RosBackendPublisher::publishMeshGraph(const DynamicSceneGraph& graph,
+                                           const DeformationGraph& dgraph) const {
+  std::map<size_t, std::vector<size_t>> id_timestamps_temp;
+  const auto mesh_graph = *dgraph.getPoseGraph(id_timestamps_temp, true, false);
+  const auto map_frame = GlobalInfo::instance().getFrames().map;
+  auto mesh_graph_msg = pose_graph_tools::toMsg(mesh_graph);
+  mesh_graph_msg.header.frame_id = map_frame;
+  mesh_graph_pub_.publish(mesh_graph_msg);
 }
 
 void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgraph,
