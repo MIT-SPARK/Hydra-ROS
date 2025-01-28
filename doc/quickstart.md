@@ -31,7 +31,7 @@ catkin build
 First, start Kimera:
 
 ```
-roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 use_lcd:=false
+roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 use_lcd:=false odom_frame_id:=odom
 ```
 
 and in a separate terminal, run:
@@ -47,6 +47,7 @@ First, start Kimera:
 
 ```
 roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
+    odom_frame_id:=odom \
     use_lcd:=true \
     lcd_no_optimize:=true
 ```
@@ -65,6 +66,7 @@ First, start Kimera:
 
 ```
 roslaunch kimera_vio_ros kimera_vio_ros_uhumans2.launch online:=true viz_type:=1 \
+     odom_frame_id:=odom \
      use_lcd:=true \
      lcd_no_detection:=true
 ```

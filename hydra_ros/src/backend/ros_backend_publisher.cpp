@@ -114,7 +114,7 @@ void RosBackendPublisher::publishPoseGraph(const DynamicSceneGraph& graph,
   pose_graph_pub_.publish(pose_graph_msg);
 }
 
-void RosBackendPublisher::publishMeshGraph(const DynamicSceneGraph& graph,
+void RosBackendPublisher::publishMeshGraph(const DynamicSceneGraph&,
                                            const DeformationGraph& dgraph) const {
   std::map<size_t, std::vector<size_t>> id_timestamps_temp;
   const auto mesh_graph = *dgraph.getPoseGraph(id_timestamps_temp, true, false);
