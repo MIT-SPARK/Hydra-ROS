@@ -1,6 +1,5 @@
 #include "hydra_ros/visualizer/feature_color_adaptors.h"
 
-#include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
@@ -11,15 +10,12 @@
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>
 
-#include "hydra_ros_build_config.h"
-
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-#include <semantic_inference_msgs/FeatureVectorStamped.h>
-#endif
+#include "hydra_ros/common.h"
 
 namespace hydra {
 
 using namespace spark_dsg;
+using semantic_inference_msgs::msg::FeatureVectorStamped;
 
 namespace {
 
@@ -96,34 +92,15 @@ void declare_config(FeatureScoreColor::Config& config) {
   field(config.metric, "metric");
 }
 
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-using semantic_inference_msgs::FeatureVectorStamped;
-
-struct FeatureScoreColor::FeatureTrampoline {
-  void callback(const FeatureVectorStamped& msg) {
-    const auto& vec = msg.feature.data;
-    trampoline(Eigen::Map<const Eigen::VectorXf>(vec.data(), vec.size()));
-  }
-
-  std::function<void(const Eigen::VectorXf&)> trampoline;
-};
-#else
-struct FeatureScoreColor::FeatureTrampoline {};
-#endif
-
 FeatureScoreColor::FeatureScoreColor(const Config& config)
     : config(config),
-      nh_(config.ns),
       has_change_(false),
       has_feature_(false),
       metric_(config.metric.create()) {
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-  trampoline_.reset(new FeatureTrampoline());
-  trampoline_->trampoline = [this](const auto& vec) { setFeature(vec); };
-  sub_ = nh_.subscribe("feature", 1, &FeatureTrampoline::callback, trampoline_.get());
-#else
-  LOG(ERROR) << "semantic_inference_msgs not found when building, disabled!";
-#endif
+  // TODO(nathan) this is wrong
+  auto nh = getHydraNodeHandle(config.ns);
+  sub_ = nh.create_subscription<FeatureVectorStamped>(
+      "feature", 1, &FeatureScoreColor::callback, this);
 }
 
 FeatureScoreColor::~FeatureScoreColor() = default;
@@ -170,6 +147,11 @@ void FeatureScoreColor::setFeature(const Eigen::VectorXf& feature) {
   feature_ = feature;
   has_feature_ = true;
   has_change_ = true;
+}
+
+void FeatureScoreColor::callback(const InputMsg::ConstSharedPtr& msg) {
+  const auto& vec = msg->feature.data;
+  setFeature(Eigen::Map<const Eigen::VectorXf>(vec.data(), vec.size()));
 }
 
 void declare_config(NearestFeatureColor::Config& config) {

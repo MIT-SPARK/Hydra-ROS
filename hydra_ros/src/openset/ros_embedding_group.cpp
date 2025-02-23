@@ -3,34 +3,34 @@
 #include <config_utilities/config.h>
 #include <glog/logging.h>
 #include <hydra/openset/openset_types.h>
-#include <ros/ros.h>
+#include <ianvs/message_wait_functor.h>
 
-#include "hydra_ros_build_config.h"
+#include <semantic_inference_msgs/msg/feature_vectors.hpp>
+#include <semantic_inference_msgs/srv/encode_feature.hpp>
 
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-#include <semantic_inference_msgs/EncodeFeature.h>
-#include <semantic_inference_msgs/FeatureVectors.h>
-#endif
+#include "hydra_ros/common.h"
+
+using semantic_inference_msgs::msg::FeatureVectors;
+using semantic_inference_msgs::srv::EncodeFeature;
 
 namespace hydra {
 
-template <typename T>
-struct MessageWaitFunctor {
-  void callback(const T& msg) { msg_ = msg; }
+using namespace std::chrono_literals;
 
-  std::optional<T> wait() {
-    ros::WallRate r(10.0);
-    while (ros::ok() && !msg_) {
-      r.sleep();
-      ros::spinOnce();
+template <typename T>
+std::future_status wait_for_result(T& future, std::chrono::seconds timeout) {
+  auto status = std::future_status::timeout;
+  const auto start = std::chrono::steady_clock::now();
+  while (status != std::future_status::ready && rclcpp::ok()) {
+    if (std::chrono::steady_clock::now() - start > timeout) {
+      break;
     }
 
-    return msg_;
+    status = future.wait_for(100ms);
   }
 
- private:
-  std::optional<T> msg_;
-};
+  return status;
+}
 
 void declare_config(RosEmbeddingGroup::Config& config) {
   using namespace config;
@@ -41,21 +41,15 @@ void declare_config(RosEmbeddingGroup::Config& config) {
 }
 
 RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
   if (config.prompts.empty()) {
-    ros::NodeHandle nh(config.ns);
+    auto nh = getHydraNodeHandle(config.ns);
+    const auto topic_name = nh.resolve_name("features", false);
     LOG_IF(INFO, !config.silent_wait)
-        << "Waiting for embeddings on '" << nh.resolveName("features") << "'";
-    MessageWaitFunctor<semantic_inference_msgs::FeatureVectors> functor;
-    auto sub = nh.subscribe(
-        "features",
-        1,
-        &MessageWaitFunctor<semantic_inference_msgs::FeatureVectors>::callback,
-        &functor);
-    const auto msg = functor.wait();
+        << "Waiting for embeddings on '" << topic_name << "'";
+
+    const auto msg = ianvs::getSingleMessage<FeatureVectors>(nh, "features", true);
     if (!msg) {
-      LOG(ERROR) << "Failed to get embeddings from '" << nh.resolveName("features")
-                 << "'";
+      LOG(ERROR) << "Failed to get embeddings from '" << topic_name << "'";
       return;
     }
 
@@ -67,30 +61,35 @@ RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
       }
     }
 
-    LOG_IF(INFO, !config.silent_wait)
-        << "Got embeddings from '" << nh.resolveName("features") << "'!";
+    LOG_IF(INFO, !config.silent_wait) << "Got embeddings from '" << topic_name << "'!";
     return;
   }
 
-  const std::string service_name = ros::names::append(config.ns, "embed");
-  LOG_IF(INFO, !config.silent_wait) << "Waiting for embedding encoder on '"
-                                    << ros::names::resolve(service_name) << "'...";
-  ros::service::waitForService(service_name);
+  auto nh = getHydraNodeHandle(config.ns);
+  const auto service_name = nh.resolve_name("embed", true);
+  LOG_IF(INFO, !config.silent_wait)
+      << "Waiting for embedding encoder on '" << service_name << "'...";
+
+  auto client = nh.create_client<EncodeFeature>("embed");
+  while (!client->wait_for_service(10ms) && rclcpp::ok()) {
+  }
 
   for (const auto& prompt : config.prompts) {
-    ::semantic_inference_msgs::EncodeFeature msg;
-    msg.request.prompt = prompt;
-    CHECK(ros::service::call(service_name, msg));
+    auto msg = std::make_unique<EncodeFeature::Request>();
+    msg->prompt = prompt;
+    auto rep = client->async_send_request(std::move(msg)).future.share();
+    if (wait_for_result(rep, 1s) != std::future_status::ready) {
+      LOG(ERROR) << "Failed to get result for '" << prompt << "'";
+      continue;
+    }
+
     names.push_back(prompt);
-    const auto& vec = msg.response.feature.feature.data;
+    const auto& vec = rep.get()->feature.feature.data;
     embeddings.emplace_back(Eigen::Map<const FeatureVector>(vec.data(), vec.size()));
   }
 
-  LOG_IF(INFO, !config.silent_wait) << "Finished embedding prompts on using '"
-                                    << ros::names::resolve(service_name) << "'!";
-#else
-  LOG(ERROR) << "Hydra not built with semantic_inference. Not encoding prompts";
-#endif
+  LOG_IF(INFO, !config.silent_wait)
+      << "Finished embedding prompts on using '" << service_name << "'!";
 }
 
 }  // namespace hydra

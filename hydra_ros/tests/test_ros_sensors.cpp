@@ -38,8 +38,10 @@
 #include <gtest/gtest.h>
 #include <hydra/input/lidar.h>
 #include <hydra_ros/input/ros_sensors.h>
-#include <ros/ros.h>
-#include <sensor_msgs/CameraInfo.h>
+
+#include <rclcpp/node.hpp>
+#include <rclcpp/publisher.hpp>
+#include <sensor_msgs/msg/camera_info.hpp>
 
 #include <Eigen/Geometry>
 
@@ -64,14 +66,16 @@ class RosSensors : public ::testing::Test {
   RosSensors() = default;
   virtual ~RosSensors() = default;
   void SetUp() override {
-    info_pub =
-        nh.advertise<sensor_msgs::CameraInfo>("/some/camera/camera_info", 1, true);
-    sensor_msgs::CameraInfo msg;
+    // TODO(nathan) not sure this will work correctly
+    auto node = std::make_shared<rclcpp::Node>("test_ros_sensors");
+    info_pub = node->create_publisher<sensor_msgs::msg::CameraInfo>(
+        "/some/camera/camera_info", rclcpp::QoS(1).transient_local());
+    sensor_msgs::msg::CameraInfo msg;
     msg.header.frame_id = "lidar";
     msg.height = 1;
     msg.width = 2;
-    msg.K = {3, 0, 4, 0, 5, 6, 0, 0, 0};
-    info_pub.publish(msg);
+    msg.k = {3, 0, 4, 0, 5, 6, 0, 0, 0};
+    info_pub->publish(msg);
 
     expected_intrinsics.min_range = 10;
     expected_intrinsics.max_range = 15;
@@ -89,8 +93,7 @@ class RosSensors : public ::testing::Test {
   ParamSensorExtrinsics::Config expected_extrinsics;
   Camera::Config expected_intrinsics;
 
-  ros::NodeHandle nh;
-  ros::Publisher info_pub;
+  rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr info_pub;
 };
 
 TEST_F(RosSensors, TestNonCamera) {

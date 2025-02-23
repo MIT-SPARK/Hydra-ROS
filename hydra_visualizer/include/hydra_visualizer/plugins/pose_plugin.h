@@ -33,7 +33,11 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <geometry_msgs/msg/pose_array.hpp>
+#include <rclcpp/publisher.hpp>
+
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
+#include <ianvs/node_handle.h>
 
 namespace hydra {
 
@@ -45,17 +49,17 @@ class PosePlugin : public VisualizerPlugin {
     spark_dsg::PartitionId partition = 'a';
   } const config;
 
-  PosePlugin(const Config& config, const ros::NodeHandle& nh, const std::string& name);
+  PosePlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
 
   virtual ~PosePlugin() = default;
 
-  void draw(const std_msgs::Header& header,
+  void draw(const std_msgs::msg::Header& header,
             const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header) override;
+  void reset(const std_msgs::msg::Header& header) override;
 
  protected:
-  ros::Publisher pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pub_;
 };
 
 void declare_config(PosePlugin::Config& config);

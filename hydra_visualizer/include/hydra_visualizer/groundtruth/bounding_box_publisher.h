@@ -33,18 +33,19 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <ros/ros.h>
 #include <spark_dsg/bounding_box.h>
-#include <std_msgs/String.h>
 
 #include <filesystem>
+
+#include <rclcpp/node.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
 
 namespace hydra {
 
-class BoundingBoxPublisher {
+class BoundingBoxPublisher : public rclcpp::Node {
  public:
   using Ptr = std::shared_ptr<BoundingBoxPublisher>;
   using Annotations = std::map<std::string, std::vector<spark_dsg::BoundingBox>>;
@@ -52,7 +53,6 @@ class BoundingBoxPublisher {
   struct Config {
     std::filesystem::path filepath;
     std::string frame_id = "map";
-    std::string ns = "~gt";
     std::string marker_ns = "";
     bool draw_labels = true;
     double scale = 0.015;
@@ -63,22 +63,21 @@ class BoundingBoxPublisher {
     visualizer::DiscreteColormap::Config colormap;
   } const config;
 
-  explicit BoundingBoxPublisher(const Config& config);
+  explicit BoundingBoxPublisher(const rclcpp::NodeOptions& options);
 
-  void load(const std_msgs::String& msg);
+  void load(const std_msgs::msg::String& msg);
 
  private:
-  void drawBoxes(const std_msgs::Header& header,
+  void drawBoxes(const std_msgs::msg::Header& header,
                  const Annotations& boxes,
-                 visualization_msgs::MarkerArray& msg) const;
+                 visualization_msgs::msg::MarkerArray& msg) const;
 
-  void drawLabels(const std_msgs::Header& header,
+  void drawLabels(const std_msgs::msg::Header& header,
                   const Annotations& boxes,
-                  visualization_msgs::MarkerArray& msg) const;
+                  visualization_msgs::msg::MarkerArray& msg) const;
 
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  ros::Subscriber sub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
   std::string marker_ns_;
   mutable MarkerTracker tracker_;
   const visualizer::DiscreteColormap colormap_;

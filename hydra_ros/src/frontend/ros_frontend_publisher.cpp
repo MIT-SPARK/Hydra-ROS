@@ -35,39 +35,32 @@
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 
 #include <hydra/common/global_info.h>
-#include <kimera_pgmo_msgs/KimeraPgmoMeshDelta.h>
-#include <kimera_pgmo_ros/conversion/mesh_delta_conversion.h>
-#include <pose_graph_tools_msgs/PoseGraph.h>
-#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
-using kimera_pgmo_msgs::KimeraPgmoMeshDelta;
-using pose_graph_tools_msgs::PoseGraph;
+using kimera_pgmo::MeshDeltaTypeAdapter;
+using pose_graph_tools::PoseGraphTypeAdapter;
 
-RosFrontendPublisher::RosFrontendPublisher(const ros::NodeHandle& node_handle)
-    : nh_(node_handle) {
+RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh) {
   const auto odom_frame = GlobalInfo::instance().getFrames().odom;
-  dsg_sender_.reset(new DsgSender(nh_, odom_frame, "frontend", false));
-  mesh_graph_pub_ = nh_.advertise<PoseGraph>("mesh_graph_incremental", 100, true);
-  mesh_update_pub_ = nh_.advertise<KimeraPgmoMeshDelta>("full_mesh_update", 100, true);
+  dsg_sender_.reset(new DsgSender(nh, odom_frame, "frontend", false));
+  mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
+      "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
+  mesh_update_pub_ = nh.create_publisher<MeshDeltaTypeAdapter>(
+      "full_mesh_update", rclcpp::QoS(100).transient_local());
 }
 
 void RosFrontendPublisher::call(uint64_t timestamp_ns,
                                 const DynamicSceneGraph& graph,
                                 const BackendInput& backend_input) const {
-  auto msg = pose_graph_tools::toMsg(backend_input.deformation_graph);
-  msg.header.stamp.fromNSec(timestamp_ns);
-  mesh_graph_pub_.publish(msg);
-
+  // TODO(nathan) make sure pgmo stamps the deformation graph
+  mesh_graph_pub_->publish(backend_input.deformation_graph);
   if (backend_input.mesh_update) {
-    mesh_update_pub_.publish(
-        kimera_pgmo::conversions::toRosMsg(*backend_input.mesh_update, timestamp_ns));
+    backend_input.mesh_update->timestamp_ns = timestamp_ns;
+    mesh_update_pub_->publish(*backend_input.mesh_update);
   }
 
-  ros::Time stamp;
-  stamp.fromNSec(timestamp_ns);
-  dsg_sender_->sendGraph(graph, stamp);
+  dsg_sender_->sendGraph(graph, rclcpp::Time(timestamp_ns));
 }
 
 }  // namespace hydra

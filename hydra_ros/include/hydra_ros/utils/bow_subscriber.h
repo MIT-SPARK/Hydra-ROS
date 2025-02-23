@@ -33,21 +33,22 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <pose_graph_tools_msgs/BowQueries.h>
-#include <ros/ros.h>
+#include <ianvs/node_handle.h>
+
+#include <pose_graph_tools_msgs/msg/bow_queries.hpp>
 
 namespace hydra {
 
 class BowSubscriber {
  public:
-  explicit BowSubscriber(const ros::NodeHandle& nh);
+  using MsgType = pose_graph_tools_msgs::msg::BowQueries;
+  explicit BowSubscriber(ianvs::NodeHandle nh);
 
  protected:
-  void callback(const pose_graph_tools_msgs::BowQueries& msg);
+  void callback(const MsgType::ConstSharedPtr& msg);
 
  protected:
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
+  rclcpp::Subscription<MsgType>::SharedPtr sub_;
 };
 
 }  // namespace hydra

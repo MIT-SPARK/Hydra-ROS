@@ -35,18 +35,31 @@
 #include "hydra_visualizer/io/graph_ros_wrapper.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/factory.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/serialization/graph_binary_serialization.h>
 
-namespace hydra {
+#include <rclcpp/create_subscription.hpp>
 
+namespace hydra {
+namespace {
+static const auto registration =
+    config::RegistrationWithConfig<GraphWrapper,
+                                   GraphRosWrapper,
+                                   GraphRosWrapper::Config,
+                                   ianvs::NodeHandle>("GraphFromRos");
+}
+
+using hydra_msgs::msg::DsgUpdate;
 using spark_dsg::DynamicSceneGraph;
 
-GraphRosWrapper::GraphRosWrapper(const Config& config)
-    : config(config::checkValid(config)), has_change_(false), nh_(config.wrapper_ns) {
-  sub_ = nh_.subscribe("dsg", 1, &GraphRosWrapper::graphCallback, this);
-}
+GraphRosWrapper::GraphRosWrapper(const Config& config, ianvs::NodeHandle nh)
+    : config(config::checkValid(config)),
+      has_change_(false),
+      nh_(nh / config.wrapper_ns),
+      sub_(nh_.create_subscription<DsgUpdate>(
+          "dsg", 1, &GraphRosWrapper::callback, this)) {}
 
 bool GraphRosWrapper::hasChange() const { return has_change_; }
 
@@ -54,19 +67,19 @@ void GraphRosWrapper::clearChangeFlag() { has_change_ = false; }
 
 StampedGraph GraphRosWrapper::get() const { return {graph_, last_time_}; }
 
-void GraphRosWrapper::graphCallback(const hydra_msgs::DsgUpdate& msg) {
+void GraphRosWrapper::callback(const DsgUpdate::ConstSharedPtr& msg) {
   // not designed to be threadsafe; should lock and clone graph on return if desired
   try {
-    last_time_ = msg.header.stamp;
+    last_time_ = msg->header.stamp;
     if (!graph_) {
-      graph_ = spark_dsg::io::binary::readGraph(msg.layer_contents);
+      graph_ = spark_dsg::io::binary::readGraph(msg->layer_contents);
     } else {
-      spark_dsg::io::binary::updateGraph(*graph_, msg.layer_contents);
+      spark_dsg::io::binary::updateGraph(*graph_, msg->layer_contents);
     }
 
     has_change_ = true;
   } catch (const std::exception& e) {
-    ROS_ERROR_STREAM("Received invalid message: " << e.what());
+    LOG(ERROR) << "Received invalid message: " << e.what();
     return;
   }
 }

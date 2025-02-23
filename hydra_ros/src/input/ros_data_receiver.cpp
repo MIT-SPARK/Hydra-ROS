@@ -35,6 +35,7 @@
 #include "hydra_ros/input/ros_data_receiver.h"
 
 #include <config_utilities/config.h>
+#include <ianvs/node_handle_factory.h>
 
 namespace hydra {
 
@@ -53,6 +54,6 @@ void declare_config(RosDataReceiver::Config& config) {
 RosDataReceiver::RosDataReceiver(const Config& config, const std::string& sensor_name)
     : DataReceiver(config, sensor_name),
       config(config),
-      nh_(getNamespace(config.ns, sensor_name)) {}
+      ns_(getNamespace(config.ns, sensor_name)) {}
 
 }  // namespace hydra

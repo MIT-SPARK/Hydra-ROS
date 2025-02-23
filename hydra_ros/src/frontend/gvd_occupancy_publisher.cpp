@@ -39,6 +39,8 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 
+#include "hydra_ros/common.h"
+
 namespace hydra {
 namespace voxel_traits {
 
@@ -62,7 +64,7 @@ void declare_config(GvdOccupancyPublisher::Config& config) {
 }
 
 GvdOccupancyPublisher::GvdOccupancyPublisher(const Config& config)
-    : OccupancyPublisher<places::GvdBlock>(config, ros::NodeHandle(config.ns)),
+    : OccupancyPublisher<places::GvdBlock>(config, getHydraNodeHandle(config.ns)),
       config(config::checkValid(config)) {}
 
 std::string GvdOccupancyPublisher::printInfo() const {

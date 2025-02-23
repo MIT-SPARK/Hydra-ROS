@@ -44,7 +44,7 @@ class GvdOccupancyPublisher : public GvdPlaceExtractor::Sink,
                               OccupancyPublisher<places::GvdBlock> {
  public:
   struct Config : OccupancyPublisherConfig {
-    std::string ns = "~gvd";
+    std::string ns = "~/gvd";
   } const config;
 
   explicit GvdOccupancyPublisher(const Config& config);

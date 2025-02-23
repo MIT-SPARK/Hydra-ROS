@@ -1,16 +1,26 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.16)
 project(hydra_msgs)
 
-find_package(catkin REQUIRED COMPONENTS std_msgs message_generation)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_message_files(FILES ActiveLayer.msg DsgUpdate.msg)
-add_service_files(FILES GetDsg.srv QueryFreespace.srv)
+find_package(ament_cmake REQUIRED)
+find_package(builtin_interfaces REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+find_package(std_msgs REQUIRED)
 
-generate_messages(DEPENDENCIES std_msgs)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra)
+endif()
 
-catkin_package(
-  CATKIN_DEPENDS std_msgs message_runtime
-  DEPENDS
-  INCLUDE_DIRS
-  LIBRARIES
+rosidl_generate_interfaces(
+  ${PROJECT_NAME}
+  msg/ActiveLayer.msg
+  msg/DsgUpdate.msg
+  srv/GetDsg.srv
+  DEPENDENCIES
+  builtin_interfaces
+  std_msgs
 )
+
+ament_package()

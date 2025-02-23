@@ -33,24 +33,45 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <dynamic_reconfigure/server.h>
-#include <ros/ros.h>
+#include <ianvs/node_handle.h>
+
+#include <std_msgs/msg/string.hpp>
+// TODO(nathan) don't use internal tools
+#include <config_utilities/internal/yaml_utils.h>
+#include <config_utilities/parsing/yaml.h>
+#include <config_utilities/printing.h>
+
+#include <functional>
+#include <memory>
 
 namespace hydra::visualizer {
 
 // TODO(nathan) make threadsafe
+// TODO(nathan) save
+// TODO(nathan) logging
+// TODO(nathan) consider show
 template <typename Config>
 class ConfigWrapper {
  public:
   using Ptr = std::shared_ptr<ConfigWrapper<Config>>;
-  using Server = dynamic_reconfigure::Server<Config>;
   using UpdateCallback = std::function<void(const Config&)>;
 
-  ConfigWrapper(const ros::NodeHandle& nh, const std::string& ns)
-      : nh_(nh, ns), changed_(true) {
-    server_ = std::make_unique<Server>(nh_);
-    server_->setCallback(boost::bind(&ConfigWrapper<Config>::update, this, _1, _2));
+  ConfigWrapper(ianvs::NodeHandle _nh,
+                const std::string& ns,
+                const Config& initial = {})
+      : changed_(true),
+        ns_(ns),
+        config_(initial),
+        curr_contents_(config::toYaml(config_)) {
+    auto nh = _nh / ns;
+    sub_ = nh.create_subscription<std_msgs::msg::String>(
+        "set", 1, &ConfigWrapper::update, this);
   }
+
+  ConfigWrapper(const ConfigWrapper<Config>& other) = delete;
+  ConfigWrapper(ConfigWrapper<Config>&& other) = delete;
+  ConfigWrapper<Config>& operator=(const ConfigWrapper<Config>& other) = delete;
+  ConfigWrapper<Config>& operator=(ConfigWrapper<Config>&& other) = delete;
 
   bool hasChange() const { return changed_; }
 
@@ -63,8 +84,17 @@ class ConfigWrapper {
   }
 
  private:
-  void update(Config& config, uint32_t) {
-    config_ = config;
+  void update(const std_msgs::msg::String::ConstSharedPtr& msg) {
+    YAML::Node update;
+    try {
+      update = YAML::Load(msg->data);
+    } catch (const std::exception& e) {
+      // LOG(ERROR) << "Failed to parse given update '" << msg->data << "'";
+      return;
+    }
+
+    config::internal::mergeYamlNodes(curr_contents_, update);
+    config::updateFromYaml(config_, curr_contents_);
     changed_ = true;
     if (on_update_callback_) {
       on_update_callback_(config_);
@@ -72,12 +102,12 @@ class ConfigWrapper {
   }
 
  private:
-  ros::NodeHandle nh_;
-
   bool changed_;
+  std::string ns_;
   Config config_;
 
-  std::unique_ptr<Server> server_;
+  YAML::Node curr_contents_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
   UpdateCallback on_update_callback_;
 };
 

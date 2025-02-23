@@ -1,8 +1,8 @@
 ---
 plugins:
-  dsg_mesh:
+  mesh:
     type: MeshPlugin
-    use_color_adaptor: $(arg color_mesh_by_label)
+    use_color_adapter: $(arg color_mesh_by_label)
     coloring:
       type: SemanticMeshColoring
   places_basis_points:

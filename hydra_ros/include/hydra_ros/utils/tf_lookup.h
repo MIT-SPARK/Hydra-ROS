@@ -37,9 +37,12 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 
-#include <Eigen/Geometry>
 #include <optional>
 #include <string>
+
+#include <rclcpp/time.hpp>
+
+#include <Eigen/Geometry>
 
 namespace hydra {
 
@@ -49,7 +52,7 @@ PoseStatus lookupTransform(const std::string& target,
                            int verbosity = 10);
 
 PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
-                           const std::optional<ros::Time>& stamp,
+                           const std::optional<rclcpp::Time>& stamp,
                            const std::string& target,
                            const std::string& source,
                            std::optional<size_t> max_tries = std::nullopt,
@@ -66,12 +69,13 @@ struct TFLookup {
     int max_tries = 5;
     //! Logging verbosity of tf lookup process
     int verbosity = 3;
+    //! Get the buffer size in nanoseconds
+    std::chrono::nanoseconds buffer_size_ns() const;
   } const config;
 
   explicit TFLookup(const Config& config);
   PoseStatus getBodyPose(uint64_t timestamp_ns) const;
 
-  ros::NodeHandle nh;
   tf2_ros::Buffer buffer;
   tf2_ros::TransformListener listener;
 };

@@ -34,31 +34,34 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/common/dsg_types.h>
-#include <hydra_msgs/DsgUpdate.h>
-#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
-#include <ros/ros.h>
 
 #include <optional>
+
+#include <ianvs/node_handle.h>
+#include <hydra_msgs/msg/dsg_update.hpp>
+#include <kimera_pgmo_msgs/msg/mesh.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/subscription.hpp>
+#include <rclcpp/time.hpp>
 
 namespace hydra {
 
 class DsgSender {
  public:
-  explicit DsgSender(const ros::NodeHandle& nh,
+  explicit DsgSender(ianvs::NodeHandle nh,
                      const std::string& frame_id,
                      const std::string& timer_name = "publish_dsg",
                      bool publish_mesh = false,
                      double min_mesh_separation_s = 0.0,
                      bool serialize_dsg_mesh_ = true);
 
-  void sendGraph(const DynamicSceneGraph& graph, const ros::Time& stamp) const;
+  void sendGraph(const DynamicSceneGraph& graph, const rclcpp::Time& stamp) const;
 
  private:
-  ros::NodeHandle nh_;
   std::string frame_id_;
 
-  ros::Publisher pub_;
-  ros::Publisher mesh_pub_;
+  rclcpp::Publisher<hydra_msgs::msg::DsgUpdate>::SharedPtr pub_;
+  rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
   mutable std::optional<uint64_t> last_mesh_time_ns_;
 
   std::string timer_name_;
@@ -69,11 +72,11 @@ class DsgSender {
 
 class DsgReceiver {
  public:
-  using LogCallback = std::function<void(const ros::Time&, size_t)>;
+  using LogCallback = std::function<void(const rclcpp::Time&, size_t)>;
 
-  explicit DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh = false);
+  DsgReceiver(ianvs::NodeHandle nh, bool subscribe_to_mesh = false);
 
-  DsgReceiver(const ros::NodeHandle& nh, const LogCallback& cb);
+  DsgReceiver(ianvs::NodeHandle nh, const LogCallback& cb);
 
   inline DynamicSceneGraph::Ptr graph() const { return graph_; }
 
@@ -82,13 +85,12 @@ class DsgReceiver {
   inline void clearUpdated() { has_update_ = false; }
 
  private:
-  void handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg);
+  void handleUpdate(const hydra_msgs::msg::DsgUpdate::ConstSharedPtr& msg);
 
-  void handleMesh(const kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr& msg);
+  void handleMesh(const kimera_pgmo_msgs::msg::Mesh::ConstSharedPtr& msg);
 
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Subscriber mesh_sub_;
+  rclcpp::Subscription<hydra_msgs::msg::DsgUpdate>::SharedPtr sub_;
+  rclcpp::Subscription<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_sub_;
 
   bool has_update_;
   DynamicSceneGraph::Ptr graph_;

@@ -34,9 +34,14 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <config_utilities/virtual_config.h>
-#include <std_srvs/SetBool.h>
+#include <ianvs/node_handle.h>
 
-#include "hydra_visualizer/color/mesh_color_adaptor.h"
+#include <kimera_pgmo_msgs/msg/mesh.hpp>
+#include <rclcpp/publisher.hpp>
+#include <rclcpp/service.hpp>
+#include <std_srvs/srv/set_bool.hpp>
+
+#include "hydra_visualizer/adapters/mesh_color.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
 
 namespace hydra {
@@ -47,35 +52,29 @@ class MeshPlugin : public VisualizerPlugin {
   using LabelsPtr = std::shared_ptr<Labels>;
 
   struct Config {
-    bool use_color_adaptor = false;
+    bool use_color_adapter = false;
     config::VirtualConfig<MeshColoring> coloring{SemanticMeshColoring::Config()};
   } const config;
 
-  MeshPlugin(const Config& config, const ros::NodeHandle& nh, const std::string& name);
+  MeshPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
 
   virtual ~MeshPlugin();
 
-  void draw(const std_msgs::Header& header,
+  void draw(const std_msgs::msg::Header& header,
             const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header) override;
+  void reset(const std_msgs::msg::Header& header) override;
 
  protected:
-  bool handleService(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& res);
+  void handleService(const std_srvs::srv::SetBool::Request::SharedPtr& req,
+                     std_srvs::srv::SetBool::Response::SharedPtr res);
 
   std::string getMsgNamespace() const;
 
-  bool use_color_adaptor_;
-  ros::Publisher mesh_pub_;
-  ros::ServiceServer toggle_service_;
+  bool use_color_adapter_;
+  rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
+  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr toggle_service_;
   std::shared_ptr<MeshColoring> mesh_coloring_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<VisualizerPlugin,
-                                     MeshPlugin,
-                                     MeshPlugin::Config,
-                                     ros::NodeHandle,
-                                     std::string>("MeshPlugin");
 };
 
 void declare_config(MeshPlugin::Config& config);

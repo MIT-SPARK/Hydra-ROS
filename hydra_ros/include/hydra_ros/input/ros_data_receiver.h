@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/input/data_receiver.h>
-#include <ros/ros.h>
+#include <ianvs/node_handle.h>
 
 namespace hydra {
 
@@ -49,7 +49,7 @@ class RosDataReceiver : public DataReceiver {
   virtual ~RosDataReceiver() = default;
 
  protected:
-  ros::NodeHandle nh_;
+  const std::string ns_;
 };
 
 void declare_config(RosDataReceiver::Config& config);

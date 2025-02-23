@@ -1,132 +1,60 @@
 ---
-layer_z_step: 5.5  # unit separation between layers
-collapse_layers: false  # whether or not to apply offsets to each of the layers
-layer2:
-  z_offset_scale: 2.0
-  visualize: true
-  # node
-  node_scale: 0.40
-  node_color_mode: LabelColorAdaptor
-  node_alpha: 0.8
-  node_use_sphere: false
-  use_text: true
-  collapse_text: true
-  text_mode: LabelTextAdaptor
-  text_height: 0.5
-  text_scale: 0.45
-  use_bounding_box: true
-  collapse_bounding_box: true
-  bounding_box_scale: 0.05
-  bounding_box_edge_scale: 0.05
-  bounding_box_alpha: 0.9
-  mesh_edge_break_ratio: 0.5
-  # edge
-  edge_scale: 0.03
-  edge_alpha: 0.6
-  edge_use_color: false
-  interlayer_edge_use_source: true
-  interlayer_edge_scale: 0.08
-  interlayer_edge_alpha: 0.9
-  interlayer_edge_use_color: true
-layer3:
-  z_offset_scale: 3.0
-  visualize: true
-  # nodes
-  node_scale: 0.2
-  node_color_mode: ParentColorAdaptor
-  color_settings:
-    colormap:
-      palette: colorbrewer
-  node_alpha: 0.9
-  node_use_sphere: true
-  # edges
-  edge_scale: 0.01
-  edge_alpha: 0.5
-  edge_use_color: false
-  interlayer_edge_use_source: false
-  interlayer_edge_scale: 0.08
-  interlayer_edge_alpha: 0.4
-  interlayer_edge_use_color: true
-  interlayer_edge_insertion_skip: 0
-layer4:
-  z_offset_scale: 4.2
-  visualize: true
-  # nodes
-  node_scale: 0.6
-  node_color_mode: IdColorAdaptor
-  color_settings:
-    colormap:
-      palette: colorbrewer
-  node_alpha: 0.8
-  node_use_sphere: false
-  use_text: true
-  text_height: 1.25
-  text_scale: 1.0
-  # edges
-  edge_scale: 0.1
-  edge_alpha: 0.2
-  edge_use_color: false
-  interlayer_edge_use_source: true
-  interlayer_edge_scale: 0.08
-  interlayer_edge_alpha: 0.4
-  interlayer_edge_use_color: true
-  interlayer_edge_insertion_skip: 0
-layer5:
-  z_offset_scale: 5.5
-  visualize: false
-  # nodes
-  node_scale: 1.0
-  node_alpha: 1.0
-  node_use_sphere: false
-  use_text: true
-  text_height: 1.5
-  text_scale: 1.25
-  # edges
-  edge_scale: 0.05
-  edge_alpha: 1.0
-  edge_use_color: false
-  interlayer_edge_use_source: false
-  interlayer_edge_scale: 0.10
-  interlayer_edge_alpha: 0.5
-  interlayer_edge_use_color: false
-  interlayer_edge_insertion_skip: 0
-partitions:
-  layer2:
-    z_offset_scale: 0.0
-    visualize: true
-    # nodes
-    node_scale: 0.15
-    node_alpha: 0.9
-    node_use_sphere: false
-    node_color_mode: PartitionColorAdaptor
-    # edges
-    edge_scale: 0.05
-    edge_alpha: 0.9
-    # text
-    use_layer_text: true
-    text_height: 0.9
-    text_scale: 0.8
-    # interlayer
-    draw_interlayer_edges: false
-  layer3:
-    z_offset_scale: 3.0
-    visualize: true
-    # nodes
-    node_scale: 0.2
-    node_color_mode: LabelColorAdaptor
-    node_alpha: 0.9
-    node_use_sphere: true
-    draw_boundaries: true
-    collapse_boundary: false
-    boundary_wireframe_scale: 0.1
-    boundary_use_node_color: true
-    boundary_alpha: 1.0
-    # edges
-    edge_scale: 0.01
-    edge_alpha: 0.5
-    edge_use_color: false
-    interlayer_edge_use_source: false
-    interlayer_edge_scale: 0.08
-    interlayer_edge_alpha: 0.4
-    interlayer_edge_use_color: true
-    interlayer_edge_insertion_skip: 0
+renderer:
+  layer_z_step: 5.5  # unit separation between layers
+  collapse_layers: false  # whether or not to apply offsets to each of the layers
+  layers:
+    2:
+      z_offset_scale: 2.0
+      visualize: true
+      nodes: {scale: 0.40, color: {type: LabelColorAdapter}, alpha: 0.8, use_sphere: false}
+      text: {draw: true, collapse: true, adapter: {type: LabelTextAdapter}, height: 0.5, scale: 0.45}
+      bounding_boxes: {draw: true, collapse: true, scale: 0.05, edge_scale: 0.05, alpha: 0.9, edge_break_ratio: 0.5}
+      edges: {interlayer_use_source: true, interlayer_scale: 0.08, interlayer_alpha: 0.9, interlayer_use_color: true}
+    3:
+      z_offset_scale: 3.0
+      visualize: true
+      nodes: {scale: 0.2, color: {type: ParentColorAdapter, colormap: {palette: colorbrewer}}, alpha: 0.9, use_sphere: true}
+      edges:
+        scale: 0.01
+        alpha: 0.5
+        use_color: false
+        interlayer_use_source: false
+        interlayer_scale: 0.08
+        interlayer_alpha: 0.4
+        interlayer_use_color: true
+        interlayer_insertion_skip: 0
+    4:
+      z_offset_scale: 4.2
+      visualize: true
+      nodes: {scale: 0.6, color: {type: IdColorAdapter, colormap: {palette: colorbrewer}}, alpha: 0.8, use_sphere: false}
+      text: {draw: true, height: 1.25, scale: 1.0}
+      edges:
+        scale: 0.1
+        alpha: 0.2
+        use_color: false
+        interlayer_use_source: true
+        interlayer_scale: 0.08
+        interlayer_alpha: 0.4
+        interlayer_use_color: true
+        interlayer_insertion_skip: 0
+  partitions:
+    2:
+      z_offset_scale: 0.0
+      visualize: true
+      nodes: {scale: 0.15, alpha: 0.9, use_sphere: false, color: {type: PartitionColorAdapter}}
+      edges: {scale: 0.05, alpha: 0.9, draw_interlayer: false}
+      text: {draw_layer: true, height: 0.9, scale: 0.8}
+    3:
+      z_offset_scale: 3.0
+      visualize: true
+      nodes: {scale: 0.2, color: {type: LabelColorAdapter}, alpha: 0.9, use_sphere: true}
+      boundaries: {draw: true, collapse: false, wireframe_scale: 0.1, use_node_color: true, alpha: 1.0}
+      edges:
+        scale: 0.01
+        alpha: 0.5
+        use_color: false
+        interlayer_use_source: false
+        interlayer_scale: 0.08
+        interlayer_alpha: 0.4
+        interlayer_use_color: true
+        interlayer_insertion_skip: 0

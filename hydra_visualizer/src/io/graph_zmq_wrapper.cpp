@@ -39,6 +39,13 @@
 #include <glog/logging.h>
 
 namespace hydra {
+namespace {
+static const auto registration =
+    config::RegistrationWithConfig<GraphWrapper,
+                                   GraphZmqWrapper,
+                                   GraphZmqWrapper::Config,
+                                   ianvs::NodeHandle>("GraphFromZmq");
+}
 
 using spark_dsg::DynamicSceneGraph;
 
@@ -50,7 +57,7 @@ void declare_config(GraphZmqWrapper::Config& config) {
   field(config.poll_time_ms, "poll_time_ms");
 }
 
-GraphZmqWrapper::GraphZmqWrapper(const Config& config)
+GraphZmqWrapper::GraphZmqWrapper(const Config& config, ianvs::NodeHandle)
     : config(config::checkValid(config)), has_change_(false), should_shutdown_(false) {
   receiver_.reset(new spark_dsg::ZmqReceiver(config.url, config.num_threads));
   recv_thread_.reset(new std::thread(&GraphZmqWrapper::spin, this));

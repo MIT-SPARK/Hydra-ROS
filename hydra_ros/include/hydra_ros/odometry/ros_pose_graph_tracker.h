@@ -49,9 +49,7 @@
 
 #include <config_utilities/factory.h>
 #include <hydra/odometry/pose_graph_tracker.h>
-#include <pose_graph_tools_msgs/PoseGraph.h>
-#include <ros/node_handle.h>
-#include <ros/subscriber.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 #include <mutex>
 
@@ -77,12 +75,11 @@ class RosPoseGraphTracker : public PoseGraphTracker {
                          const Eigen::Isometry3d& world_T_body) override;
 
  protected:
-  void odomCallback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
-  void priorCallback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
+  void odomCallback(const pose_graph_tools::PoseGraph& pose_graph);
+  void priorCallback(const pose_graph_tools::PoseGraph& pose_graph);
 
-  ros::NodeHandle nh_;
-  ros::Subscriber odom_sub_;
-  ros::Subscriber prior_sub_;
+  pose_graph_tools::PoseGraphSubscription odom_sub_;
+  pose_graph_tools::PoseGraphSubscription prior_sub_;
 
   std::mutex mutex_;
   std::vector<pose_graph_tools::PoseGraph> pose_graphs_;

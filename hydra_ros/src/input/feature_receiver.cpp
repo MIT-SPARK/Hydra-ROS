@@ -42,11 +42,9 @@
 #include <hydra/common/pipeline_queues.h>
 #include <hydra/frontend/view_selector.h>
 
-#include "hydra_ros_build_config.h"
+#include <semantic_inference_msgs/msg/feature_vector_stamped.hpp>
 
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-#include <semantic_inference_msgs/FeatureVectorStamped.h>
-#endif
+#include "hydra_ros/common.h"
 
 namespace hydra {
 
@@ -59,36 +57,36 @@ void declare_config(FeatureReceiver::Config& config) {
   field(config.sensors_to_exclude, "sensors_to_exclude");
 }
 
-#if defined(HYDRA_USE_SEMANTIC_INFERENCE) && HYDRA_USE_SEMANTIC_INFERENCE
-using semantic_inference_msgs::FeatureVectorStamped;
+using semantic_inference_msgs::msg::FeatureVectorStamped;
 
 struct FeatureSubscriber {
   using Ptr = std::unique_ptr<FeatureSubscriber>;
   using Callback = std::function<PoseStatus(uint64_t)>;
 
-  FeatureSubscriber(ros::NodeHandle& nh,
+  FeatureSubscriber(ianvs::NodeHandle nh,
                     const std::string& sensor_name,
                     const Callback& pose_callback,
                     size_t queue_size = 10);
 
   void callback(const FeatureVectorStamped& msg);
 
-  ros::Subscriber sub;
+  rclcpp::Subscription<FeatureVectorStamped>::SharedPtr sub;
   const std::string sensor_name;
   const Callback pose_callback;
 };
 
-FeatureSubscriber::FeatureSubscriber(ros::NodeHandle& nh,
+FeatureSubscriber::FeatureSubscriber(ianvs::NodeHandle nh,
                                      const std::string& sensor_name,
                                      const Callback& pose_callback,
                                      size_t queue_size)
     : sensor_name(sensor_name), pose_callback(pose_callback) {
   const std::string topic = sensor_name + "/feature";
-  sub = nh.subscribe(topic, queue_size, &FeatureSubscriber::callback, this);
+  sub = nh.create_subscription<FeatureVectorStamped>(
+      topic, queue_size, &FeatureSubscriber::callback, this);
 }
 
 void FeatureSubscriber::callback(const FeatureVectorStamped& msg) {
-  const auto timestamp_ns = msg.header.stamp.toNSec();
+  const auto timestamp_ns = rclcpp::Time(msg.header.stamp).nanoseconds();
   const auto& vec = msg.feature.data;
 
   const auto sensor = GlobalInfo::instance().getSensor(sensor_name);
@@ -119,24 +117,17 @@ void FeatureReceiver::start() {
       continue;
     }
 
+    auto nh = getHydraNodeHandle(config.ns);
     subs_.push_back(std::make_unique<FeatureSubscriber>(
-        nh_,
+        nh,
         name,
         [this](uint64_t timestamp_ns) { return lookup_.getBodyPose(timestamp_ns); },
         config.queue_size));
   }
 }
-#else
-
-struct FeatureSubscriber {};
-
-void FeatureReceiver::start() {
-  LOG(ERROR) << "semantic_inference_msgs not found when building, disabled!";
-}
-#endif
 
 FeatureReceiver::FeatureReceiver(const Config& config)
-    : config(config::checkValid(config)), lookup_(config.tf_lookup), nh_(config.ns) {}
+    : config(config::checkValid(config)), lookup_(config.tf_lookup) {}
 
 FeatureReceiver::~FeatureReceiver() {}
 

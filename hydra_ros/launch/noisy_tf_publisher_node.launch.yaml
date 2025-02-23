@@ -1,0 +1,9 @@
+---
+launch:
+  - arg: {name: config_path, default: $(find-pkg-share hydra_ros)/config/noisy_tf_publisher_node.yaml}
+  - node:
+      pkg: hydra_ros
+      exec: noisy_tf_publisher.py
+      name: noisy_tf_publisher_node
+      param:
+        - {file: $(var config_path)}

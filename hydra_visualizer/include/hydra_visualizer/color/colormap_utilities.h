@@ -35,12 +35,12 @@
 #pragma once
 #include <config_utilities/virtual_config.h>
 #include <spark_dsg/color.h>
-#include <std_msgs/ColorRGBA.h>
+#include <std_msgs/msg/color_rgba.hpp>
 
 namespace hydra::visualizer {
 
-std_msgs::ColorRGBA makeColorMsg(const spark_dsg::Color& color,
-                                 std::optional<double> alpha = std::nullopt);
+std_msgs::msg::ColorRGBA makeColorMsg(const spark_dsg::Color& color,
+                                      std::optional<double> alpha = std::nullopt);
 
 struct ContinuousPalette {
   virtual ~ContinuousPalette() = default;

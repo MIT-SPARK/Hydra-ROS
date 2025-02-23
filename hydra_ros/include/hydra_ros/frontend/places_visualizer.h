@@ -34,12 +34,13 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/gvd_place_extractor.h>
-#include <hydra_visualizer/LayerVisualizerConfig.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
+#include <hydra_visualizer/layer_info.h>
 #include <hydra_visualizer/utils/config_wrapper.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
+#include <ianvs/node_handle.h>
 
-#include "hydra_ros/GvdVisualizerConfig.h"
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 
 namespace hydra {
 namespace places {
@@ -48,8 +49,9 @@ class GraphExtractorInterface;
 
 class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
+  // TODO(nathan) initialize configs
   struct Config {
-    std::string ns = "~places";
+    std::string ns = "~/places";
     visualizer::RangeColormap::Config colormap;
     Color block_color = Color::purple();
   } const config;
@@ -66,19 +68,20 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
             const places::GraphExtractorInterface* extractor) const override;
 
  private:
-  void visualizeGvd(const std_msgs::Header& header, const places::GvdLayer& gvd) const;
+  void visualizeGvd(const std_msgs::msg::Header& header,
+                    const places::GvdLayer& gvd) const;
 
-  void visualizeExtractor(const std_msgs::Header& header,
+  void visualizeExtractor(const std_msgs::msg::Header& header,
                           const places::GraphExtractorInterface& extractor) const;
 
-  void visualizeGraph(const std_msgs::Header& header,
+  void visualizeGraph(const std_msgs::msg::Header& header,
                       const SceneGraphLayer& graph) const;
 
  protected:
-  ros::NodeHandle nh_;
+  ianvs::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<hydra_ros::GvdVisualizerConfig> gvd_config_;
-  visualizer::ConfigWrapper<hydra_visualizer::LayerVisualizerConfig> layer_config_;
+  visualizer::ConfigWrapper<GvdVisualizerConfig> gvd_config_;
+  visualizer::ConfigWrapper<visualizer::LayerConfig> layer_config_;
   const visualizer::RangeColormap colormap_;
 
  private:

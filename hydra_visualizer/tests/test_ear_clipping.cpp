@@ -35,7 +35,7 @@
 #include <glog/logging.h>
 #include <glog/stl_logging.h>
 #include <gtest/gtest.h>
-#include <hydra_ros/utils/ear_clipping.h>
+#include <hydra_visualizer/utils/ear_clipping.h>
 
 namespace hydra {
 

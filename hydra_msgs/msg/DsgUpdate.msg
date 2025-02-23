@@ -1,4 +1,4 @@
-Header header
+std_msgs/Header header
 uint8[] layer_contents  # serialized nodes that are active
 uint64[] deleted_nodes  # node ids that were deleted
 uint64[] deleted_edges  # node ids for edges that were deleted

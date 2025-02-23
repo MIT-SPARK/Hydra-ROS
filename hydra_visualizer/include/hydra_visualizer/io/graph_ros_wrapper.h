@@ -33,9 +33,12 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
-#include <ros/ros.h>
-#include <hydra_msgs/DsgUpdate.h>
+
+#include <ianvs/node_handle.h>
+
+#include <hydra_msgs/msg/dsg_update.hpp>
+#include <rclcpp/subscription.hpp>
+#include <rclcpp/time.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
 
@@ -47,7 +50,7 @@ class GraphRosWrapper : public GraphWrapper {
     std::string wrapper_ns = "~";
   } const config;
 
-  explicit GraphRosWrapper(const Config& config);
+  GraphRosWrapper(const Config& config, ianvs::NodeHandle nh);
 
   bool hasChange() const override;
 
@@ -56,18 +59,13 @@ class GraphRosWrapper : public GraphWrapper {
   StampedGraph get() const override;
 
  private:
-  void graphCallback(const hydra_msgs::DsgUpdate& msg);
+  void callback(const hydra_msgs::msg::DsgUpdate::ConstSharedPtr& msg);
 
   bool has_change_;
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  ros::Time last_time_;
+  ianvs::NodeHandle nh_;
+  rclcpp::Subscription<hydra_msgs::msg::DsgUpdate>::SharedPtr sub_;
+  rclcpp::Time last_time_;
   spark_dsg::DynamicSceneGraph::Ptr graph_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphWrapper,
-                                     GraphRosWrapper,
-                                     GraphRosWrapper::Config>("GraphFromRos");
 };
 
 void declare_config(GraphRosWrapper::Config& config);

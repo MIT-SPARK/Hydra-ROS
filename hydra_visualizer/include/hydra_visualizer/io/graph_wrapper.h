@@ -33,14 +33,15 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <ros/time.h>
 #include <spark_dsg/dynamic_scene_graph.h>
+
+#include <rclcpp/time.hpp>
 
 namespace hydra {
 
 struct StampedGraph {
   spark_dsg::DynamicSceneGraph::Ptr graph;
-  std::optional<ros::Time> timestamp = std::nullopt;
+  std::optional<rclcpp::Time> timestamp = std::nullopt;
   inline operator bool() const { return graph != nullptr; }
 };
 

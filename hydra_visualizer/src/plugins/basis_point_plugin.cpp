@@ -35,17 +35,25 @@
 #include "hydra_visualizer/plugins/basis_point_plugin.h"
 
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
+#include <config_utilities/factory.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
-#include <tf2_eigen/tf2_eigen.h>
 
-#include "hydra_visualizer/color/colormap_utilities.h"
-#include "hydra_visualizer/utils/visualizer_utilities.h"
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include "hydra_visualizer/drawing.h"
 
 namespace hydra {
+namespace {
+static const auto registration =
+    config::RegistrationWithConfig<VisualizerPlugin,
+                                   BasisPointPlugin,
+                                   BasisPointPlugin::Config,
+                                   ianvs::NodeHandle,
+                                   std::string>("BasisPointPlugin");
+}
 
 using spark_dsg::Color;
 using spark_dsg::DsgLayers;
@@ -53,8 +61,8 @@ using spark_dsg::DynamicSceneGraph;
 using spark_dsg::PlaceNodeAttributes;
 using spark_dsg::SceneGraphNode;
 using spark_dsg::SemanticNodeAttributes;
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 void declare_config(BasisPointPlugin::Config& config) {
   using namespace config;
@@ -103,17 +111,17 @@ std::vector<BasisPoint> getBasisPoints(const visualizer::CategoricalColormap& cm
 }
 
 BasisPointPlugin::BasisPointPlugin(const Config& config,
-                                   const ros::NodeHandle& nh,
+                                   ianvs::NodeHandle nh,
                                    const std::string& name)
-    : VisualizerPlugin(nh, name),
+    : VisualizerPlugin(name),
       config(config::checkValid(config)),
-      pub_(nh_.advertise<MarkerArray>("", 1, true)),
-      layer_config_(nh_, "graph"),
+      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())),
+      layer_config_(nh, "graph"),
       colormap_(config.colormap) {}
 
-void BasisPointPlugin::draw(const std_msgs::Header& header,
+void BasisPointPlugin::draw(const std_msgs::msg::Header& header,
                             const DynamicSceneGraph& graph) {
-  if (pub_.getNumSubscribers() == 0) {
+  if (pub_->get_subscription_count() == 0) {
     return;
   }
 
@@ -121,19 +129,19 @@ void BasisPointPlugin::draw(const std_msgs::Header& header,
   fillMarkers(header, graph, msg);
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 
-void BasisPointPlugin::reset(const std_msgs::Header& header) {
+void BasisPointPlugin::reset(const std_msgs::msg::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 
-void BasisPointPlugin::fillMarkers(const std_msgs::Header& header,
+void BasisPointPlugin::fillMarkers(const std_msgs::msg::Header& header,
                                    const DynamicSceneGraph& graph,
                                    MarkerArray& msg) const {
   if (!graph.hasLayer(DsgLayers::PLACES)) {
@@ -142,16 +150,14 @@ void BasisPointPlugin::fillMarkers(const std_msgs::Header& header,
 
   const auto& places = graph.getLayer(DsgLayers::PLACES);
 
-  visualizer::LayerInfo info{{}, layer_config_.get()};
-  info.graph.layer_z_step = 0.0;
-  info.graph.collapse_layers = true;
+  visualizer::LayerInfo info(layer_config_.get());
   info.node_color = [&](const SceneGraphNode& node) {
     const auto parent = node.getParent();
     return parent ? graph.getNode(*parent).attributes<SemanticNodeAttributes>().color
                   : spark_dsg::Color();
   };
 
-  if (!info.layer.visualize) {
+  if (!info.config.visualize) {
     return;
   }
 
@@ -166,7 +172,7 @@ void BasisPointPlugin::fillMarkers(const std_msgs::Header& header,
   }
 }
 
-void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
+void BasisPointPlugin::drawEdges(const std_msgs::msg::Header& header,
                                  const DynamicSceneGraph& graph,
                                  MarkerArray& msg) const {
   Marker marker;
@@ -183,7 +189,7 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
   for (const auto& id_node_pair : layer.nodes()) {
     auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
 
-    geometry_msgs::Point start;
+    geometry_msgs::msg::Point start;
     tf2::convert(attrs.position, start);
 
     const auto basis_points = getBasisPoints(
@@ -198,7 +204,7 @@ void BasisPointPlugin::drawEdges(const std_msgs::Header& header,
   tracker_.add(marker, msg);
 }
 
-void BasisPointPlugin::drawBasisPoints(const std_msgs::Header& header,
+void BasisPointPlugin::drawBasisPoints(const std_msgs::msg::Header& header,
                                        const DynamicSceneGraph& graph,
                                        MarkerArray& msg) const {
   const auto mesh = graph.mesh();

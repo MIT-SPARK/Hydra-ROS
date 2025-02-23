@@ -35,13 +35,25 @@
 #include "hydra_visualizer/io/graph_file_wrapper.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/factory.h>
 #include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
+#include <rclcpp/create_subscription.hpp>
+
 namespace hydra {
+namespace {
+static const auto registration_ =
+    config::RegistrationWithConfig<GraphWrapper,
+                                   GraphFileWrapper,
+                                   GraphFileWrapper::Config,
+                                   ianvs::NodeHandle>("GraphFromFile");
+}
 
 using spark_dsg::DynamicSceneGraph;
+using std_msgs::msg::String;
+using std_srvs::srv::Empty;
 
 void declare_config(GraphFileWrapper::Config& config) {
   using namespace config;
@@ -52,14 +64,14 @@ void declare_config(GraphFileWrapper::Config& config) {
   check<Path::Exists>(config.filepath, "filepath");
 }
 
-GraphFileWrapper::GraphFileWrapper(const Config& config)
+GraphFileWrapper::GraphFileWrapper(const Config& config, ianvs::NodeHandle nh)
     : config(config::checkValid(config)),
-      nh_(config.wrapper_ns),
       has_change_(true),
+      nh_(nh / config.wrapper_ns),
       filepath_(config.filepath),
       graph_(DynamicSceneGraph::load(filepath_)),
-      service_(nh_.advertiseService("reload", &GraphFileWrapper::reload, this)),
-      sub_(nh_.subscribe("load", 1, &GraphFileWrapper::load, this)) {}
+      service_(nh_.create_service<Empty>("reload", &GraphFileWrapper::reload, this)),
+      sub_(nh_.create_subscription<String>("load", 1, &GraphFileWrapper::load, this)) {}
 
 bool GraphFileWrapper::hasChange() const { return has_change_; }
 
@@ -67,20 +79,22 @@ void GraphFileWrapper::clearChangeFlag() { has_change_ = false; }
 
 StampedGraph GraphFileWrapper::get() const { return {graph_}; }
 
-bool GraphFileWrapper::reload(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+void GraphFileWrapper::reload(const std_srvs::srv::Empty::Request::SharedPtr&,
+                              std_srvs::srv::Empty::Response::SharedPtr) {
+  // TODO(nathan) consider deferring load
   graph_ = DynamicSceneGraph::load(filepath_);
   has_change_ = true;
-  return true;
 }
 
-void GraphFileWrapper::load(const std_msgs::String& msg) {
-  std::filesystem::path req_path(msg.data);
+void GraphFileWrapper::load(const std_msgs::msg::String::ConstSharedPtr& msg) {
+  std::filesystem::path req_path(msg->data);
   if (!std::filesystem::exists(req_path)) {
     LOG(ERROR) << "Graph does not exist at '" << req_path.string() << "'";
     return;
   }
 
   filepath_ = req_path;
+  // TODO(nathan) consider deferring load
   graph_ = DynamicSceneGraph::load(filepath_);
   has_change_ = true;
 }

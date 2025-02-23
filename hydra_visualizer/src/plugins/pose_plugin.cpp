@@ -37,11 +37,11 @@
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
 #include <config_utilities/validation.h>
-#include <geometry_msgs/PoseArray.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>
-#include <tf2_eigen/tf2_eigen.h>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 namespace hydra {
 namespace {
@@ -50,12 +50,12 @@ inline static const auto registration =
     config::RegistrationWithConfig<VisualizerPlugin,
                                    PosePlugin,
                                    PosePlugin::Config,
-                                   ros::NodeHandle,
+                                   ianvs::NodeHandle,
                                    std::string>("PosePlugin");
 
 }
 
-using geometry_msgs::PoseArray;
+using geometry_msgs::msg::PoseArray;
 using namespace spark_dsg;
 
 void declare_config(PosePlugin::Config& config) {
@@ -67,14 +67,14 @@ void declare_config(PosePlugin::Config& config) {
 }
 
 PosePlugin::PosePlugin(const Config& config,
-                       const ros::NodeHandle& nh,
+                       ianvs::NodeHandle nh,
                        const std::string& name)
-    : VisualizerPlugin(nh, name), config(config::checkValid(config)) {
-  // namespacing gives us a reasonable topic
-  pub_ = nh_.advertise<PoseArray>("", 1, true);
-}
+    : VisualizerPlugin(name),
+      config(config::checkValid(config)),
+      pub_(nh.create_publisher<PoseArray>(name, rclcpp::QoS(1).transient_local())) {}
 
-void PosePlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) {
+void PosePlugin::draw(const std_msgs::msg::Header& header,
+                      const DynamicSceneGraph& graph) {
   PoseArray msg;
   msg.header = header;
 
@@ -110,13 +110,13 @@ void PosePlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& g
     pose.orientation = tf2::toMsg(attrs->world_R_body);
   }
 
-  pub_.publish(msg);
+  pub_->publish(msg);
 }
 
-void PosePlugin::reset(const std_msgs::Header& header) {
+void PosePlugin::reset(const std_msgs::msg::Header& header) {
   PoseArray msg;
   msg.header = header;
-  pub_.publish(msg);
+  pub_->publish(msg);
 }
 
 }  // namespace hydra

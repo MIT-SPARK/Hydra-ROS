@@ -35,52 +35,34 @@
 #include "hydra_ros/input/image_receiver.h"
 
 #include <config_utilities/config.h>
-#include <cv_bridge/cv_bridge.h>
 #include <glog/logging.h>
-#include <image_transport/image_transport.h>
-#include <image_transport/subscriber_filter.h>
+
+#include <cv_bridge/cv_bridge.hpp>
 
 namespace hydra {
-namespace {
 
-inline image_transport::TransportHints getHints(const ros::NodeHandle& nh,
-                                                const std::string& ns) {
-  namespace it = image_transport;
-  return it::TransportHints("raw", ros::TransportHints(), ros::NodeHandle(nh, ns));
-}
+using sensor_msgs::msg::Image;
 
-}  // namespace
+struct ImageSubImpl : public ImageSimpleFilter {
+  ImageSubImpl(ianvs::NodeHandle nh, const std::string& topic, uint32_t queue_size)
+      : subscriber(nh.create_subscription<Image>(
+            topic, queue_size, [this](const Image::ConstSharedPtr& msg) {
+              signalMessage(msg);
+            })) {}
 
-struct ImageSubImpl {
-  ImageSubImpl(const ros::NodeHandle& nh,
-               const std::string& camera_name,
-               const std::string& image_name,
-               uint32_t queue_size);
-
-  image_transport::ImageTransport transport;
-  image_transport::SubscriberFilter subscriber;
+  rclcpp::Subscription<Image>::SharedPtr subscriber;
 };
-
-ImageSubImpl::ImageSubImpl(const ros::NodeHandle& nh,
-                           const std::string& cam_name,
-                           const std::string& img_name,
-                           uint32_t queue_size)
-    : transport(ros::NodeHandle(nh, cam_name)),
-      subscriber(transport, img_name, queue_size, getHints(nh, cam_name)) {}
 
 ColorSubscriber::ColorSubscriber() = default;
 
-ColorSubscriber::ColorSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
-    : impl_(std::make_shared<ImageSubImpl>(nh, "rgb", "image_raw", queue_size)) {}
+ColorSubscriber::ColorSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
+    : impl_(std::make_shared<ImageSubImpl>(nh, "rgb/image_raw", queue_size)) {}
 
 ColorSubscriber::~ColorSubscriber() = default;
 
-ImageSimpleFilter& ColorSubscriber::getFilter() const {
-  return CHECK_NOTNULL(impl_)->subscriber;
-}
+ImageSimpleFilter& ColorSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
 
-void ColorSubscriber::fillInput(const sensor_msgs::Image& img,
-                                ImageInputPacket& packet) const {
+void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
     packet.color = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8)->image;
   } catch (const cv_bridge::Exception& e) {
@@ -90,18 +72,15 @@ void ColorSubscriber::fillInput(const sensor_msgs::Image& img,
 
 DepthSubscriber::DepthSubscriber() = default;
 
-DepthSubscriber::DepthSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
+DepthSubscriber::DepthSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
     : impl_(std::make_shared<ImageSubImpl>(
-          nh, "depth_registered", "image_rect", queue_size)) {}
+          nh, "depth_registered/image_rect", queue_size)) {}
 
 DepthSubscriber::~DepthSubscriber() = default;
 
-ImageSimpleFilter& DepthSubscriber::getFilter() const {
-  return CHECK_NOTNULL(impl_)->subscriber;
-}
+ImageSimpleFilter& DepthSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
 
-void DepthSubscriber::fillInput(const sensor_msgs::Image& img,
-                                ImageInputPacket& packet) const {
+void DepthSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
     packet.depth = cv_bridge::toCvCopy(img)->image;
   } catch (const cv_bridge::Exception& e) {
@@ -111,17 +90,14 @@ void DepthSubscriber::fillInput(const sensor_msgs::Image& img,
 
 LabelSubscriber::LabelSubscriber() = default;
 
-LabelSubscriber::LabelSubscriber(const ros::NodeHandle& nh, uint32_t queue_size)
-    : impl_(std::make_shared<ImageSubImpl>(nh, "semantic", "image_raw", queue_size)) {}
+LabelSubscriber::LabelSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
+    : impl_(std::make_shared<ImageSubImpl>(nh, "semantic/image_raw", queue_size)) {}
 
 LabelSubscriber::~LabelSubscriber() = default;
 
-ImageSimpleFilter& LabelSubscriber::getFilter() const {
-  return CHECK_NOTNULL(impl_)->subscriber;
-}
+ImageSimpleFilter& LabelSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
 
-void LabelSubscriber::fillInput(const sensor_msgs::Image& img,
-                                ImageInputPacket& packet) const {
+void LabelSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
     packet.labels = cv_bridge::toCvCopy(img)->image;
   } catch (const cv_bridge::Exception& e) {

@@ -35,7 +35,7 @@
 #include "hydra_ros/utils/scene_graph_logger.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/parsing/ros.h>
+#include <config_utilities/parsing/context.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
@@ -53,11 +53,13 @@ void declare_config(SceneGraphLogger::Config& config) {
   checkCondition(!config.output_path.empty(), "output_path required");
 }
 
-SceneGraphLogger::SceneGraphLogger(const ros::NodeHandle& nh)
-    : config(config::checkValid(config::fromRos<Config>(nh))),
-      nh_(nh),
+SceneGraphLogger::SceneGraphLogger(const rclcpp::NodeOptions& options)
+    : Node("scene_graph_logger", options),
+      config(config::checkValid(config::fromContext<Config>())),
       curr_count_(0),
       curr_output_count_(0) {
+  using namespace std::chrono_literals;
+
   bool exists = std::filesystem::exists(config.output_path);
   if (exists && !std::filesystem::is_directory(config.output_path)) {
     LOG(ERROR) << "Invalid output path: " << config.output_path;
@@ -68,34 +70,34 @@ SceneGraphLogger::SceneGraphLogger(const ros::NodeHandle& nh)
     std::filesystem::create_directories(config.output_path);
   }
 
-  receiver_.reset(new DsgReceiver(nh_));
+  timer_ = create_wall_timer(100ms, [this]() { spinOnce(); });
 }
 
-void SceneGraphLogger::spin() {
+void SceneGraphLogger::spinOnce() {
   if (!receiver_) {
+    ianvs::NodeHandle nh(*this, "");
+    receiver_.reset(new DsgReceiver(nh));
     return;
   }
 
-  ros::WallRate r(10);
-  while (ros::ok()) {
-    ros::spinOnce();
-    if (!receiver_->updated()) {
-      r.sleep();
-      continue;
-    }
-
-    ++curr_count_;
-    receiver_->clearUpdated();
-    if (config.output_every_num > 1 && curr_count_ % config.output_every_num != 1) {
-      continue;
-    }
-
-    std::stringstream ss;
-    ss << "dsg_" << std::setfill('0') << std::setw(6) << curr_output_count_ << ".json";
-    const auto path = config.output_path / ss.str();
-    receiver_->graph()->save(path, false);
-    ++curr_output_count_;
+  if (!receiver_->updated()) {
+    return;
   }
+
+  ++curr_count_;
+  receiver_->clearUpdated();
+  if (config.output_every_num > 1 && curr_count_ % config.output_every_num != 1) {
+    return;
+  }
+
+  std::stringstream ss;
+  ss << "dsg_" << std::setfill('0') << std::setw(6) << curr_output_count_ << ".json";
+  const auto path = config.output_path / ss.str();
+  receiver_->graph()->save(path, false);
+  ++curr_output_count_;
 }
 
 }  // namespace hydra
+
+#include <rclcpp_components/register_node_macro.hpp>
+RCLCPP_COMPONENTS_REGISTER_NODE(hydra::SceneGraphLogger)

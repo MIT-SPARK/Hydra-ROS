@@ -33,13 +33,15 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <visualization_msgs/MarkerArray.h>
+#include <ianvs/node_handle.h>
 
-#include "hydra_visualizer/LayerVisualizerConfig.h"
+#include <visualization_msgs/msg/marker_array.hpp>
+
 #include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
 #include "hydra_visualizer/utils/config_wrapper.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
+#include "hydra_visualizer/layer_info.h"
 
 namespace hydra {
 
@@ -52,28 +54,28 @@ class PlacesFreespacePlugin : public VisualizerPlugin {
   } const config;
 
   PlacesFreespacePlugin(const Config& config,
-                        const ros::NodeHandle& nh,
+                        ianvs::NodeHandle nh,
                         const std::string& name);
 
   virtual ~PlacesFreespacePlugin() = default;
 
-  void draw(const std_msgs::Header& header,
+  void draw(const std_msgs::msg::Header& header,
             const spark_dsg::DynamicSceneGraph& graph) override;
 
-  void reset(const std_msgs::Header& header) override;
+  void reset(const std_msgs::msg::Header& header) override;
 
  protected:
-  void fillMarkers(const std_msgs::Header& header,
+  void fillMarkers(const std_msgs::msg::Header& header,
                    const spark_dsg::DynamicSceneGraph& graph,
-                   visualization_msgs::MarkerArray& msg) const;
+                   visualization_msgs::msg::MarkerArray& msg) const;
 
-  void drawSpheres(const std_msgs::Header& header,
+  void drawSpheres(const std_msgs::msg::Header& header,
                    const spark_dsg::SceneGraphLayer& places,
-                   visualization_msgs::MarkerArray& msg) const;
+                   visualization_msgs::msg::MarkerArray& msg) const;
 
-  ros::Publisher pub_;
   mutable MarkerTracker tracker_;
-  visualizer::ConfigWrapper<hydra_visualizer::LayerVisualizerConfig> layer_config_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
+  visualizer::ConfigWrapper<visualizer::LayerConfig> layer_config_;
 };
 
 void declare_config(PlacesFreespacePlugin::Config& config);

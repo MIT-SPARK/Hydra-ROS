@@ -36,14 +36,13 @@
 
 namespace hydra {
 
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using std_msgs::msg::Header;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 namespace {
 
-inline Marker makeDeleteMarker(const std_msgs::Header& header,
-                               size_t id,
-                               const std::string& ns) {
+inline Marker makeDeleteMarker(const Header& header, size_t id, const std::string& ns) {
   Marker marker;
   marker.header = header;
   marker.action = Marker::DELETE;
@@ -86,7 +85,7 @@ void MarkerTracker::add(const MarkerArray& markers, MarkerArray& msg) {
   }
 }
 
-void MarkerTracker::remove(const std_msgs::Header& header,
+void MarkerTracker::remove(const Header& header,
                            const std::string& ns,
                            size_t marker_id,
                            MarkerArray& msg) {
@@ -104,7 +103,7 @@ void MarkerTracker::remove(const std_msgs::Header& header,
   }
 }
 
-void MarkerTracker::clearPrevious(const std_msgs::Header& header, MarkerArray& msg) {
+void MarkerTracker::clearPrevious(const Header& header, MarkerArray& msg) {
   std::map<std::string, std::set<size_t>> previous = published_markers_;
   for (const auto& marker : msg.markers) {
     auto iter = previous.find(marker.ns);

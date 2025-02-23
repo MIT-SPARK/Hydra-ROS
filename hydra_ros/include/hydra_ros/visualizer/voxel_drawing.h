@@ -33,12 +33,15 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra_visualizer/utils/visualizer_utilities.h>
+#include <hydra_visualizer/drawing.h>
 #include <spatial_hash/voxel_layer.h>
-#include <tf2_eigen/tf2_eigen.h>
-#include <visualization_msgs/Marker.h>
+
+#include <tf2_eigen/tf2_eigen.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 namespace hydra {
+
+using MarkerMsg = visualization_msgs::msg::Marker;
 
 struct VoxelSliceConfig {
   double slice_height = 0.0;
@@ -46,33 +49,29 @@ struct VoxelSliceConfig {
 };
 
 template <typename Voxel>
-using Colormap = std::function<std_msgs::ColorRGBA(const Voxel&)>;
+using Colormap = std::function<std_msgs::msg::ColorRGBA(const Voxel&)>;
 
 template <typename Voxel>
 using Filter = std::function<bool(const Voxel&)>;
 
 // adapted from khronos
 template <typename Voxel, typename Block>
-visualization_msgs::Marker drawVoxelSlice(const VoxelSliceConfig& config,
-                                          const std_msgs::Header& header,
-                                          const spatial_hash::VoxelLayer<Block>& layer,
-                                          const Eigen::Isometry3d& world_T_sensor,
-                                          const Filter<Voxel>& observed,
-                                          const Colormap<Voxel>& colormap,
-                                          const std::string& ns) {
-  visualization_msgs::Marker msg;
+MarkerMsg drawVoxelSlice(const VoxelSliceConfig& config,
+                         const std_msgs::msg::Header& header,
+                         const spatial_hash::VoxelLayer<Block>& layer,
+                         const Eigen::Isometry3d& world_T_sensor,
+                         const Filter<Voxel>& observed,
+                         const Colormap<Voxel>& colormap,
+                         const std::string& ns) {
+  MarkerMsg msg;
   msg.header = header;
-  msg.action = visualization_msgs::Marker::ADD;
+  msg.action = MarkerMsg::ADD;
   msg.id = 0;
   msg.ns = ns;
-  msg.type = visualization_msgs::Marker::CUBE_LIST;
+  msg.type = MarkerMsg::CUBE_LIST;
   msg.scale.x = layer.voxel_size;
   msg.scale.y = layer.voxel_size;
   msg.scale.z = layer.voxel_size;
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, msg.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), msg.pose.orientation);
 
   auto height = config.slice_height;
   if (config.use_relative_height) {
@@ -110,13 +109,13 @@ visualization_msgs::Marker drawVoxelSlice(const VoxelSliceConfig& config,
 }
 
 template <typename Block>
-using BlockColoring = std::function<std_msgs::ColorRGBA(const Block&)>;
+using BlockColoring = std::function<std_msgs::msg::ColorRGBA(const Block&)>;
 
 struct ActiveBlockColoring {
-  ActiveBlockColoring(const spark_dsg::Color& active_color)
+  explicit ActiveBlockColoring(const spark_dsg::Color& active_color)
       : active_color(active_color) {}
 
-  std_msgs::ColorRGBA call(const spatial_hash::Block& block) const {
+  std_msgs::msg::ColorRGBA call(const spatial_hash::Block& block) const {
     return visualizer::makeColorMsg(block.updated ? active_color : spark_dsg::Color());
   }
 
@@ -129,14 +128,14 @@ struct ActiveBlockColoring {
 };
 
 template <typename Block>
-visualization_msgs::Marker drawSpatialGrid(const spatial_hash::BlockLayer<Block>& layer,
-                                           double scale,
-                                           const std::string& ns,
-                                           double alpha = 1.0,
-                                           const BlockColoring<Block>& cmap = {}) {
-  visualization_msgs::Marker marker;
-  marker.type = visualization_msgs::Marker::LINE_LIST;
-  marker.action = visualization_msgs::Marker::ADD;
+MarkerMsg drawSpatialGrid(const spatial_hash::BlockLayer<Block>& layer,
+                          double scale,
+                          const std::string& ns,
+                          double alpha = 1.0,
+                          const BlockColoring<Block>& cmap = {}) {
+  visualization_msgs::msg::Marker marker;
+  marker.type = MarkerMsg::LINE_LIST;
+  marker.action = MarkerMsg::ADD;
   marker.id = 0;
   marker.ns = ns;
   marker.scale.x = scale;
@@ -150,7 +149,7 @@ visualization_msgs::Marker drawSpatialGrid(const spatial_hash::BlockLayer<Block>
   for (const auto& block : layer) {
     const auto position = block.position();
     spark_dsg::BoundingBox box(Eigen::Vector3f::Constant(block.block_size), position);
-    std_msgs::ColorRGBA color;
+    std_msgs::msg::ColorRGBA color;
     if (cmap) {
       color = cmap(block);
     }

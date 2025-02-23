@@ -1,14 +1,16 @@
 #pragma once
 #include <hydra/openset/embedding_distances.h>
-#include <hydra_visualizer/color/graph_color_adaptors.h>
-#include <hydra_visualizer/utils/text_adaptors.h>
-#include <ros/ros.h>
+#include <hydra_visualizer/adapters/graph_color.h>
+#include <hydra_visualizer/adapters/text.h>
+
+#include <rclcpp/subscription.hpp>
+#include <semantic_inference_msgs/msg/feature_vector_stamped.hpp>
 
 #include "hydra_ros/openset/ros_embedding_group.h"
 
 namespace hydra {
 
-class FeatureScoreColor : public GraphColorAdaptor {
+class FeatureScoreColor : public GraphColorAdapter {
  public:
   struct Config {
     std::string ns = "~";
@@ -28,10 +30,11 @@ class FeatureScoreColor : public GraphColorAdaptor {
   void setFeature(const Eigen::VectorXf& feature);
 
  private:
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
-  struct FeatureTrampoline;
-  std::unique_ptr<FeatureTrampoline> trampoline_;
+  using InputMsg = semantic_inference_msgs::msg::FeatureVectorStamped;
+
+  void callback(const InputMsg::ConstSharedPtr& msg);
+
+  rclcpp::Subscription<InputMsg>::SharedPtr sub_;
 
   struct ScoreRange {
     float min = 0.0f;
@@ -45,13 +48,13 @@ class FeatureScoreColor : public GraphColorAdaptor {
   std::unique_ptr<EmbeddingDistance> metric_;
 
   inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphColorAdaptor, FeatureScoreColor, Config>(
+      config::RegistrationWithConfig<GraphColorAdapter, FeatureScoreColor, Config>(
           "FeatureScoreColor");
 };
 
 void declare_config(FeatureScoreColor::Config& config);
 
-class NearestFeatureColor : public GraphColorAdaptor {
+class NearestFeatureColor : public GraphColorAdapter {
  public:
   struct Config {
     config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
@@ -64,19 +67,18 @@ class NearestFeatureColor : public GraphColorAdaptor {
                             const spark_dsg::SceneGraphNode& node) const override;
 
  private:
-  ros::NodeHandle nh_;
   std::unique_ptr<EmbeddingDistance> metric_;
   std::unique_ptr<EmbeddingGroup> features_;
   const visualizer::DiscreteColormap colormap_;
 
   inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphColorAdaptor, NearestFeatureColor, Config>(
+      config::RegistrationWithConfig<GraphColorAdapter, NearestFeatureColor, Config>(
           "NearestFeatureColor");
 };
 
 void declare_config(NearestFeatureColor::Config& config);
 
-class NearestFeatureLabel : public visualizer::GraphTextAdaptor {
+class NearestFeatureLabel : public visualizer::GraphTextAdapter {
  public:
   struct Config {
     config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
@@ -90,12 +92,11 @@ class NearestFeatureLabel : public visualizer::GraphTextAdaptor {
                       const spark_dsg::SceneGraphNode& node) const override;
 
  private:
-  ros::NodeHandle nh_;
   std::unique_ptr<EmbeddingDistance> metric_;
   std::unique_ptr<EmbeddingGroup> features_;
 
   inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphTextAdaptor, NearestFeatureLabel, Config>(
+      config::RegistrationWithConfig<GraphTextAdapter, NearestFeatureLabel, Config>(
           "NearestFeatureLabel");
 };
 

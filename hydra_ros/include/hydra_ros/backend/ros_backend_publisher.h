@@ -35,6 +35,10 @@
 #pragma once
 #include <hydra/backend/backend_module.h>
 #include <tf2_ros/transform_broadcaster.h>
+#include <ianvs/node_handle.h>
+#include <pose_graph_tools_ros/conversions.h>
+#include <rclcpp/publisher.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
@@ -53,7 +57,7 @@ class RosBackendPublisher : public BackendModule::Sink {
     std::string tf_pub_odom_frame = "";
   } const config;
 
-  explicit RosBackendPublisher(const ros::NodeHandle& nh);
+  explicit RosBackendPublisher(ianvs::NodeHandle nh);
 
   virtual ~RosBackendPublisher() = default;
 
@@ -77,14 +81,13 @@ class RosBackendPublisher : public BackendModule::Sink {
                          const kimera_pgmo::DeformationGraph& dgraph) const;
 
  protected:
-  ros::NodeHandle nh_;
-  ros::Publisher mesh_mesh_edges_pub_;
-  ros::Publisher pose_mesh_edges_pub_;
-  ros::Publisher pose_graph_pub_;
-  ros::Publisher mesh_graph_pub_;
+  ianvs::NodeHandle nh_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr mesh_mesh_edges_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_mesh_edges_pub_;
+  pose_graph_tools::PoseGraphPublisher pose_graph_pub_;
+  pose_graph_tools::PoseGraphPublisher mesh_graph_pub_;
   std::unique_ptr<DsgSender> dsg_sender_;
   mutable tf2_ros::TransformBroadcaster tf_br_;
-  mutable int64_t last_robot_tf_stamp_ = 0;
 };
 
 }  // namespace hydra

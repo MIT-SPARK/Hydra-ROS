@@ -34,18 +34,17 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/mesh_segmenter.h>
+#include <ianvs/lazy_publisher_group.h>
 #include <kimera_pgmo/mesh_delta.h>
-#include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
 
-#include "hydra_ros/utils/lazy_publisher_group.h"
+#include <visualization_msgs/msg/marker.hpp>
 
 namespace hydra {
 
 class ObjectVisualizer : public MeshSegmenter::Sink {
  public:
   struct Config {
-    std::string module_ns = "~objects";
+    std::string module_ns = "~/objects";
     double point_scale = 0.1;
     double point_alpha = 0.7;
     bool use_spheres = false;
@@ -65,11 +64,11 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
  protected:
   void fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
                            const std::vector<size_t>& indices,
-                           visualization_msgs::Marker& marker) const;
+                           visualization_msgs::msg::Marker& marker) const;
 
  protected:
-  ros::NodeHandle nh_;
-  RosPublisherGroup<visualization_msgs::Marker> pubs_;
+  ianvs::NodeHandle nh_;
+  ianvs::RosPublisherGroup<visualization_msgs::msg::Marker> pubs_;
 
  private:
   inline static const auto registration_ =

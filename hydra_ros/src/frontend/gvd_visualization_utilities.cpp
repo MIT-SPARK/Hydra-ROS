@@ -34,22 +34,24 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/frontend/gvd_visualization_utilities.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/types/enum.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
-#include <hydra_visualizer/utils/visualizer_utilities.h>
-#include <tf2_eigen/tf2_eigen.h>
+#include <hydra_visualizer/drawing.h>
 
 #include <random>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
 
-using hydra_ros::GvdVisualizerConfig;
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 using visualizer::DiscreteColormap;
 using visualizer::RangeColormap;
 
@@ -131,6 +133,30 @@ std::unordered_set<uint64_t>& getNodeSet(EdgeMap& edge_map, uint64_t node) {
 
 }  // namespace
 
+void declare_config(GvdVisualizerConfig& config) {
+  using namespace config;
+  name("GvdVisualizerConfig");
+  field(config.show_block_outlines, "show_block_outlines");
+  field(config.block_outline_scale, "block_outline_scale");
+  field(config.gvd_alpha, "gvd_alpha");
+  field(config.gvd_min_alpha, "gvd_min_alpha");
+  field(config.gvd_min_distance, "gvd_min_distance");
+  field(config.gvd_max_distance, "gvd_max_distance");
+  field(config.basis_threshold, "basis_threshold");
+  field(config.min_num_basis, "min_num_basis");
+  field(config.max_num_basis, "max_num_basis");
+  enum_field(config.gvd_mode,
+             "gvd_mode",
+             {{GvdVisualizationMode::DEFAULT, "DEFAULT"},
+              {GvdVisualizationMode::DISTANCE, "DISTANCE"},
+              {GvdVisualizationMode::BASIS_POINTS, "BASIS_POINTS"}});
+  field(config.gvd_graph_scale, "gvd_graph_scale");
+  field(config.freespace_sphere_alpha, "freespace_sphere_alpha");
+  field(config.esdf_alpha, "esdf_alpha");
+  field(config.slice_height, "slice_height");
+  field(config.esdf_distance, "esdf_distance");
+}
+
 Marker drawEsdf(const GvdVisualizerConfig& config,
                 const RangeColormap& cmap,
                 const Eigen::Isometry3d& pose,
@@ -139,14 +165,13 @@ Marker drawEsdf(const GvdVisualizerConfig& config,
   VoxelSliceConfig slice{config.slice_height, true};
   return drawVoxelSlice<GvdVoxel>(
       slice,
-      std_msgs::Header(),
+      std_msgs::msg::Header(),
       layer,
       pose,
       [](const auto& voxel) { return voxel.observed; },
       [&](const auto& voxel) {
-        return visualizer::makeColorMsg(
-            cmap(voxel.distance, 0, config.esdf_distance),
-            config.esdf_alpha);
+        return visualizer::makeColorMsg(cmap(voxel.distance, 0, config.esdf_distance),
+                                        config.esdf_alpha);
       },
       ns);
 }
@@ -177,7 +202,7 @@ Marker drawGvd(const GvdVisualizerConfig& config,
       }
 
       const Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
+      geometry_msgs::msg::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
@@ -216,7 +241,7 @@ Marker drawGvdSurface(const GvdVisualizerConfig& config,
       }
 
       Eigen::Vector3d voxel_pos = block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
+      geometry_msgs::msg::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
@@ -265,7 +290,7 @@ Marker drawGvdError(const GvdVisualizerConfig& config,
       }
 
       const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::Point marker_pos;
+      geometry_msgs::msg::Point marker_pos;
       tf2::convert(voxel_pos, marker_pos);
       marker.points.push_back(marker_pos);
 
@@ -320,7 +345,7 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
 
   EdgeMap seen_edges;
   for (const auto& id_node_pair : graph.nodes()) {
-    geometry_msgs::Point node_centroid;
+    geometry_msgs::msg::Point node_centroid;
     tf2::convert(id_node_pair.second.position, node_centroid);
     nodes.points.push_back(node_centroid);
     const auto color = getGvdColor(config,
@@ -342,7 +367,7 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
       edges.colors.push_back(nodes.colors.back());
 
       const auto& other = *graph.getNode(sibling);
-      geometry_msgs::Point neighbor_centroid;
+      geometry_msgs::msg::Point neighbor_centroid;
       tf2::convert(other.position, neighbor_centroid);
       edges.points.push_back(neighbor_centroid);
       const auto sibling_color =
@@ -399,14 +424,14 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
 
   std::map<uint64_t, size_t> color_mapping;
   const size_t num_colors = fillColors(clusters, color_mapping);
-  std::vector<std_msgs::ColorRGBA> colors;
+  std::vector<std_msgs::msg::ColorRGBA> colors;
   for (size_t i = 0; i < num_colors; ++i) {
     colors.push_back(visualizer::makeColorMsg(colormap(i), config.gvd_alpha));
   }
 
   EdgeMap seen_edges;
   for (const auto& id_node_pair : graph.nodes()) {
-    geometry_msgs::Point node_centroid;
+    geometry_msgs::msg::Point node_centroid;
     tf2::convert(id_node_pair.second.position, node_centroid);
     nodes.points.push_back(node_centroid);
     if (remapping.count(id_node_pair.first)) {
@@ -431,7 +456,7 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
       edges.colors.push_back(nodes.colors.back());
 
       const auto& other = *graph.getNode(sibling);
-      geometry_msgs::Point neighbor_centroid;
+      geometry_msgs::msg::Point neighbor_centroid;
       tf2::convert(other.position, neighbor_centroid);
       edges.points.push_back(neighbor_centroid);
 

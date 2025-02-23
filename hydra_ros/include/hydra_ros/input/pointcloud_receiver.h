@@ -34,7 +34,9 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <config_utilities/factory.h>
-#include <sensor_msgs/PointCloud2.h>
+
+#include <rclcpp/subscription.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include "hydra_ros/input/ros_data_receiver.h"
 
@@ -52,9 +54,9 @@ class PointcloudReceiver : public RosDataReceiver {
   bool initImpl() override;
 
  private:
-  void callback(const sensor_msgs::PointCloud2& cloud);
+  void callback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud);
 
-  ros::Subscriber sub_;
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
 
   inline static const auto registration_ =
       config::RegistrationWithConfig<DataReceiver,

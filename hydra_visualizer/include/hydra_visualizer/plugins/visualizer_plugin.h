@@ -33,8 +33,9 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <ros/ros.h>
 #include <spark_dsg/dynamic_scene_graph.h>
+
+#include <std_msgs/msg/header.hpp>
 
 namespace hydra {
 
@@ -42,23 +43,23 @@ class VisualizerPlugin {
  public:
   using Ptr = std::shared_ptr<VisualizerPlugin>;
 
-  VisualizerPlugin(const ros::NodeHandle& nh, const std::string& name)
-      : nh_(nh, name) {}
+  VisualizerPlugin(const std::string& _name) : name(_name) {}
 
   virtual ~VisualizerPlugin() = default;
 
-  virtual void draw(const std_msgs::Header& header,
+  virtual void draw(const std_msgs::msg::Header& header,
                     const spark_dsg::DynamicSceneGraph& graph) = 0;
 
-  virtual void reset(const std_msgs::Header& header) = 0;
+  virtual void reset(const std_msgs::msg::Header& header) = 0;
 
   // Let plugins request changes.
   virtual bool hasChange() const { return has_change_; }
 
   virtual void clearChangeFlag() { has_change_ = false; }
 
+  const std::string name;
+
  protected:
-  ros::NodeHandle nh_;
   bool has_change_ = false;
 };
 

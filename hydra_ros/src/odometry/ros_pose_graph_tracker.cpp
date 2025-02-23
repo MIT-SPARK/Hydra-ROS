@@ -50,11 +50,12 @@
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
-#include <pose_graph_tools_ros/conversions.h>
+
+#include "hydra_ros/common.h"
 
 namespace hydra {
 
-using PoseGraphMsg = pose_graph_tools_msgs::PoseGraph;
+using pose_graph_tools::PoseGraph;
 
 void declare_config(RosPoseGraphTracker::Config& config) {
   using namespace config;
@@ -64,13 +65,16 @@ void declare_config(RosPoseGraphTracker::Config& config) {
 }
 
 RosPoseGraphTracker::RosPoseGraphTracker(const Config& config)
-    : config(config::checkValid(config)), nh_(config.ns) {
-  odom_sub_ = nh_.subscribe(
+    : config(config::checkValid(config)) {
+  using pose_graph_tools::PoseGraphTypeAdapter;
+  auto nh = getHydraNodeHandle(config.ns);
+  odom_sub_ = nh.create_subscription<PoseGraphTypeAdapter>(
       "pose_graph", config.queue_size, &RosPoseGraphTracker::odomCallback, this);
-  prior_sub_ = nh_.subscribe("agent_node_measurements",
-                             config.queue_size,
-                             &RosPoseGraphTracker::priorCallback,
-                             this);
+  prior_sub_ =
+      nh.create_subscription<PoseGraphTypeAdapter>("agent_node_measurements",
+                                                  config.queue_size,
+                                                  &RosPoseGraphTracker::priorCallback,
+                                                  this);
 }
 
 // Return pose graphs and priors received from Kimera since the last call
@@ -87,20 +91,19 @@ PoseGraphPacket RosPoseGraphTracker::update(uint64_t, const Eigen::Isometry3d&) 
   return packet;
 }
 
-void RosPoseGraphTracker::odomCallback(const PoseGraphMsg& msg) {
+void RosPoseGraphTracker::odomCallback(const PoseGraph& msg) {
   if (msg.nodes.empty()) {
     LOG(WARNING) << "[RosPoseGraphTracker] Received empty pose graph, skipping!";
     return;
   }
 
   std::unique_lock<std::mutex> lock(mutex_);
-  pose_graphs_.push_back(pose_graph_tools::fromMsg(msg));
+  pose_graphs_.push_back(msg);
 }
 
-void RosPoseGraphTracker::priorCallback(const PoseGraphMsg& msg) {
+void RosPoseGraphTracker::priorCallback(const PoseGraph& msg) {
   std::unique_lock<std::mutex> lock(mutex_);
-  external_priors_ =
-      std::make_shared<pose_graph_tools::PoseGraph>(pose_graph_tools::fromMsg(msg));
+  external_priors_ = std::make_shared<pose_graph_tools::PoseGraph>(msg);
 }
 
 }  // namespace hydra

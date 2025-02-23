@@ -35,21 +35,24 @@
 #include "hydra_ros/active_window/reconstruction_visualizer.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <hydra/common/global_info.h>
 #include <hydra_visualizer/color/color_parsing.h>
-#include <hydra_visualizer/utils/visualizer_utilities.h>
-#include <tf2_eigen/tf2_eigen.h>
+#include <hydra_visualizer/drawing.h>
+#include <ianvs/node_handle_factory.h>
 
+#include <tf2_eigen/tf2_eigen.hpp>
+
+#include "hydra_ros/common.h"
 #include "hydra_ros/utils/input_data_to_messages.h"
-#include "hydra_ros/utils/node_handle_factory.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
 
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using sensor_msgs::msg::Image;
+using std_msgs::msg::ColorRGBA;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 using visualizer::ContinuousPalette;
 using visualizer::DivergentPalette;
 using visualizer::RangeColormap;
@@ -61,17 +64,17 @@ bool isVoxelObserved(const ReconstructionVisualizer::Config& config,
   return voxel.weight >= config.min_observation_weight;
 }
 
-std_msgs::ColorRGBA colorVoxelByDist(const ReconstructionVisualizer::Config& config,
-                                     double truncation_distance,
-                                     const visualizer::RangeColormap& cmap,
-                                     const TsdfVoxel& voxel) {
+ColorRGBA colorVoxelByDist(const ReconstructionVisualizer::Config& config,
+                           double truncation_distance,
+                           const visualizer::RangeColormap& cmap,
+                           const TsdfVoxel& voxel) {
   auto color = cmap(voxel.distance, -truncation_distance, truncation_distance);
   return visualizer::makeColorMsg(color, config.marker_alpha);
 }
 
-std_msgs::ColorRGBA colorVoxelByWeight(const ReconstructionVisualizer::Config& config,
-                                       const visualizer::RangeColormap& cmap,
-                                       const TsdfVoxel& voxel) {
+ColorRGBA colorVoxelByWeight(const ReconstructionVisualizer::Config& config,
+                             const visualizer::RangeColormap& cmap,
+                             const TsdfVoxel& voxel) {
   // TODO(nathan) consider exponential
   auto color = cmap(voxel.weight, config.min_weight, config.max_weight);
   return visualizer::makeColorMsg(color, config.marker_alpha);
@@ -103,28 +106,12 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.mesh_coloring, "mesh_coloring");
 }
 
-ImagePublisherGroup::ImagePublisherGroup(ros::NodeHandle& nh) : transport_(nh) {}
-
-bool ImagePublisherGroup::shouldPublish(const image_transport::Publisher& pub) const {
-  return pub.getNumSubscribers() > 0;
-}
-
-image_transport::Publisher ImagePublisherGroup::makePublisher(
-    const std::string& topic) const {
-  return transport_.advertise(topic, 1);
-}
-
-void ImagePublisherGroup::publishMsg(const image_transport::Publisher& pub,
-                                     const sensor_msgs::Image::Ptr& img) const {
-  pub.publish(img);
-}
-
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
     : config(config),
-      nh_(NodeHandleFactory::getNodeHandle(config.ns)),
+      nh_(getHydraNodeHandle(config.ns)),
       pubs_(nh_),
-      active_mesh_pub_(nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("mesh", 1)),
-      pose_pub_(nh_.advertise<geometry_msgs::PoseStamped>("pose", 10)),
+      active_mesh_pub_(nh_.create_publisher<kimera_pgmo_msgs::msg::Mesh>("mesh", 1)),
+      pose_pub_(nh_.create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10)),
       image_pubs_(nh_),
       cloud_pubs_(nh_),
       colormap_(config.colormap),
@@ -143,21 +130,21 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   const auto& tsdf = map.getTsdfLayer();
   const auto pose = output.world_T_body();
 
-  std_msgs::Header header;
+  std_msgs::msg::Header header;
   header.frame_id = GlobalInfo::instance().getFrames().map;
-  header.stamp.fromNSec(timestamp_ns);
+  header.stamp = rclcpp::Time(timestamp_ns);
 
-  geometry_msgs::PoseStamped pose_msg;
-  pose_msg.header = header;
-  pose_msg.pose.position.x = pose.translation().x();
-  pose_msg.pose.position.y = pose.translation().y();
-  pose_msg.pose.position.z = pose.translation().z();
+  auto pose_msg = std::make_unique<geometry_msgs::msg::PoseStamped>();
+  pose_msg->header = header;
+  pose_msg->pose.position.x = pose.translation().x();
+  pose_msg->pose.position.y = pose.translation().y();
+  pose_msg->pose.position.z = pose.translation().z();
   const Eigen::Quaterniond q(pose.rotation());
-  pose_msg.pose.orientation.x = q.x();
-  pose_msg.pose.orientation.y = q.y();
-  pose_msg.pose.orientation.z = q.z();
-  pose_msg.pose.orientation.w = q.w();
-  pose_pub_.publish(pose_msg);
+  pose_msg->pose.orientation.x = q.x();
+  pose_msg->pose.orientation.y = q.y();
+  pose_msg->pose.orientation.z = q.z();
+  pose_msg->pose.orientation.w = q.w();
+  pose_pub_->publish(std::move(pose_msg));
 
   const RangeColormap cmap(RangeColormap::Config{});
   const VoxelSliceConfig slice{config.slice_height, config.use_relative_height};
@@ -194,8 +181,8 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
   publishMesh(output);
 
   if (output.sensor_data) {
-    std_msgs::Header header;
-    header.stamp.fromNSec(output.timestamp_ns);
+    std_msgs::msg::Header header;
+    header.stamp = rclcpp::Time(output.timestamp_ns);
     header.frame_id = GlobalInfo::instance().getFrames().map;
 
     const auto sensor_name = output.sensor_data->getSensor().name;
@@ -213,8 +200,8 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
 }  // namespace hydra
 
 void ReconstructionVisualizer::publishMesh(const ActiveWindowOutput& out) const {
-  std_msgs::Header header;
-  header.stamp.fromNSec(out.timestamp_ns);
+  std_msgs::msg::Header header;
+  header.stamp = rclcpp::Time(out.timestamp_ns);
   header.frame_id = GlobalInfo::instance().getFrames().map;
 
   const auto& mesh = out.map().getMeshLayer();
@@ -227,7 +214,7 @@ void ReconstructionVisualizer::publishMesh(const ActiveWindowOutput& out) const 
                            block_cmap.getCallback<MeshBlock>());
   });
 
-  if (active_mesh_pub_.getNumSubscribers() == 0) {
+  if (!active_mesh_pub_->get_subscription_count()) {
     return;
   }
 
@@ -245,7 +232,7 @@ void ReconstructionVisualizer::publishMesh(const ActiveWindowOutput& out) const 
 
   auto msg = visualizer::makeMeshMsg(
       header, *combined_mesh, "active_window_mesh", mesh_coloring_);
-  active_mesh_pub_.publish(msg);
+  active_mesh_pub_->publish(msg);
 }
 
 }  // namespace hydra

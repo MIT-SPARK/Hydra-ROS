@@ -33,33 +33,36 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/PointCloud2.h>
 #include <spark_dsg/color.h>
+
+#include <functional>
+
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace hydra {
 
 struct InputData;
+using CmapFunc = std::function<spark_dsg::Color(uint32_t)>;
 
 /**
  * @brief Make a colored image for the current labels in the input data
  */
-sensor_msgs::Image::Ptr makeImage(
-    const std_msgs::Header& header,
-    const InputData& sensor_data,
-    const std::function<spark_dsg::Color(uint32_t)>& colormap);
+sensor_msgs::msg::Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
+                                             const InputData& sensor_data,
+                                             const CmapFunc& colormap);
 
 /**
- * @brief Make a colored image for the current labels in the input data
+ * @brief Copy the current depth image to ros
  */
-sensor_msgs::Image::Ptr makeDepthImage(const std_msgs::Header& header,
-                                       const InputData& sensor_data);
+sensor_msgs::msg::Image::SharedPtr makeDepthImage(const std_msgs::msg::Header& header,
+                                                  const InputData& sensor_data);
 
 /**
  * @brief Convert the input pointcloud to a ROS type
  */
-sensor_msgs::PointCloud2::Ptr makeCloud(const std_msgs::Header& header,
-                                        const InputData& sensor_data,
-                                        bool filter_by_range);
+sensor_msgs::msg::PointCloud2::UniquePtr makeCloud(const std_msgs::msg::Header& header,
+                                                   const InputData& sensor_data,
+                                                   bool filter_by_range);
 
 }  // namespace hydra

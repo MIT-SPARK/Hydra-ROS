@@ -32,26 +32,29 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include <ros/ros.h>
-
 #include <filesystem>
+
+#include <rclcpp/node.hpp>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
 namespace hydra {
 
-struct SceneGraphLogger {
+class SceneGraphLogger : public rclcpp::Node {
+ public:
   struct Config {
     size_t output_every_num = 0;
     std::filesystem::path output_path;
   } const config;
 
-  explicit SceneGraphLogger(const ros::NodeHandle& nh);
-  void spin();
+  explicit SceneGraphLogger(const rclcpp::NodeOptions& options);
 
-  ros::NodeHandle nh_;
+ private:
+  void spinOnce();
+
   size_t curr_count_;
   size_t curr_output_count_;
+  rclcpp::TimerBase::SharedPtr timer_;
   std::unique_ptr<DsgReceiver> receiver_;
 };
 

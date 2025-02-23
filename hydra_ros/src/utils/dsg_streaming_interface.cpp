@@ -40,43 +40,45 @@
 #include <hydra/utils/pgmo_mesh_traits.h>
 #include <hydra/utils/timing_utilities.h>
 #include <kimera_pgmo/utils/common_functions.h>
-#include <kimera_pgmo_ros/conversion/ros_conversion.h>
+#include <kimera_pgmo_ros/conversion/mesh.h>
 #include <spark_dsg/serialization/graph_binary_serialization.h>
 
 namespace hydra {
 
-DsgSender::DsgSender(const ros::NodeHandle& nh,
+using hydra_msgs::msg::DsgUpdate;
+using MeshMsg = kimera_pgmo_msgs::msg::Mesh;
+
+DsgSender::DsgSender(ianvs::NodeHandle nh,
                      const std::string& frame_id,
                      const std::string& timer_name,
                      bool publish_mesh,
                      double min_mesh_separation_s,
                      bool serialize_dsg_mesh)
-    : nh_(nh),
-      frame_id_(frame_id),
+    : frame_id_(frame_id),
       timer_name_(timer_name),
       publish_mesh_(publish_mesh),
       min_mesh_separation_s_(min_mesh_separation_s),
       serialize_dsg_mesh_(serialize_dsg_mesh) {
-  pub_ = nh_.advertise<hydra_msgs::DsgUpdate>("dsg", 1);
+  pub_ = nh.create_publisher<DsgUpdate>("dsg", 1);
   if (publish_mesh_) {
-    mesh_pub_ = nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("dsg_mesh", 1, false);
+    mesh_pub_ = nh.create_publisher<MeshMsg>("dsg_mesh", 1);
   }
 }
 
 void DsgSender::sendGraph(const DynamicSceneGraph& graph,
-                          const ros::Time& stamp) const {
-  const uint64_t timestamp_ns = stamp.toNSec();
+                          const rclcpp::Time& stamp) const {
+  const uint64_t timestamp_ns = stamp.nanoseconds();
   timing::ScopedTimer timer(timer_name_, timestamp_ns);
 
-  if (pub_.getNumSubscribers()) {
-    hydra_msgs::DsgUpdate msg;
-    msg.header.stamp = stamp;
-    spark_dsg::io::binary::writeGraph(graph, msg.layer_contents, serialize_dsg_mesh_);
-    msg.full_update = true;
-    pub_.publish(msg);
+  if (pub_->get_subscription_count()) {
+    auto msg = std::make_unique<DsgUpdate>();
+    msg->header.stamp = stamp;
+    spark_dsg::io::binary::writeGraph(graph, msg->layer_contents, serialize_dsg_mesh_);
+    msg->full_update = true;
+    pub_->publish(std::move(msg));
   }
 
-  if (!publish_mesh_ || !mesh_pub_.getNumSubscribers()) {
+  if (!publish_mesh_ || !mesh_pub_->get_subscription_count()) {
     return;
   }
 
@@ -95,27 +97,30 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
 
   last_mesh_time_ns_ = timestamp_ns;
 
-  kimera_pgmo_msgs::KimeraPgmoMesh msg = kimera_pgmo::conversions::toMsg(*mesh);
-  msg.header.stamp.fromNSec(timestamp_ns);
-  msg.header.frame_id = frame_id_;
-  mesh_pub_.publish(msg);
+  // TODO(nathan) grab the right robot id
+  auto msg = kimera_pgmo::conversions::toMsg(0, *mesh);
+  msg->header.stamp = stamp;
+  msg->header.frame_id = frame_id_;
+  mesh_pub_->publish(std::move(msg));
 }
 
-DsgReceiver::DsgReceiver(const ros::NodeHandle& nh, bool subscribe_to_mesh)
-    : nh_(nh), has_update_(false), graph_(nullptr) {
-  sub_ = nh_.subscribe("dsg", 1, &DsgReceiver::handleUpdate, this);
+DsgReceiver::DsgReceiver(ianvs::NodeHandle nh, bool subscribe_to_mesh)
+    : has_update_(false), graph_(nullptr) {
+  sub_ = nh.create_subscription<DsgUpdate>("dsg", 1, &DsgReceiver::handleUpdate, this);
   if (subscribe_to_mesh) {
-    mesh_sub_ = nh_.subscribe("dsg_mesh_updates", 1, &DsgReceiver::handleMesh, this);
+    mesh_sub_ = nh.create_subscription<MeshMsg>(
+        "dsg_mesh_updates", 1, &DsgReceiver::handleMesh, this);
   }
 }
 
-DsgReceiver::DsgReceiver(const ros::NodeHandle& nh, const LogCallback& log_cb)
+DsgReceiver::DsgReceiver(ianvs::NodeHandle nh, const LogCallback& log_cb)
     : DsgReceiver(nh) {
   log_callback_.reset(new LogCallback(log_cb));
 }
 
-void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
-  timing::ScopedTimer timer("receive_dsg", msg->header.stamp.toNSec());
+void DsgReceiver::handleUpdate(const DsgUpdate::ConstSharedPtr& msg) {
+  const auto timestamp_ns = rclcpp::Time(msg->header.stamp).nanoseconds();
+  timing::ScopedTimer timer("receive_dsg", timestamp_ns);
   if (!msg->full_update) {
     throw std::runtime_error("not implemented");
   }
@@ -134,8 +139,7 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
     }
     has_update_ = true;
   } catch (const std::exception& e) {
-    ROS_FATAL_STREAM("Received invalid message: " << e.what());
-    ros::shutdown();
+    LOG(ERROR) << "Received invalid message: " << e.what();
     return;
   }
 
@@ -144,16 +148,18 @@ void DsgReceiver::handleUpdate(const hydra_msgs::DsgUpdate::ConstPtr& msg) {
   }
 }
 
-void DsgReceiver::handleMesh(const kimera_pgmo_msgs::KimeraPgmoMesh::ConstPtr& msg) {
+void DsgReceiver::handleMesh(const MeshMsg::ConstSharedPtr& msg) {
   if (!msg) {
     return;
   }
-  timing::ScopedTimer timer("receive_mesh", msg->header.stamp.toNSec());
+
+  const auto timestamp_ns = rclcpp::Time(msg->header.stamp).nanoseconds();
+  timing::ScopedTimer timer("receive_mesh", timestamp_ns);
   if (!mesh_) {
     mesh_ = std::make_shared<Mesh>();
   }
 
-  kimera_pgmo::conversions::fromMsg(*msg, *mesh_);
+  kimera_pgmo::conversions::fillFromMsg(*msg, *mesh_);
 
   if (graph_) {
     graph_->setMesh(mesh_);

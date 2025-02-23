@@ -73,17 +73,20 @@
 
 #pragma once
 
-#include <config_utilities/factory.h>
+#include <ianvs/node_handle.h>
 #include <spark_dsg/color.h>
 #include <spark_dsg/node_attributes.h>
 #include <tf2_ros/transform_broadcaster.h>
-#include <visualization_msgs/MarkerArray.h>
 
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+
+#include <kimera_pgmo_msgs/msg/mesh.hpp>
+#include <rclcpp/publisher.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
@@ -123,19 +126,19 @@ class KhronosObjectPlugin : public VisualizerPlugin {
 
   // Construction.
   KhronosObjectPlugin(const Config& config,
-                      const ros::NodeHandle& nh,
+                      ianvs::NodeHandle nh,
                       const std::string& name);
 
   // Implement visualization interfaces.
-  void draw(const std_msgs::Header& header,
+  void draw(const std_msgs::msg::Header& header,
             const spark_dsg::DynamicSceneGraph& graph) override;
-  void reset(const std_msgs::Header& header) override;
+  void reset(const std_msgs::msg::Header& header) override;
 
  protected:
   // Helper functions.
-  void drawDynamicObjects(const std_msgs::Header& header,
+  void drawDynamicObjects(const std_msgs::msg::Header& header,
                           const spark_dsg::DynamicSceneGraph& graph);
-  void drawStaticObjects(const std_msgs::Header& header,
+  void drawStaticObjects(const std_msgs::msg::Header& header,
                          const spark_dsg::DynamicSceneGraph& graph);
 
   // Mesh namespace for the visualizer plugin.
@@ -145,7 +148,7 @@ class KhronosObjectPlugin : public VisualizerPlugin {
   static std::string getFrameName(const uint64_t id);
 
   // Publish Tf transform for a static object.
-  void publishTransform(const std_msgs::Header& header,
+  void publishTransform(const std_msgs::msg::Header& header,
                         const spark_dsg::KhronosObjectAttributes& attrs,
                         const uint64_t id);
 
@@ -154,25 +157,17 @@ class KhronosObjectPlugin : public VisualizerPlugin {
                                    const uint64_t id) const;
 
   // Clear static object visuliazation
-  void resetObject(const std_msgs::Header& header, const uint64_t id);
+  void resetObject(const std_msgs::msg::Header& header, const uint64_t id);
 
  private:
   // ROS.
-  ros::Publisher dynamic_pub_;
-  ros::Publisher static_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr dynamic_pub_;
+  rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr static_pub_;
   tf2_ros::TransformBroadcaster tf_broadcaster_;
 
   // Marker tracking.
   MarkerTracker tracker_;                          // Dynamic objects.
   std::unordered_set<uint64_t> previous_objects_;  // Static objects.
-
-  // Registration.
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<VisualizerPlugin,
-                                     KhronosObjectPlugin,
-                                     KhronosObjectPlugin::Config,
-                                     ros::NodeHandle,
-                                     std::string>("KhronosObjectPlugin");
 };
 
 void declare_config(KhronosObjectPlugin::Config& config);

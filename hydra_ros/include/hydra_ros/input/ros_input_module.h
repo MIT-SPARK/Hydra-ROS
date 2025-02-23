@@ -34,7 +34,6 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/input/input_module.h>
-#include <ros/ros.h>
 
 #include "hydra_ros/utils/tf_lookup.h"
 

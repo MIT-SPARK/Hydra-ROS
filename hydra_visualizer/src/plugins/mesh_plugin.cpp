@@ -37,13 +37,21 @@
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
-#include <kimera_pgmo_msgs/KimeraPgmoMesh.h>
-#include <tf2_eigen/tf2_eigen.h>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
-#include "hydra_visualizer/utils/visualizer_utilities.h"
+#include "hydra_visualizer/drawing.h"
 
 namespace hydra {
+namespace {
+
+static const auto registration =
+    config::RegistrationWithConfig<VisualizerPlugin,
+                                   MeshPlugin,
+                                   MeshPlugin::Config,
+                                   ianvs::NodeHandle,
+                                   std::string>("MeshPlugin");
+
+}
 
 using spark_dsg::DynamicSceneGraph;
 
@@ -52,50 +60,50 @@ void declare_config(MeshPlugin::Config& config) {
   name("MeshPlugin::Config");
   // TODO(lschmid): Not the most elegant, would be nice to dynamically set different
   // colorings once config_utilities dynamic config is ready.
-  field(config.use_color_adaptor, "use_color_adaptor");
+  field(config.use_color_adapter, "use_color_adapter");
   config.coloring.setOptional();
   field(config.coloring, "coloring");
 }
 
 MeshPlugin::MeshPlugin(const Config& config,
-                       const ros::NodeHandle& nh,
+                       ianvs::NodeHandle nh,
                        const std::string& name)
-    : VisualizerPlugin(nh, name),
+    : VisualizerPlugin(name),
       config(config::checkValid(config)),
-      use_color_adaptor_(config.use_color_adaptor),
+      use_color_adapter_(config.use_color_adapter),
+      mesh_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>(
+          name, rclcpp::QoS(1).transient_local())),
       mesh_coloring_(config.coloring.create()) {
   if (mesh_coloring_) {
-    toggle_service_ =
-        nh_.advertiseService("use_color_adaptor", &MeshPlugin::handleService, this);
+    toggle_service_ = nh.create_service<std_srvs::srv::SetBool>(
+        "use_color_adapter", &MeshPlugin::handleService, this);
   }
-
-  // namespacing gives us a reasonable topic
-  mesh_pub_ = nh_.advertise<kimera_pgmo_msgs::KimeraPgmoMesh>("", 1, true);
 }
 
 MeshPlugin::~MeshPlugin() {}
 
-void MeshPlugin::draw(const std_msgs::Header& header, const DynamicSceneGraph& graph) {
+void MeshPlugin::draw(const std_msgs::msg::Header& header,
+                      const DynamicSceneGraph& graph) {
   auto mesh = graph.mesh();
   if (!mesh || mesh->empty()) {
     return;
   }
 
-  if (use_color_adaptor_ && !mesh_coloring_) {
-    ROS_WARN_STREAM(
-        "[MeshPlugin] Invalid colormap; defaulting to original vertex color");
+  if (use_color_adapter_ && !mesh_coloring_) {
+    LOG(WARNING)
+        << "[MeshPlugin] Invalid colormap; defaulting to original vertex color";
   }
 
   auto msg = visualizer::makeMeshMsg(
-      header, *mesh, getMsgNamespace(), use_color_adaptor_ ? mesh_coloring_ : nullptr);
-  mesh_pub_.publish(msg);
+      header, *mesh, getMsgNamespace(), use_color_adapter_ ? mesh_coloring_ : nullptr);
+  mesh_pub_->publish(msg);
 }
 
-void MeshPlugin::reset(const std_msgs::Header& header) {
-  kimera_pgmo_msgs::KimeraPgmoMesh msg;
+void MeshPlugin::reset(const std_msgs::msg::Header& header) {
+  kimera_pgmo_msgs::msg::Mesh msg;
   msg.header = header;
   msg.ns = getMsgNamespace();
-  mesh_pub_.publish(msg);
+  mesh_pub_->publish(msg);
 }
 
 std::string MeshPlugin::getMsgNamespace() const {
@@ -103,12 +111,11 @@ std::string MeshPlugin::getMsgNamespace() const {
   return "robot0/dsg_mesh";
 }
 
-bool MeshPlugin::handleService(std_srvs::SetBool::Request& req,
-                               std_srvs::SetBool::Response& res) {
-  use_color_adaptor_ = req.data;
-  res.success = true;
+void MeshPlugin::handleService(const std_srvs::srv::SetBool::Request::SharedPtr& req,
+                               std_srvs::srv::SetBool::Response::SharedPtr res) {
+  use_color_adapter_ = req->data;
+  res->success = true;
   has_change_ = true;
-  return true;
 }
 
 }  // namespace hydra

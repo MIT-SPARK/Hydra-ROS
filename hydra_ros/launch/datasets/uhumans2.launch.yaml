@@ -1,0 +1,66 @@
+---
+launch:
+  # development arguments
+  - arg: {name: debug, default: 'false'}
+  - arg: {name: verbosity, default: '0'}
+  - arg: {name: glog_level, default: '0'}
+  - arg: {name: print_missing, default: 'false', description: have config utilities print all missing parameters when parsing configs}
+  # run behavior
+  - arg: {name: scene, default: office, description: uhumans2 scene name}
+  - arg: {name: log_path, default: '', description: directory to output to}
+  - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
+  # robot configuration
+  - arg: {name: robot_id, default: '0', description: unique robot identifier}
+  - arg: {name: sensor_frame, default: left_cam, description: camera frame}
+  - arg: {name: robot_frame, default: base_link_gt, description: robot body tf frame}
+  - arg: {name: odom_frame, default: world, description: odometry (map) frame}
+  - arg: {name: map_frame, default: map, description: backend scene graph frame}
+  # configuration
+  - arg: {name: hydra_config_path, default: $(find-pkg-share hydra)/config/datasets/uhumans2.yaml}
+  - arg: {name: input_config_path, default: $(find-pkg-share hydra_ros)/config/datasets/uhumans2.yaml}
+  - arg: {name: lcd_config_path, default: $(find-pkg-share hydra)/config/lcd/uhumans2.yaml}
+  - arg: {name: enable_lcd, default: 'false'}
+  - arg: {name: bounding_box_type, default: AABB}
+  # dataset semantics
+  - arg: {name: labelspace_path, default: $(find-pkg-share hydra)/config/label_spaces/uhumans2_$(var scene)_label_space.yaml}
+  - arg: {name: semantic_label_remap_path, default: $(find-pkg-share hydra)/config/label_remaps/uhumans2_$(var scene).yaml}
+  # output
+  - arg: {name: enable_zmq, default: 'false'}
+  - arg: {name: zmq_url, default: 'tcp://127.0.0.1:8001'}
+  - arg: {name: zmq_send_mesh, default: 'false'}
+  - set_remap: {from: hydra_visualizer/dsg, to: hydra/backend/dsg}
+  - node: {pkg: tf2_ros, exec: static_transform_publisher, args: '--frame-id world --child-frame-id map'}
+  - node:
+      pkg: hydra_ros
+      exec: hydra_ros_node
+      name: hydra
+      on_exit: shutdown
+      launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
+      env:
+        - {name: TERM, value: xterm-256color}
+      remap:
+        - {from: hydra/input/left_cam/depth_registered/image_rect, to: /tesse/depth_cam/mono/image_raw}
+        - {from: hydra/input/left_cam/rgb/image_raw, to: /tesse/left_cam/rgb/image_raw}
+        - {from: hydra/input/left_cam/rgb/camera_info, to: /tesse/left_cam/camera_info}
+        - {from: hydra/input/left_cam/semantic/image_raw, to: /tesse/seg_cam/converted/image_raw}
+      args: >
+        # start subst_value files
+        --config-utilities-file $(var input_config_path)
+        # end subst value files
+        --config-utilities-file $(var hydra_config_path)
+        --config-utilities-file $(var labelspace_path)
+        --config-utilities-file $(var lcd_config_path)
+        --config-utilities-file $(find-pkg-share hydra_ros)/config/sinks/mesh_segmenter_sinks.yaml@frontend/objects
+        --config-utilities-file $(find-pkg-share hydra_ros)/config/sinks/gvd_places_sinks.yaml@frontend/freespace_places
+        --config-utilities-file $(find-pkg-share hydra_ros)/config/sinks/active_window_sinks.yaml@active_window
+        --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
+        --config-utilities-yaml {print_missing: $(var print_missing), glog_level: $(var glog_level), verbosity: $(var verbosity)}
+        --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
+        --config-utilities-yaml {semantic_label_remap_filepath: $(var semantic_label_remap_path)}
+        --config-utilities-yaml {enable_zmq: $(var enable_zmq), backend: {zmq_sink: {url: $(var zmq_url), send_mesh: $(var zmq_send_mesh)}}}
+        --config-utilities-yaml {frontend: {objects: {bounding_box_type: $(var bounding_box_type)}}}
+        --config-utilities-yaml {enable_lcd: $(var enable_lcd)}
+  - include:
+      file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml
+      arg:
+        - {name: visualizer_frame, value: $(var map_frame)}

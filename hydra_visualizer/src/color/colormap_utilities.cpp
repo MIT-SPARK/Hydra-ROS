@@ -73,8 +73,8 @@ std::function<Color(size_t)> lookupColormap(DiscretePalette cmap) {
 
 }  // namespace
 
-std_msgs::ColorRGBA makeColorMsg(const Color& color, std::optional<double> alpha) {
-  std_msgs::ColorRGBA msg;
+std_msgs::msg::ColorRGBA makeColorMsg(const Color& color, std::optional<double> alpha) {
+  std_msgs::msg::ColorRGBA msg;
   msg.r = static_cast<double>(color.r) / 255.0;
   msg.g = static_cast<double>(color.g) / 255.0;
   msg.b = static_cast<double>(color.b) / 255.0;

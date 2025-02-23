@@ -33,48 +33,85 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <ros/ros.h>
+#include <ianvs/node_handle.h>
 #include <spark_dsg/dynamic_scene_graph.h>
-#include <visualization_msgs/MarkerArray.h>
 
 #include <string>
 #include <vector>
 
+#include <visualization_msgs/msg/marker_array.hpp>
+
+#include "hydra_visualizer/layer_info.h"
+#include "hydra_visualizer/utils/config_wrapper.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
-#include "hydra_visualizer/utils/visualizer_types.h"
 
 namespace hydra {
 
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+// NOTE(nathan) separate to make config wrapper easier to use
+struct GraphRenderConfig {
+  //! @brief Unit amount of distance between layers
+  double layer_z_step = 5.0;  // [0, 50.0]
+  //! @brief Whether or not to separate layers by adding z offsets
+  bool collapse_layers = false;
+};
+
+void declare_config(GraphRenderConfig& config);
 
 class SceneGraphRenderer {
  public:
   using Ptr = std::shared_ptr<SceneGraphRenderer>;
-  explicit SceneGraphRenderer(const ros::NodeHandle& nh);
+  using LayerConfigWrapper = visualizer::ConfigWrapper<visualizer::LayerConfig>;
+
+  struct Config {
+    //! @brief Overall graph config
+    GraphRenderConfig graph;
+    //! @brief Configuration for each layer
+    std::map<spark_dsg::LayerId, visualizer::LayerConfig> layers;
+    //! @brief Configuration for non-primary partitions by layer
+    std::map<spark_dsg::LayerId, visualizer::LayerConfig> partitions;
+  };
+
+  explicit SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh);
 
   virtual ~SceneGraphRenderer() = default;
 
-  virtual void reset(const std_msgs::Header& header);
+  virtual void reset(const std_msgs::msg::Header& header);
 
-  virtual void draw(const std_msgs::Header& header,
-                    const spark_dsg::DynamicSceneGraph& graph);
+  virtual void draw(const std_msgs::msg::Header& header,
+                    const spark_dsg::DynamicSceneGraph& graph) const;
 
   virtual bool hasChange() const;
 
   virtual void clearChangeFlag();
 
  protected:
-  virtual void drawLayer(const std_msgs::Header& header,
+  virtual void setConfigs(const spark_dsg::DynamicSceneGraph& graph) const;
+
+  virtual void drawInterlayerEdges(const std_msgs::msg::Header& header,
+                                   const spark_dsg::DynamicSceneGraph& graph,
+                                   visualization_msgs::msg::MarkerArray& msg) const;
+
+  virtual void drawLayer(const std_msgs::msg::Header& header,
                          const visualizer::LayerInfo& info,
                          const spark_dsg::SceneGraphLayer& layer,
                          const spark_dsg::Mesh* mesh,
-                         MarkerArray& msg);
+                         visualization_msgs::msg::MarkerArray& msg) const;
+
+  const visualizer::LayerInfo& getLayerInfo(spark_dsg::LayerKey layer) const;
 
  protected:
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
-  MarkerTracker tracker_;
+  ianvs::NodeHandle nh_;
+  visualizer::ConfigWrapper<GraphRenderConfig> graph_config_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
+
+  mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> layers_;
+  mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> partitions_;
+
+  mutable MarkerTracker tracker_;
+  mutable std::map<spark_dsg::LayerId, visualizer::LayerInfo> layer_infos_;
+  mutable std::map<spark_dsg::LayerId, visualizer::LayerInfo> partition_infos_;
 };
+
+void declare_config(SceneGraphRenderer::Config& config);
 
 }  // namespace hydra

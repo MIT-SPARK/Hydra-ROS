@@ -43,7 +43,7 @@ class TsdfOccupancyPublisher : public ReconstructionModule::Sink,
                                OccupancyPublisher<TsdfBlock> {
  public:
   struct Config : OccupancyPublisherConfig {
-    std::string ns = "~tsdf";
+    std::string ns = "~/tsdf";
   } const config;
 
   explicit TsdfOccupancyPublisher(const Config& config);

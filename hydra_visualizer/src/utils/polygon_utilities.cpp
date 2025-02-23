@@ -38,7 +38,8 @@
 #include <spark_dsg/bounding_box_extraction.h>
 #include <spark_dsg/graph_utilities.h>
 #include <spark_dsg/node_attributes.h>
-#include <tf2_eigen/tf2_eigen.h>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/utils/ear_clipping.h"
 
@@ -99,8 +100,8 @@ Eigen::MatrixXd getCirclePolygon(const SceneGraphNode& node,
   return footprint;
 }
 
-struct NodeAdaptor : public ::spark_dsg::bounding_box::PointAdaptor {
-  NodeAdaptor(const DynamicSceneGraph* graph, const std::vector<NodeId>& nodes)
+struct NodeAdapter : public ::spark_dsg::bounding_box::PointAdaptor {
+  NodeAdapter(const DynamicSceneGraph* graph, const std::vector<NodeId>& nodes)
       : graph(graph), nodes(nodes) {}
 
   size_t size() const override { return nodes.size(); }
@@ -120,8 +121,8 @@ struct NodeAdaptor : public ::spark_dsg::bounding_box::PointAdaptor {
 Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
                                       const SceneGraphNode& parent) {
   std::vector<NodeId> children(parent.children().begin(), parent.children().end());
-  const NodeAdaptor adaptor(&graph, children);
-  std::list<size_t> hull_indices = ::spark_dsg::bounding_box::get2dConvexHull(adaptor);
+  const NodeAdapter adapter(&graph, children);
+  std::list<size_t> hull_indices = ::spark_dsg::bounding_box::get2dConvexHull(adapter);
 
   Eigen::MatrixXd hull_points(3, hull_indices.size());
   size_t i = 0;
@@ -134,8 +135,8 @@ Eigen::MatrixXd getChildrenConvexHull(const DynamicSceneGraph& graph,
 }
 
 void makeFilledPolygon(const Eigen::MatrixXd& points,
-                       const std_msgs::ColorRGBA& color,
-                       visualization_msgs::Marker& marker,
+                       const std_msgs::msg::ColorRGBA& color,
+                       visualization_msgs::msg::Marker& marker,
                        std::optional<double> height) {
   if (points.cols() <= 1 || points.rows() != 3) {
     LOG(ERROR) << "Invalid point dimensions: [" << points.rows() << ", "
@@ -159,17 +160,17 @@ void makeFilledPolygon(const Eigen::MatrixXd& points,
 }
 
 void makePolygonBoundary(const Eigen::MatrixXd& points,
-                         const std_msgs::ColorRGBA& color,
-                         visualization_msgs::Marker& edges,
+                         const std_msgs::msg::ColorRGBA& color,
+                         visualization_msgs::msg::Marker& edges,
                          std::optional<double> height,
-                         visualization_msgs::Marker* corners) {
+                         visualization_msgs::msg::Marker* corners) {
   if (points.cols() <= 1 || points.rows() != 3) {
     LOG(ERROR) << "Invalid point dimensions: [" << points.rows() << ", "
                << points.cols() << "]";
     return;
   }
 
-  geometry_msgs::Point prev;
+  geometry_msgs::msg::Point prev;
   const Eigen::Vector3d prev_pos = points.block<3, 1>(0, points.cols() - 1);
   tf2::convert(prev_pos, prev);
   prev.z = height.value_or(prev.z);

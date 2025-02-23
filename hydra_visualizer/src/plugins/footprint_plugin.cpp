@@ -35,23 +35,34 @@
 #include "hydra_visualizer/plugins/footprint_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/factory.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
-#include <tf2_eigen/tf2_eigen.h>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/utils/polygon_utilities.h"
 
 namespace hydra {
+namespace {
+
+static const auto registration_ =
+    config::RegistrationWithConfig<VisualizerPlugin,
+                                   FootprintPlugin,
+                                   FootprintPlugin::Config,
+                                   ianvs::NodeHandle,
+                                   std::string>("FootprintPlugin");
+}
 
 using spark_dsg::DsgLayers;
 using spark_dsg::DynamicSceneGraph;
 using spark_dsg::LayerId;
 using spark_dsg::PlaceNodeAttributes;
 using spark_dsg::SemanticNodeAttributes;
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 void declare_config(FootprintPlugin::Config& config) {
   using namespace config;
@@ -71,16 +82,13 @@ void declare_config(FootprintPlugin::Config& config) {
 }
 
 FootprintPlugin::FootprintPlugin(const Config& config,
-                                 const ros::NodeHandle& nh,
+                                 ianvs::NodeHandle nh,
                                  const std::string& name)
-    : VisualizerPlugin(nh, name), config(config::checkValid(config)) {
-  // namespacing gives us a reasonable topic
-  pub_ = nh_.advertise<MarkerArray>("", 1, true);
-}
+    : VisualizerPlugin(name),
+      config(config::checkValid(config)),
+      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())) {}
 
-FootprintPlugin::~FootprintPlugin() {}
-
-void FootprintPlugin::draw(const std_msgs::Header& header,
+void FootprintPlugin::draw(const std_msgs::msg::Header& header,
                            const DynamicSceneGraph& graph) {
   MarkerArray markers;
   markers.markers.resize(
@@ -154,15 +162,15 @@ void FootprintPlugin::draw(const std_msgs::Header& header,
   tracker_.add(markers, msg);
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 
-void FootprintPlugin::reset(const std_msgs::Header& header) {
+void FootprintPlugin::reset(const std_msgs::msg::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 

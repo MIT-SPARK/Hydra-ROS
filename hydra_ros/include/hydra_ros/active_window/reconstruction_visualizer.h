@@ -35,40 +35,22 @@
 #pragma once
 #include <hydra/active_window/active_window_module.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
-#include <hydra_visualizer/color/mesh_color_adaptor.h>
+#include <hydra_visualizer/adapters/mesh_color.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
-#include <image_transport/image_transport.h>
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <ianvs/lazy_publisher_group.h>
+#include <ianvs/node_handle.h>
 
-#include "hydra_ros/utils/lazy_publisher_group.h"
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <kimera_pgmo_msgs/msg/mesh.hpp>
+#include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace hydra {
-
-struct ImagePublisherGroup;
-
-template <>
-struct publisher_type_trait<ImagePublisherGroup> {
-  using value = image_transport::Publisher;
-};
-
-struct ImagePublisherGroup : public LazyPublisherGroup<ImagePublisherGroup> {
-  using Base = LazyPublisherGroup<ImagePublisherGroup>;
-  explicit ImagePublisherGroup(ros::NodeHandle& nh);
-  virtual ~ImagePublisherGroup() = default;
-  bool shouldPublish(const image_transport::Publisher& pub) const;
-  image_transport::Publisher makePublisher(const std::string& topic) const;
-  void publishMsg(const image_transport::Publisher& pub,
-                  const sensor_msgs::Image::Ptr& img) const;
-
- private:
-  mutable image_transport::ImageTransport transport_;
-};
 
 class ReconstructionVisualizer : public ActiveWindowModule::Sink {
  public:
   struct Config {
-    std::string ns = "~reconstruction";
+    std::string ns = "~/reconstruction";
     double min_weight = 0.0;
     double max_weight = 10.0;
     double marker_alpha = 0.5;
@@ -101,12 +83,12 @@ class ReconstructionVisualizer : public ActiveWindowModule::Sink {
  protected:
   void publishMesh(const ActiveWindowOutput& output) const;
 
-  ros::NodeHandle nh_;
+  ianvs::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  ros::Publisher active_mesh_pub_;
-  ros::Publisher pose_pub_;
-  ImagePublisherGroup image_pubs_;
-  RosPublisherGroup<sensor_msgs::PointCloud2> cloud_pubs_;
+  rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr active_mesh_pub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
+  ianvs::RosPublisherGroup<sensor_msgs::msg::Image> image_pubs_;
+  ianvs::RosPublisherGroup<sensor_msgs::msg::PointCloud2> cloud_pubs_;
   const visualizer::RangeColormap colormap_;
   const visualizer::CategoricalColormap label_colormap_;
   std::shared_ptr<MeshColoring> mesh_coloring_;

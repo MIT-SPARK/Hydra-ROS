@@ -38,7 +38,6 @@
 #include <hydra/backend/backend_module.h>
 #include <hydra/common/hydra_pipeline.h>
 #include <hydra/frontend/graph_builder.h>
-#include <ros/ros.h>
 
 #include "hydra_ros/input/feature_receiver.h"
 #include "hydra_ros/input/ros_input_module.h"
@@ -61,7 +60,7 @@ class HydraRosPipeline : public HydraPipeline {
     config::VirtualConfig<FeatureReceiver> features;
   } const config;
 
-  HydraRosPipeline(const ros::NodeHandle& nh, int robot_id, int config_verbosity = 1);
+  explicit HydraRosPipeline(int robot_id, int config_verbosity = 1);
 
   virtual ~HydraRosPipeline();
 
@@ -73,7 +72,6 @@ class HydraRosPipeline : public HydraPipeline {
   virtual void initLCD();
 
  protected:
-  ros::NodeHandle nh_;
   std::shared_ptr<ActiveWindowModule> active_window_;
   std::shared_ptr<GraphBuilder> frontend_;
   std::shared_ptr<BackendModule> backend_;

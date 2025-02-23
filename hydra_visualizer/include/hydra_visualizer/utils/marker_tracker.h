@@ -33,9 +33,10 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <visualization_msgs/MarkerArray.h>
-
+#include <map>
 #include <set>
+
+#include <visualization_msgs/msg/marker_array.hpp>
 
 namespace hydra {
 
@@ -44,19 +45,19 @@ class MarkerTracker {
   MarkerTracker() = default;
   ~MarkerTracker() = default;
 
-  void add(const visualization_msgs::Marker& marker,
-           visualization_msgs::MarkerArray& msg);
+  void add(const visualization_msgs::msg::Marker& marker,
+           visualization_msgs::msg::MarkerArray& msg);
 
-  void add(const visualization_msgs::MarkerArray& markers,
-           visualization_msgs::MarkerArray& msg);
+  void add(const visualization_msgs::msg::MarkerArray& markers,
+           visualization_msgs::msg::MarkerArray& msg);
 
-  void remove(const std_msgs::Header& header,
+  void remove(const std_msgs::msg::Header& header,
               const std::string& ns,
               size_t marker_id,
-              visualization_msgs::MarkerArray& msg);
+              visualization_msgs::msg::MarkerArray& msg);
 
-  void clearPrevious(const std_msgs::Header& header,
-                     visualization_msgs::MarkerArray& msg);
+  void clearPrevious(const std_msgs::msg::Header& header,
+                     visualization_msgs::msg::MarkerArray& msg);
 
  private:
   std::map<std::string, std::set<size_t>> published_markers_;

@@ -33,21 +33,20 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <pose_graph_tools_msgs/PoseGraph.h>
-#include <ros/ros.h>
+#include <ianvs/node_handle.h>
+#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
 class ExternalLoopClosureSubscriber {
  public:
-  explicit ExternalLoopClosureSubscriber(const ros::NodeHandle& nh);
+  explicit ExternalLoopClosureSubscriber(ianvs::NodeHandle nh);
 
  protected:
-  void callback(const pose_graph_tools_msgs::PoseGraph& pose_graph);
+  void callback(const pose_graph_tools::PoseGraph& pose_graph);
 
  protected:
-  ros::NodeHandle nh_;
-  ros::Subscriber sub_;
+  pose_graph_tools::PoseGraphSubscription sub_;
 };
 
 }  // namespace hydra

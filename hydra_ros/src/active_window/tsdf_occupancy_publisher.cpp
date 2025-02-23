@@ -39,6 +39,8 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 
+#include "hydra_ros/common.h"
+
 namespace hydra {
 namespace voxel_traits {
 
@@ -62,7 +64,7 @@ void declare_config(TsdfOccupancyPublisher::Config& config) {
 }
 
 TsdfOccupancyPublisher::TsdfOccupancyPublisher(const Config& config)
-    : OccupancyPublisher(config, ros::NodeHandle(config.ns)),
+    : OccupancyPublisher(config, getHydraNodeHandle(config.ns)),
       config(config::checkValid(config)) {}
 
 std::string TsdfOccupancyPublisher::printInfo() const {

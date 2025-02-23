@@ -35,23 +35,24 @@
 #include "hydra_visualizer/groundtruth/region_publisher.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/parsing/ros.h>
+#include <config_utilities/parsing/context.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
-#include <tf2_eigen/tf2_eigen.h>
 #include <yaml-cpp/yaml.h>
 
 #include <filesystem>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/utils/polygon_utilities.h"
 
 namespace hydra {
 
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 void declare_config(RegionPublisher::Config& config) {
   using namespace config;
@@ -135,11 +136,11 @@ bool loadRegions(const std::filesystem::path& region_filepath,
   return true;
 }
 
-RegionPublisher::RegionPublisher(const ros::NodeHandle& nh)
-    : config(config::checkValid(config::fromRos<RegionPublisher::Config>(nh))),
+RegionPublisher::RegionPublisher(const rclcpp::NodeOptions& options)
+    : Node("region_publisher", options),
+      config(config::checkValid(config::fromContext<RegionPublisher::Config>())),
       published_(false),
-      nh_(nh),
-      pub_(nh_.advertise<MarkerArray>("regions", 1, true)) {
+      pub_(create_publisher<MarkerArray>("regions", rclcpp::QoS(1).transient_local())) {
   VLOG(1) << config::toString(config);
   if (config.region_filepath.empty()) {
     return;
@@ -158,7 +159,7 @@ size_t getTotalMarkers(const RegionPublisher::Config& config) {
 }
 
 Marker* setupFillMarker(const RegionPublisher::Config& config,
-                        const std_msgs::Header& header,
+                        const std_msgs::msg::Header& header,
                         MarkerArray& msg) {
   if (!config.fill_polygons) {
     return nullptr;
@@ -179,7 +180,7 @@ Marker* setupFillMarker(const RegionPublisher::Config& config,
 }
 
 Marker* setupBoundaryMarker(const RegionPublisher::Config& config,
-                            const std_msgs::Header& header,
+                            const std_msgs::msg::Header& header,
                             MarkerArray& msg) {
   if (!config.draw_polygon_boundaries) {
     return nullptr;
@@ -198,7 +199,7 @@ Marker* setupBoundaryMarker(const RegionPublisher::Config& config,
 }
 
 Marker* setupVertexMarker(const RegionPublisher::Config& config,
-                          const std_msgs::Header& header,
+                          const std_msgs::msg::Header& header,
                           MarkerArray& msg) {
   if (!config.draw_polygon_vertices) {
     return nullptr;
@@ -218,7 +219,7 @@ Marker* setupVertexMarker(const RegionPublisher::Config& config,
 }
 
 void addLabelMarker(const RegionPublisher::Config& config,
-                    const std_msgs::Header& header,
+                    const std_msgs::msg::Header& header,
                     const Region& region,
                     MarkerArray& msg) {
   const std::string ns = "gt_region_labels";
@@ -243,8 +244,8 @@ void RegionPublisher::publish() {
     return;
   }
 
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
+  std_msgs::msg::Header header;
+  header.stamp = get_clock()->now();
   header.frame_id = config.frame_id;
 
   MarkerArray markers;
@@ -282,20 +283,21 @@ void RegionPublisher::publish() {
   tracker_.add(markers, msg);
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
+
   published_ = true;
 }
 
 void RegionPublisher::reset() {
-  std_msgs::Header header;
-  header.stamp = ros::Time::now();
+  std_msgs::msg::Header header;
+  header.stamp = get_clock()->now();
   header.frame_id = config.frame_id;
 
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 
   published_ = false;

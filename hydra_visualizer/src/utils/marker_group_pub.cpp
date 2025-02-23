@@ -36,13 +36,13 @@
 
 namespace hydra {
 
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
-MarkerGroupPub::MarkerGroupPub(const ros::NodeHandle& nh) : nh_(nh) {}
+MarkerGroupPub::MarkerGroupPub(ianvs::NodeHandle nh) : nh_(nh) {}
 
 void MarkerGroupPub::publish(const std::string& name,
-                             const std_msgs::Header& header,
+                             const std_msgs::msg::Header& header,
                              const MarkerCallback& func) const {
   publish(name, header, [&func]() -> MarkerArray {
     MarkerArray msg;
@@ -52,15 +52,16 @@ void MarkerGroupPub::publish(const std::string& name,
 }
 
 void MarkerGroupPub::publish(const std::string& name,
-                             const std_msgs::Header& header,
+                             const std_msgs::msg::Header& header,
                              const ArrayCallback& func) const {
   auto iter = pubs_.find(name);
   if (iter == pubs_.end()) {
-    TrackedPublisher pub{{}, nh_.advertise<MarkerArray>(name, 1, true)};
+    TrackedPublisher pub{
+        {}, nh_.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())};
     iter = pubs_.emplace(name, pub).first;
   }
 
-  if (!iter->second.pub.getNumSubscribers()) {
+  if (!iter->second.pub->get_subscription_count()) {
     return;  // avoid doing computation if we don't need to publish
   }
 
@@ -70,7 +71,7 @@ void MarkerGroupPub::publish(const std::string& name,
     marker.header = header;
   }
   iter->second.tracker.clearPrevious(header, msg);
-  iter->second.pub.publish(msg);
+  iter->second.pub->publish(msg);
 }
 
 }  // namespace hydra

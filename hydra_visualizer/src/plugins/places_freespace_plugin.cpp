@@ -35,15 +35,15 @@
 #include "hydra_visualizer/plugins/places_freespace_plugin.h"
 
 #include <config_utilities/config_utilities.h>
-#include <config_utilities/parsing/ros.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
-#include <tf2_eigen/tf2_eigen.h>
+
+#include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/color_parsing.h"
-#include "hydra_visualizer/utils/visualizer_utilities.h"
+#include "hydra_visualizer/drawing.h"
 
 namespace hydra {
 namespace {
@@ -52,7 +52,7 @@ inline static const auto registration_ =
     config::RegistrationWithConfig<VisualizerPlugin,
                                    PlacesFreespacePlugin,
                                    PlacesFreespacePlugin::Config,
-                                   ros::NodeHandle,
+                                   ianvs::NodeHandle,
                                    std::string>("PlacesFreespacePlugin");
 
 }
@@ -64,8 +64,8 @@ using spark_dsg::PlaceNodeAttributes;
 using spark_dsg::SceneGraphLayer;
 using spark_dsg::SceneGraphNode;
 using spark_dsg::SemanticNodeAttributes;
-using visualization_msgs::Marker;
-using visualization_msgs::MarkerArray;
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 void declare_config(PlacesFreespacePlugin::Config& config) {
   using namespace config;
@@ -76,16 +76,16 @@ void declare_config(PlacesFreespacePlugin::Config& config) {
 }
 
 PlacesFreespacePlugin::PlacesFreespacePlugin(const Config& config,
-                                             const ros::NodeHandle& nh,
+                                             ianvs::NodeHandle nh,
                                              const std::string& name)
-    : VisualizerPlugin(nh, name),
+    : VisualizerPlugin(name),
       config(config::checkValid(config)),
-      pub_(nh_.advertise<MarkerArray>("", 1, true)),
-      layer_config_(nh_, "graph") {}
+      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())),
+      layer_config_(nh, "graph") {}
 
-void PlacesFreespacePlugin::draw(const std_msgs::Header& header,
+void PlacesFreespacePlugin::draw(const std_msgs::msg::Header& header,
                                  const DynamicSceneGraph& graph) {
-  if (pub_.getNumSubscribers() == 0) {
+  if (!pub_->get_subscription_count()) {
     return;
   }
 
@@ -93,19 +93,19 @@ void PlacesFreespacePlugin::draw(const std_msgs::Header& header,
   fillMarkers(header, graph, msg);
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 
-void PlacesFreespacePlugin::reset(const std_msgs::Header& header) {
+void PlacesFreespacePlugin::reset(const std_msgs::msg::Header& header) {
   MarkerArray msg;
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
-    pub_.publish(msg);
+    pub_->publish(msg);
   }
 }
 
-void PlacesFreespacePlugin::fillMarkers(const std_msgs::Header& header,
+void PlacesFreespacePlugin::fillMarkers(const std_msgs::msg::Header& header,
                                         const DynamicSceneGraph& graph,
                                         MarkerArray& msg) const {
   if (!graph.hasLayer(DsgLayers::PLACES)) {
@@ -113,11 +113,8 @@ void PlacesFreespacePlugin::fillMarkers(const std_msgs::Header& header,
   }
 
   const auto& places = graph.getLayer(DsgLayers::PLACES);
-
-  visualizer::LayerInfo info{{}, layer_config_.get()};
-  info.graph.layer_z_step = 0.0;
-  info.graph.collapse_layers = true;
-  if (!info.layer.visualize) {
+  const auto& info = layer_config_.get();
+  if (!info.visualize) {
     return;
   }
 
@@ -129,7 +126,7 @@ void PlacesFreespacePlugin::fillMarkers(const std_msgs::Header& header,
   drawSpheres(header, places, msg);
 }
 
-void PlacesFreespacePlugin::drawSpheres(const std_msgs::Header& header,
+void PlacesFreespacePlugin::drawSpheres(const std_msgs::msg::Header& header,
                                         const SceneGraphLayer& layer,
                                         MarkerArray& msg) const {
   size_t id = 0;
@@ -139,7 +136,7 @@ void PlacesFreespacePlugin::drawSpheres(const std_msgs::Header& header,
     Marker marker;
     marker.header = header;
     marker.type = Marker::SPHERE;
-    marker.action = visualization_msgs::Marker::ADD;
+    marker.action = Marker::ADD;
     marker.id = id;
     marker.ns = "places_spheres";
 

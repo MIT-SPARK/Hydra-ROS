@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/input/sensor_input_packet.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/msg/point_cloud2.hpp>
 
 #include <functional>
 
@@ -42,7 +42,7 @@ namespace hydra {
 
 class PointcloudAdaptor {
  public:
-  PointcloudAdaptor(const sensor_msgs::PointCloud2& cloud);
+  explicit PointcloudAdaptor(const sensor_msgs::msg::PointCloud2& cloud);
 
   bool valid() const;
 
@@ -62,7 +62,7 @@ class PointcloudAdaptor {
   std::function<cv::Vec3b(const uint8_t*)> color_parser_;
 };
 
-bool fillPointcloudPacket(const sensor_msgs::PointCloud2& msg,
+bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
                           CloudInputPacket& packet,
                           bool labels_required);
 

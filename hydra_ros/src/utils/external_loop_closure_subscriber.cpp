@@ -35,17 +35,19 @@
 #include "hydra_ros/utils/external_loop_closure_subscriber.h"
 
 #include <hydra/common/pipeline_queues.h>
-#include <pose_graph_tools_ros/conversions.h>
 
 namespace hydra {
 
-ExternalLoopClosureSubscriber::ExternalLoopClosureSubscriber(const ros::NodeHandle& nh) : nh_(nh) {
-  sub_ = nh_.subscribe("external_loop_closures", 100, &ExternalLoopClosureSubscriber::callback, this);
+using pose_graph_tools::PoseGraph;
+using pose_graph_tools::PoseGraphTypeAdapter;
+
+ExternalLoopClosureSubscriber::ExternalLoopClosureSubscriber(ianvs::NodeHandle nh) {
+  sub_ = nh.create_subscription<PoseGraphTypeAdapter>(
+      "external_loop_closures", 100, &ExternalLoopClosureSubscriber::callback, this);
 }
 
-void ExternalLoopClosureSubscriber::callback(const pose_graph_tools_msgs::PoseGraph& msg) {
-  auto& queue = PipelineQueues::instance().external_loop_closure_queue;
-  
-  queue.push(pose_graph_tools::fromMsg(msg));
+void ExternalLoopClosureSubscriber::callback(const PoseGraph& msg) {
+  PipelineQueues::instance().external_loop_closure_queue.push(msg);
 }
+
 }  // namespace hydra

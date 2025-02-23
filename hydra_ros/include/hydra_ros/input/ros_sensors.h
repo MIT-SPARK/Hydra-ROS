@@ -36,14 +36,6 @@
 #include <hydra/input/camera.h>
 #include <hydra/input/sensor.h>
 
-namespace ros {
-class NodeHandle;
-}
-
-namespace rosbag {
-class Bag;
-}
-
 namespace hydra {
 
 struct InvalidSensor : Sensor {
@@ -90,33 +82,14 @@ struct RosCamera : InvalidSensor {
       config::RegistrationWithConfig<Sensor, RosCamera, Config>("camera_info");
 };
 
-struct RosbagCamera : InvalidSensor {
-  struct Config : Sensor::Config {
-    std::string topic = "";
-  } const config;
-
-  explicit RosbagCamera(const Config& config);
-
- private:
-  inline static const auto r_ =
-      config::RegistrationWithConfig<Sensor, RosbagCamera, Config>(
-          "rosbag_camera_info");
-};
-
 void declare_config(RosExtrinsics::Config& config);
 
 void declare_config(RosCamera::Config& config);
-
-void declare_config(RosbagCamera::Config& config);
 
 namespace input {
 
 config::VirtualConfig<Sensor> loadSensor(const config::VirtualConfig<Sensor>& sensor,
                                          const std::string& name);
 
-config::VirtualConfig<Sensor> loadSensor(const rosbag::Bag& bag,
-                                         const config::VirtualConfig<Sensor>& sensor);
-
 }  // namespace input
-
 }  // namespace hydra

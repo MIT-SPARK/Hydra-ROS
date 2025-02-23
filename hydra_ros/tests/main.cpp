@@ -35,15 +35,10 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <ros/ros.h>
 
 auto main(int argc, char** argv) -> int {
-  ros::init(argc, argv, "test_hydra_ros");
-  ros::NodeHandle nh("~");
   int verbosity = 0;
-  nh.getParam("verbosity", verbosity);
   int minloglevel = 1;
-  nh.getParam("minloglevel", minloglevel);
 
   FLAGS_logtostderr = true;
   FLAGS_alsologtostderr = true;

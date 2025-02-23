@@ -33,13 +33,13 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <ros/ros.h>
-#include <visualization_msgs/MarkerArray.h>
-
-#include <Eigen/Dense>
 #include <filesystem>
 
+#include <rclcpp/node.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
+
 #include "hydra_visualizer/utils/marker_tracker.h"
+#include <Eigen/Dense>
 
 namespace hydra {
 
@@ -47,10 +47,10 @@ struct Region {
   Eigen::MatrixXd points;
   Eigen::Vector3d centroid;
   std::string name;
-  std_msgs::ColorRGBA color;
+  std_msgs::msg::ColorRGBA color;
 };
 
-class RegionPublisher {
+class RegionPublisher : rclcpp::Node {
  public:
   struct Config {
     std::string frame_id = "map";
@@ -69,7 +69,7 @@ class RegionPublisher {
     bool use_boundary_color = true;
   } const config;
 
-  explicit RegionPublisher(const ros::NodeHandle& nh);
+  explicit RegionPublisher(const rclcpp::NodeOptions& options);
   virtual ~RegionPublisher() = default;
 
  protected:
@@ -77,8 +77,7 @@ class RegionPublisher {
   void reset();
 
   bool published_;
-  ros::NodeHandle nh_;
-  ros::Publisher pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
   MarkerTracker tracker_;
   std::vector<Region> regions_;
 };
