@@ -34,11 +34,15 @@ If you find this code relevant for your work, please consider citing us. A bibte
 
 ### Getting started
 
-Hydra has been tested on Ubuntu 20.04 and ROS Noetic. See [here](https://github.com/MIT-SPARK/Hydra?tab=readme-ov-file#installation-and-running) to get started with Hydra.
+Hydra has been tested on Ubuntu 22.04 and ROS2 Iron. See [here](doc/ros2_setup.md) to get started with Hydra and ROS2.
 
 ### Running Hydra
 
 See our documentation [here](doc/quickstart.md).
+
+### Design Information
+
+We maintain information on the ROS2 interfaces that Hydra uses [here](doc/hydra_ros_interfaces.md) that may be useful if you are trying to understand how to use Hydra with a new dataset.
 
 ### Filing Issues
 
