@@ -34,6 +34,9 @@ If you find this code relevant for your work, please consider citing us. A bibte
 
 ### Getting started
 
+> :warning: **Warning** <br>
+> The ROS2 version of this package is in active development and is not guaranteed to build, run or have documentation. You have been warned!
+
 Hydra has been tested on Ubuntu 22.04 and ROS2 Iron. See [here](doc/ros2_setup.md) to get started with Hydra and ROS2.
 
 ### Running Hydra
