@@ -57,6 +57,7 @@ add_library(
   src/utils/input_data_to_messages.cpp
   src/utils/occupancy_publisher.cpp
   src/utils/scene_graph_logger.cpp
+  src/utils/status_monitor.cpp
   src/utils/tf_lookup.cpp
   src/visualizer/feature_color_adaptors.cpp
 )

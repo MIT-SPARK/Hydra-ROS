@@ -33,60 +33,41 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/active_window/active_window_module.h>
-#include <hydra/active_window/reconstruction_module.h>
-#include <hydra/backend/backend_module.h>
-#include <hydra/common/hydra_pipeline.h>
-#include <hydra/frontend/graph_builder.h>
-#include <memory>
+#include <ianvs/node_handle.h>
 
-#include "hydra_ros/input/feature_receiver.h"
-#include "hydra_ros/input/ros_input_module.h"
-#include "hydra_ros/utils/status_monitor.h"
+#include <mutex>
+
+#include <rclcpp/timer.hpp>
+#include <std_msgs/msg/string.hpp>
 
 namespace hydra {
 
-class BowSubscriber;
-class ExternalLoopClosureSubscriber;
-
-class HydraRosPipeline : public HydraPipeline {
+class StatusMonitor {
  public:
   struct Config {
-    config::VirtualConfig<ActiveWindowModule> active_window{
-        ReconstructionModule::Config()};
-    config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
-    config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
-    bool enable_frontend_output = true;
-    bool enable_zmq_interface = true;
-    RosInputModule::Config input;
-    config::VirtualConfig<FeatureReceiver> features;
-    int verbosity = 1;
-    StatusMonitor::Config status_monitor;
+    std::string nickname = "hydra";
+    double report_period_s = 0.5;
+    double max_time_between_spins_s = 10.0;
   } const config;
 
-  explicit HydraRosPipeline(int robot_id, int config_verbosity = 1);
+  StatusMonitor(const Config& config, ianvs::NodeHandle nh);
 
-  virtual ~HydraRosPipeline();
+  void start();
 
-  void init() override;
+  void recordModuleCallback(const std::string& name, std::chrono::nanoseconds time_ns);
 
-  void start() override;
+  const std::string node_name;
 
-  void stop() override;
+ private:
+  void publish();
 
- protected:
-  virtual void initLCD();
-
- protected:
-  std::unique_ptr<StatusMonitor> status_monitor_;
-  std::shared_ptr<ActiveWindowModule> active_window_;
-  std::shared_ptr<GraphBuilder> frontend_;
-  std::shared_ptr<BackendModule> backend_;
-
-  std::unique_ptr<BowSubscriber> bow_sub_;
-  std::unique_ptr<ExternalLoopClosureSubscriber> external_loop_closure_sub_;
+  std::mutex mutex_;
+  ianvs::NodeHandle nh_;
+  std::map<std::string, std::chrono::nanoseconds> module_observations_;
+  rclcpp::Publisher<std_msgs::msg::String>::SharedPtr pub_;
+  rclcpp::TimerBase::SharedPtr timer_;
 };
 
-void declare_config(HydraRosPipeline::Config& config);
+void declare_config(StatusMonitor::Config& config);
 
 }  // namespace hydra

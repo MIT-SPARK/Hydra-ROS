@@ -47,6 +47,7 @@
 #include <hydra/loop_closure/loop_closure_module.h>
 #include <pose_graph_tools_ros/conversions.h>
 
+#include <cstdint>
 #include <memory>
 
 #include "hydra_ros/backend/ros_backend_publisher.h"
@@ -54,6 +55,7 @@
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/utils/bow_subscriber.h"
 #include "hydra_ros/utils/external_loop_closure_subscriber.h"
+#include "hydra_ros/utils/status_monitor.h"
 
 namespace hydra {
 
@@ -69,6 +71,7 @@ void declare_config(HydraRosPipeline::Config& config) {
   config.features.setOptional();
   field(config.features, "features");
   field(config.verbosity, "verbosity");
+  field(config.status_monitor, "status_monitor");
 }
 
 HydraRosPipeline::HydraRosPipeline(int robot_id, int config_verbosity)
@@ -99,10 +102,23 @@ void HydraRosPipeline::init() {
     bow_sub_.reset(new BowSubscriber(nh));
   }
 
+  status_monitor_ = std::make_unique<StatusMonitor>(config.status_monitor, nh);
   external_loop_closure_sub_.reset(new ExternalLoopClosureSubscriber(nh));
 
   auto bnh = nh / "backend";
   backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
+  backend_->addSink(BackendModule::Sink::fromCallback(
+      [this](uint64_t timestamp_ns, const auto&, const auto&) {
+        status_monitor_->recordModuleCallback("backend",
+                                              std::chrono::nanoseconds(timestamp_ns));
+      }));
+
+  active_window_->addSink(ActiveWindowModule::Sink::fromCallback(
+      [this](uint64_t timestamp_ns, const auto&, const auto&) {
+        status_monitor_->recordModuleCallback("active_window",
+                                              std::chrono::nanoseconds(timestamp_ns));
+      }));
+
   // TODO(nathan) make optional config
   if (config.enable_zmq_interface) {
     const auto zmq_config = config::fromContext<ZmqSink::Config>("backend/zmq_sink");
@@ -119,6 +135,11 @@ void HydraRosPipeline::init() {
   if (config.features) {
     modules_["features"] = config.features.create();  // has to come after input module
   }
+}
+
+void HydraRosPipeline::start() {
+  HydraPipeline::start();
+  status_monitor_->start();
 }
 
 void HydraRosPipeline::stop() {

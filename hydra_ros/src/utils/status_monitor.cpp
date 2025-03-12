@@ -32,61 +32,72 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#pragma once
-#include <hydra/active_window/active_window_module.h>
-#include <hydra/active_window/reconstruction_module.h>
-#include <hydra/backend/backend_module.h>
-#include <hydra/common/hydra_pipeline.h>
-#include <hydra/frontend/graph_builder.h>
-#include <memory>
-
-#include "hydra_ros/input/feature_receiver.h"
-#include "hydra_ros/input/ros_input_module.h"
 #include "hydra_ros/utils/status_monitor.h"
+
+#include <config_utilities/config.h>
+#include <config_utilities/validation.h>
+
+#include <chrono>
+
+#include <nlohmann/json.hpp>
 
 namespace hydra {
 
-class BowSubscriber;
-class ExternalLoopClosureSubscriber;
+StatusMonitor::StatusMonitor(const Config& config, ianvs::NodeHandle nh)
+    : config(config::checkValid(config)),
+      node_name(nh.node_name()),
+      nh_(nh),
+      pub_(nh.create_publisher<std_msgs::msg::String>("status", 1)) {}
 
-class HydraRosPipeline : public HydraPipeline {
- public:
-  struct Config {
-    config::VirtualConfig<ActiveWindowModule> active_window{
-        ReconstructionModule::Config()};
-    config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
-    config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
-    bool enable_frontend_output = true;
-    bool enable_zmq_interface = true;
-    RosInputModule::Config input;
-    config::VirtualConfig<FeatureReceiver> features;
-    int verbosity = 1;
-    StatusMonitor::Config status_monitor;
-  } const config;
+void StatusMonitor::recordModuleCallback(const std::string& name,
+                                         std::chrono::nanoseconds time_ns) {
+  // start critical section to update observations
+  std::lock_guard<std::mutex> lock(mutex_);
+  module_observations_[name] = time_ns;
+  // end critical section to update observations
+}
 
-  explicit HydraRosPipeline(int robot_id, int config_verbosity = 1);
+void StatusMonitor::start() {
+  const auto period_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::duration<double>(config.report_period_s));
+  timer_ = nh_.create_timer(period_ms, true, std::bind(&StatusMonitor::publish, this));
+}
 
-  virtual ~HydraRosPipeline();
+void StatusMonitor::publish() {
+  nlohmann::json record;
 
-  void init() override;
+  {  // get observations in critical section
+    std::lock_guard<std::mutex> lock(mutex_);
+    for (const auto& [modname, time_ns] : module_observations_) {
+      nlohmann::json module_record;
+      module_record["nickname"] = config.nickname;
+      module_record["component"] = modname;
+      module_record["status"] = "NOMINAL";
+      module_record["notes"] = "";
+    }
+  }  // end critical section
 
-  void start() override;
+  nlohmann::json hydra_record;
+  hydra_record["nickname"] = config.nickname;
+  hydra_record["node_name"] = node_name;
+  hydra_record["status"] = "NOMINAL";
+  hydra_record["notes"] = "";
+  record.push_back(hydra_record);
 
-  void stop() override;
+  std::stringstream ss;
+  ss << record;
+  auto msg = std::make_unique<std_msgs::msg::String>();
+  msg->data = ss.str();
+  pub_->publish(std::move(msg));
+}
 
- protected:
-  virtual void initLCD();
-
- protected:
-  std::unique_ptr<StatusMonitor> status_monitor_;
-  std::shared_ptr<ActiveWindowModule> active_window_;
-  std::shared_ptr<GraphBuilder> frontend_;
-  std::shared_ptr<BackendModule> backend_;
-
-  std::unique_ptr<BowSubscriber> bow_sub_;
-  std::unique_ptr<ExternalLoopClosureSubscriber> external_loop_closure_sub_;
-};
-
-void declare_config(HydraRosPipeline::Config& config);
+void declare_config(StatusMonitor::Config& config) {
+  using namespace config;
+  name("StatusMonitor::Config");
+  field(config.nickname, "nickname");
+  field(config.max_time_between_spins_s, "max_time_between_spins_s", "s");
+  checkCondition(!config.nickname.empty(), "nickname");
+  check(config.max_time_between_spins_s, GT, 0.0, "max_time_between_spins_s");
+}
 
 }  // namespace hydra
