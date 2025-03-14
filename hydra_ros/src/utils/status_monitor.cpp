@@ -64,25 +64,53 @@ void StatusMonitor::start() {
 }
 
 void StatusMonitor::publish() {
-  nlohmann::json record;
+  std::chrono::nanoseconds curr_time_ns(nh_.now().nanoseconds());
 
+  bool valid = true;
+  double average_elapsed_s = 0.0;
+  std::vector<std::string> missing;
   {  // get observations in critical section
     std::lock_guard<std::mutex> lock(mutex_);
-    for (const auto& [modname, time_ns] : module_observations_) {
-      nlohmann::json module_record;
-      module_record["nickname"] = config.nickname;
-      module_record["component"] = modname;
-      module_record["status"] = "NOMINAL";
-      module_record["notes"] = "";
+    if (module_observations_.empty()) {
+      return; // this lets us reuse heartbeat monitoring in monitor
     }
+
+    for (const auto& [modname, time_ns] : module_observations_) {
+      const auto diff_ns = curr_time_ns - time_ns;
+      const auto diff_s = std::chrono::duration_cast<std::chrono::duration<double>>(diff_ns);
+      average_elapsed_s += diff_s.count();
+      if (diff_s.count() > config.max_time_between_spins_s) {
+        valid = false;
+        missing.push_back(modname);
+      }
+    }
+
+    average_elapsed_s /= module_observations_.size();
   }  // end critical section
 
-  nlohmann::json hydra_record;
-  hydra_record["nickname"] = config.nickname;
-  hydra_record["node_name"] = node_name;
-  hydra_record["status"] = "NOMINAL";
-  hydra_record["notes"] = "";
-  record.push_back(hydra_record);
+  nlohmann::json record;
+  record["nickname"] = config.nickname;
+  record["node_name"] = node_name;
+  if (valid) {
+    record["status"] = "NOMINAL";
+    std::stringstream ss;
+    ss << "average observation gap: " << std::setprecision(3) << average_elapsed_s << " [s]";
+    record["notes"] = ss.str();
+  } else {
+    record["status"] = "ERROR";
+    std::stringstream ss;
+    ss << "missing exepected modules: [";
+    auto iter = missing.begin();
+    while (iter != missing.end()) {
+      ss << *iter;
+      ++iter;
+      if (iter != missing.end()) {
+        ss << ", ";
+      }
+      ss << "]";
+      record["notes"] = ss.str();
+    }
+  }
 
   std::stringstream ss;
   ss << record;
