@@ -94,12 +94,12 @@ void StatusMonitor::publish() {
   if (valid) {
     record["status"] = "NOMINAL";
     std::stringstream ss;
-    ss << "average observation gap: " << std::setprecision(3) << average_elapsed_s << " [s]";
-    record["notes"] = ss.str();
+    ss << "average observation gap: " << std::setprecision(3) << average_elapsed_s << " s";
+    record["note"] = ss.str();
   } else {
     record["status"] = "ERROR";
     std::stringstream ss;
-    ss << "missing exepected modules: [";
+    ss << "missing exepected modules: ";
     auto iter = missing.begin();
     while (iter != missing.end()) {
       ss << *iter;
@@ -107,9 +107,10 @@ void StatusMonitor::publish() {
       if (iter != missing.end()) {
         ss << ", ";
       }
-      ss << "]";
-      record["notes"] = ss.str();
     }
+
+    ss << " (average gap: " << std::setprecision(3) << average_elapsed_s << " s)";
+    record["note"] = ss.str();
   }
 
   std::stringstream ss;
