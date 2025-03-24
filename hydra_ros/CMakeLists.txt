@@ -120,4 +120,5 @@ install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 # TODO(nathan) install python executables TODO(nathan) export dependencies
 
 ament_export_targets(${PROJECT_NAME}-targets)
+ament_export_dependencies(rclcpp cv_bridge tf2_eigen tf2_ros hydra_visualizer semantic_inference_msgs)
 ament_package()
