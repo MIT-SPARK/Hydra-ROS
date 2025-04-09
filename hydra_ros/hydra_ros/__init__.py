@@ -8,6 +8,7 @@ from hydra_msgs.msg import DsgUpdate
 from std_msgs.msg import Header
 from builtin_interfaces.msg import Time
 
+from rclpy.qos import QoSProfile, QoSDurabilityPolicy, QoSHistoryPolicy
 
 class DsgPublisher:
     """Class for publishing a scene graph from python."""
@@ -15,7 +16,14 @@ class DsgPublisher:
     def __init__(self, node: Node, topic: str, publish_mesh: bool = True):
         """Construct a sender."""
         self._publish_mesh = publish_mesh
-        self._pub = node.create_publisher(DsgUpdate, topic, 10)
+
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_ALL,
+            depth=10,
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
+
+        self._pub = node.create_publisher(DsgUpdate, topic, qos_profile)
 
     def publish(self, G, stamp: Optional[rclpy.time.Time] = None, frame_id: str = "odom"):
         """Send a graph."""
@@ -42,12 +50,19 @@ class DsgSubscriber:
         self._callback = callback
         self._graph_set = False
         self._graph = None
+        self._logger = node.get_logger()
+
+        qos_profile = QoSProfile(
+            history=QoSHistoryPolicy.KEEP_ALL,
+            depth=10,  # Still ignored
+            durability=QoSDurabilityPolicy.TRANSIENT_LOCAL
+        )
 
         self._sub = node.create_subscription(
             DsgUpdate,
             topic,
             self._handle_update,
-            10
+            qos_profile
         )
 
     def _handle_update(self, msg: DsgUpdate):
@@ -55,14 +70,14 @@ class DsgSubscriber:
             raise NotImplementedError("Partial updates not implemented yet")
 
         size_bytes = len(msg.layer_contents)
-        rclpy.logging.get_logger('DsgSubscriber').debug(
+        self._logger.debug(
             f"Received dsg update message of {size_bytes} bytes"
         )
 
         if not self._graph_set:
-            self._graph = dsg.DynamicSceneGraph.from_binary(msg.layer_contents)
+            self._graph = dsg.DynamicSceneGraph.from_binary(msg.layer_contents.tobytes())
             self._graph_set = True
         else:
-            self._graph.update_from_binary(msg.layer_contents)
+            self._graph.update_from_binary(msg.layer_contents.tobytes())
 
         self._callback(msg.header, self._graph)
