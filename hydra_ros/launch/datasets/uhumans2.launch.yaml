@@ -18,4 +18,5 @@ launch:
         - {name: robot_frame, value: base_link_gt}
         - {name: odom_frame, value: world}
         - {name: map_frame, value: map}
+        - {name: lcd_config_path, value: $(find-pkg-share hydra)/config/lcd/uhumans2.yaml}
         - {name: extra_yaml, value: '{semantic_label_remap_filepath: $(var label_remap_path)}'}

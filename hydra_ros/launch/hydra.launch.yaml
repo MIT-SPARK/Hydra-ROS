@@ -19,7 +19,7 @@ launch:
   - arg: {name: input_config_path, default: $(find-pkg-share hydra_ros)/config/datasets/$(var dataset).yaml, description: Hydra ROS input config}
   - arg: {name: labelspace_path, default: $(find-pkg-share hydra)/config/label_spaces/$(var labelspace)_label_space.yaml, description: Closed set label space for Hydra}
   - arg: {name: enable_lcd, default: 'false', description: Turn on scene graph loop closure detection}
-  - arg: {name: lcd_config_path, default: $(find-pkg-share hydra)/config/lcd/$(var dataset).yaml, description: Loop closure detection config}
+  - arg: {name: lcd_config_path, default: $(find-pkg-share hydra)/config/lcd/default.yaml, description: Loop closure detection config}
   - arg: {name: extra_yaml, default: '{}'}
   # output
   - arg: {name: log_name, default: $(var dataset), description: Subdirectory to output to}
