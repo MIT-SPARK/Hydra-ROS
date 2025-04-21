@@ -53,6 +53,12 @@ struct ExternalPluginConfig {
   std::vector<std::string> paths;
 };
 
+struct NodeSettings {
+  ExternalPluginConfig external_plugins;
+  int glog_verbosity = 1;
+  int glog_level = 0;
+};
+
 void declare_config(ExternalPluginConfig& config) {
   using namespace config;
   name("ExternalPluginConfig");
@@ -62,13 +68,24 @@ void declare_config(ExternalPluginConfig& config) {
   field(config.paths, "paths");
 }
 
+void declare_config(NodeSettings& config) {
+  using namespace config;
+  name("NodeSettings");
+  field(config.external_plugins, "external_plugins");
+  field(config.glog_verbosity, "glog_verbosity");
+  field(config.glog_level, "glog_level");
+}
+
 }  // namespace hydra::visualizer
 
 int main(int argc, char** argv) {
   config::initContext(argc, argv, true);
   rclcpp::init(argc, argv);
 
-  FLAGS_minloglevel = 0;
+  const auto node_settings = config::fromContext<hydra::visualizer::NodeSettings>();
+
+  FLAGS_minloglevel = node_settings.glog_level;
+  FLAGS_v = node_settings.glog_verbosity;
   FLAGS_logtostderr = 1;
   FLAGS_colorlogtostderr = 1;
 
@@ -77,20 +94,19 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  const auto plugin_config =
-      config::fromContext<hydra::visualizer::ExternalPluginConfig>("external_plugins");
-  LOG(INFO) << "Plugins:\n" << config::toString(plugin_config);
+  VLOG(1) << "Settings:\n" << config::toString(node_settings);
 
   auto& settings = config::Settings();
-  settings.allow_external_libraries = plugin_config.allow_plugins;
-  settings.verbose_external_load = plugin_config.verbose_plugins;
-  settings.print_external_allocations = plugin_config.trace_plugin_allocations;
+  settings.allow_external_libraries = node_settings.external_plugins.allow_plugins;
+  settings.verbose_external_load = node_settings.external_plugins.verbose_plugins;
+  settings.print_external_allocations =
+      node_settings.external_plugins.trace_plugin_allocations;
   [[maybe_unused]] const auto plugins =
-      config::loadExternalFactories(plugin_config.paths);
+      config::loadExternalFactories(node_settings.external_plugins.paths);
 
   {  // start visualizer scope
     const auto config = config::fromContext<hydra::DsgVisualizer::Config>();
-    LOG(INFO) << "Config:\n" << config::toString(config);
+    VLOG(1) << "Config:\n" << config::toString(config);
     auto node = std::make_shared<hydra::DsgVisualizer>(config);
     node->start();
 

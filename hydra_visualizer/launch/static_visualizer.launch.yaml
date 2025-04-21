@@ -17,10 +17,10 @@ launch:
       launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
       on_exit: shutdown
       args: >
-        -alsologtostderr -colorlogtostderr -v=$(var verbosity)
         --config-utilities-file $(var visualizer_config_path)
         --config-utilities-file $(var visualizer_plugins_path)
         --config-utilities-file $(var external_plugins_path)
+        --config-utilities-yaml {glog_level: 0, glog_verbosity: $(var verbosity)}
         --config-utilities-yaml {visualizer_frame: $(var visualizer_frame), graph: {type: GraphFromFile, filepath: $(var scene_graph)}}
   # rviz node and control for launching
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
