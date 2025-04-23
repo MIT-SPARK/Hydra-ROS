@@ -4,11 +4,11 @@ launch:
   - arg: {name: debug, default: 'false', description: launch with gdb server}
   - arg: {name: scene_graph, default: '', description: filepath for scene graph to show}
   - arg: {name: visualizer_frame, default: map, description: frame_id for visualizations}
-  - arg: {name: color_mesh_by_label, default: 'true', description: turn on mesh color adapter}
   - arg: {name: visualizer_ns, default: hydra_dsg_visualizer, description: visualizer namespace}
   - arg: {name: visualizer_config_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_config.yaml}
   - arg: {name: visualizer_plugins_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_plugins.yaml}
   - arg: {name: external_plugins_path, default: $(find-pkg-share hydra_visualizer)/config/external_plugins.yaml}
+  - arg: {name: use_color_adapter, default: 'false', description: Start visualizer using mesh color adapter}
   # visualizer node and control for launching
   - node:
       pkg: hydra_visualizer
@@ -22,6 +22,7 @@ launch:
         --config-utilities-file $(var external_plugins_path)
         --config-utilities-yaml {glog_level: 0, glog_verbosity: $(var verbosity)}
         --config-utilities-yaml {visualizer_frame: $(var visualizer_frame), graph: {type: GraphFromFile, filepath: $(var scene_graph)}}
+        --config-utilities-yaml {plugins: {mesh: {use_color_adapter: $(var use_color_adapter)}}}
   # rviz node and control for launching
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
   - arg: {name: rviz_path, default: $(find-pkg-share hydra_visualizer)/rviz/static_visualizer.rviz, description: rviz file to load}
