@@ -69,14 +69,13 @@ target_include_directories(
 )
 target_link_libraries(
   ${PROJECT_NAME}
-  PUBLIC cv_bridge::cv_bridge
-         hydra::hydra
+  PUBLIC hydra::hydra
          hydra_visualizer::hydra_visualizer
          kimera_pgmo_ros::kimera_pgmo_ros
          pose_graph_tools_ros::pose_graph_tools_ros
          tf2_eigen::tf2_eigen
          tf2_ros::tf2_ros
-  PRIVATE ${PCL_LIBRARIES}
+  PRIVATE ${PCL_LIBRARIES} cv_bridge::cv_bridge
 )
 ament_target_dependencies(
   ${PROJECT_NAME}
@@ -119,7 +118,6 @@ install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
 
 ament_export_targets(${PROJECT_NAME}-targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
-  cv_bridge
   geometry_msgs
   hydra
   hydra_msgs
