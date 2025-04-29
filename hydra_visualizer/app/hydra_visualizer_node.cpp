@@ -104,13 +104,16 @@ int main(int argc, char** argv) {
   [[maybe_unused]] const auto plugins =
       config::loadExternalFactories(node_settings.external_plugins.paths);
 
+
+  rclcpp::executors::MultiThreadedExecutor executor;
   {  // start visualizer scope
     const auto config = config::fromContext<hydra::DsgVisualizer::Config>();
     VLOG(1) << "Config:\n" << config::toString(config);
     auto node = std::make_shared<hydra::DsgVisualizer>(config);
     node->start();
 
-    rclcpp::spin(node);
+    executor.add_node(node);
+    executor.spin();
   }  // end visualizer scope
 
   rclcpp::shutdown();
