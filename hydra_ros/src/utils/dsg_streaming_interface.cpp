@@ -101,6 +101,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   const uint64_t timestamp_ns = stamp.nanoseconds();
   timing::ScopedTimer timer(config.timer_name, timestamp_ns);
 
+  publishGraph(graph, timestamp_ns);
   publishMesh(graph, timestamp_ns);
 }
 
