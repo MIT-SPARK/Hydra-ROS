@@ -56,29 +56,34 @@ using kimera_pgmo_msgs::msg::Mesh;
 using pose_graph_tools::PoseGraphTypeAdapter;
 using visualization_msgs::msg::Marker;
 
+namespace {
+
+inline RosBackendPublisher::Config get_config() {
+  const auto map_frame = GlobalInfo::instance().getFrames().map;
+  auto config = config::fromContext<RosBackendPublisher::Config>("backend");
+  config.dsg_sender = config.dsg_sender.with_name("backend").with_frame(map_frame);
+  return config;
+}
+
+}  // namespace
+
 void declare_config(RosBackendPublisher::Config& config) {
   using namespace config;
   name("RosBackendPublisher::Config");
-  field(config.publish_mesh, "publish_mesh");
+  field(config.dsg_sender, "");
   field(config.publish_backend_tf, "publish_backend_tf");
   field(config.tf_pub_robot_frame, "tf_pub_robot_frame");
   field(config.tf_pub_map_frame, "tf_pub_map_frame");
   field(config.tf_pub_odom_frame, "tf_pub_odom_frame");
 }
 
-// TODO(nathan) namespaces!
 RosBackendPublisher::RosBackendPublisher(ianvs::NodeHandle nh)
-    : config(config::checkValid(config::fromContext<Config>())),
-      nh_(nh),
-      tf_br_(nh_.node()) {
+    : config(config::checkValid(get_config())), nh_(nh), tf_br_(nh_.node()) {
   mesh_mesh_edges_pub_ = nh.create_publisher<Marker>("deformation_graph_mesh_mesh", 10);
   pose_mesh_edges_pub_ = nh.create_publisher<Marker>("deformation_graph_pose_mesh", 10);
   pose_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>("pose_graph", 10);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>("mesh_graph", 10);
-
-  const auto map_frame = GlobalInfo::instance().getFrames().map;
-  dsg_sender_ =
-      std::make_unique<DsgSender>(nh, map_frame, "backend", config.publish_mesh);
+  dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
 }
 
 void RosBackendPublisher::call(uint64_t timestamp_ns,

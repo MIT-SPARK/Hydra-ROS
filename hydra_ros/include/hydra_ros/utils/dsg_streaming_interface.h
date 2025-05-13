@@ -48,26 +48,31 @@ namespace hydra {
 
 class DsgSender {
  public:
-  explicit DsgSender(ianvs::NodeHandle nh,
-                     const std::string& frame_id,
-                     const std::string& timer_name = "publish_dsg",
-                     bool publish_mesh = false,
-                     double min_mesh_separation_s = 0.0,
-                     bool serialize_dsg_mesh_ = true);
+  struct Config {
+    std::string frame_id;
+    std::string timer_name = "publish_dsg";
+    bool serialize_dsg_mesh = true;
+    bool publish_mesh = false;
+    double min_mesh_separation_s = 0.0;
+    double min_dsg_separation_s = 0.0;
+
+    Config with_name(const std::string& name) const;
+    Config with_frame(const std::string& frame) const;
+  } const config;
+
+  explicit DsgSender(const Config& config, ianvs::NodeHandle nh);
 
   void sendGraph(const DynamicSceneGraph& graph, const rclcpp::Time& stamp) const;
 
  private:
-  std::string frame_id_;
+  void publishMesh(const DynamicSceneGraph& graph, uint64_t timestamp_ns) const;
+
+  void publishGraph(const DynamicSceneGraph& graph, uint64_t timestamp_ns) const;
 
   rclcpp::Publisher<hydra_msgs::msg::DsgUpdate>::SharedPtr pub_;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
   mutable std::optional<uint64_t> last_mesh_time_ns_;
-
-  std::string timer_name_;
-  bool publish_mesh_;
-  double min_mesh_separation_s_;
-  bool serialize_dsg_mesh_;
+  mutable std::optional<uint64_t> last_dsg_time_ns_;
 };
 
 class DsgReceiver {
@@ -98,5 +103,7 @@ class DsgReceiver {
 
   std::unique_ptr<LogCallback> log_callback_;
 };
+
+void declare_config(DsgSender::Config& config);
 
 }  // namespace hydra

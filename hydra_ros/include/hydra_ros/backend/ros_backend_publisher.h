@@ -47,7 +47,9 @@ namespace hydra {
 class RosBackendPublisher : public BackendModule::Sink {
  public:
   struct Config {
-    bool publish_mesh = false;
+    //! @brief Configuration for dsg publisher
+    DsgSender::Config dsg_sender;
+    //! @brief Publish odom to map transform
     bool publish_backend_tf = false;
     //! @brief Frame to use when publishing map_T_robot. An empty frame disables publishing
     std::string tf_pub_robot_frame = "";

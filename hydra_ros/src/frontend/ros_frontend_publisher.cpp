@@ -34,6 +34,10 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/context.h>
+#include <config_utilities/printing.h>
+#include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
 
 namespace hydra {
@@ -41,9 +45,26 @@ namespace hydra {
 using kimera_pgmo::MeshDeltaTypeAdapter;
 using pose_graph_tools::PoseGraphTypeAdapter;
 
-RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh) {
+namespace {
+
+inline RosFrontendPublisher::Config get_config() {
   const auto odom_frame = GlobalInfo::instance().getFrames().odom;
-  dsg_sender_.reset(new DsgSender(nh, odom_frame, "frontend", false));
+  auto config = config::fromContext<RosFrontendPublisher::Config>("frontend");
+  config.dsg_sender = config.dsg_sender.with_name("frontend").with_frame(odom_frame);
+  return config;
+}
+
+}  // namespace
+
+void declare_config(RosFrontendPublisher::Config& config) {
+  using namespace config;
+  name("RosFrontendPublisher::Config");
+  field(config.dsg_sender, "");
+}
+
+RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
+    : config(config::checkValid(get_config())) {
+  dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
       "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
   mesh_update_pub_ = nh.create_publisher<MeshDeltaTypeAdapter>(

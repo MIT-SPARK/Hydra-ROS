@@ -43,6 +43,11 @@ namespace hydra {
 
 class RosFrontendPublisher : public GraphBuilder::Sink {
  public:
+  struct Config {
+    //! @brief Configuration for dsg publisher
+    DsgSender::Config dsg_sender;
+  } const config;
+
   explicit RosFrontendPublisher(ianvs::NodeHandle);
 
   void call(uint64_t timestamp_ns,

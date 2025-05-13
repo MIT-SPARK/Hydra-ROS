@@ -34,6 +34,8 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
+#include <config_utilities/config.h>
+#include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/dsg_types.h>
 #include <hydra/utils/display_utilities.h>
@@ -48,19 +50,34 @@ namespace hydra {
 using hydra_msgs::msg::DsgUpdate;
 using MeshMsg = kimera_pgmo_msgs::msg::Mesh;
 
-DsgSender::DsgSender(ianvs::NodeHandle nh,
-                     const std::string& frame_id,
-                     const std::string& timer_name,
-                     bool publish_mesh,
-                     double min_mesh_separation_s,
-                     bool serialize_dsg_mesh)
-    : frame_id_(frame_id),
-      timer_name_(timer_name),
-      publish_mesh_(publish_mesh),
-      min_mesh_separation_s_(min_mesh_separation_s),
-      serialize_dsg_mesh_(serialize_dsg_mesh) {
+void declare_config(DsgSender::Config& config) {
+  using namespace config;
+  name("DsgSender::Config");
+  field(config.frame_id, "frame_id");
+  field(config.timer_name, "publish_dsg");
+  field(config.serialize_dsg_mesh, "serialize_dsg_mesh");
+  field(config.publish_mesh, "publish_mesh");
+  field(config.min_mesh_separation_s, "min_mesh_separation_s");
+  field(config.min_dsg_separation_s, "min_dsg_separation_s");
+  checkCondition(!config.frame_id.empty(), "frame_id empty!");
+}
+
+DsgSender::Config DsgSender::Config::with_name(const std::string& name) const {
+  auto ret = *this;
+  ret.timer_name = name;
+  return ret;
+}
+
+DsgSender::Config DsgSender::Config::with_frame(const std::string& frame) const {
+  auto ret = *this;
+  ret.frame_id = frame;
+  return ret;
+}
+
+DsgSender::DsgSender(const Config& config, ianvs::NodeHandle nh)
+    : config(config::checkValid(config)) {
   pub_ = nh.create_publisher<DsgUpdate>("dsg", 1);
-  if (publish_mesh_) {
+  if (config.publish_mesh) {
     mesh_pub_ = nh.create_publisher<MeshMsg>("dsg_mesh", 1);
   }
 }
@@ -68,17 +85,38 @@ DsgSender::DsgSender(ianvs::NodeHandle nh,
 void DsgSender::sendGraph(const DynamicSceneGraph& graph,
                           const rclcpp::Time& stamp) const {
   const uint64_t timestamp_ns = stamp.nanoseconds();
-  timing::ScopedTimer timer(timer_name_, timestamp_ns);
+  timing::ScopedTimer timer(config.timer_name, timestamp_ns);
 
-  if (pub_->get_subscription_count()) {
-    auto msg = std::make_unique<DsgUpdate>();
-    msg->header.stamp = stamp;
-    spark_dsg::io::binary::writeGraph(graph, msg->layer_contents, serialize_dsg_mesh_);
-    msg->full_update = true;
-    pub_->publish(std::move(msg));
+  publishMesh(graph, timestamp_ns);
+}
+
+void DsgSender::publishGraph(const DynamicSceneGraph& graph,
+                             uint64_t timestamp_ns) const {
+  if (!pub_->get_subscription_count()) {
+    return;
   }
 
-  if (!publish_mesh_ || !mesh_pub_->get_subscription_count()) {
+  if (last_dsg_time_ns_) {
+    std::chrono::nanoseconds diff_ns(timestamp_ns - *last_dsg_time_ns_);
+    std::chrono::duration<double> diff_s = diff_ns;
+    if (diff_s.count() < config.min_dsg_separation_s) {
+      return;
+    }
+  }
+
+  last_dsg_time_ns_ = timestamp_ns;
+
+  auto msg = std::make_unique<DsgUpdate>();
+  msg->header.stamp = rclcpp::Time(timestamp_ns);
+  spark_dsg::io::binary::writeGraph(
+      graph, msg->layer_contents, config.serialize_dsg_mesh);
+  msg->full_update = true;
+  pub_->publish(std::move(msg));
+}
+
+void DsgSender::publishMesh(const DynamicSceneGraph& graph,
+                            uint64_t timestamp_ns) const {
+  if (!config.publish_mesh || !mesh_pub_->get_subscription_count()) {
     return;
   }
 
@@ -90,7 +128,7 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
   if (last_mesh_time_ns_) {
     std::chrono::nanoseconds diff_ns(timestamp_ns - *last_mesh_time_ns_);
     std::chrono::duration<double> diff_s = diff_ns;
-    if (diff_s.count() < min_mesh_separation_s_) {
+    if (diff_s.count() < config.min_mesh_separation_s) {
       return;
     }
   }
@@ -99,8 +137,8 @@ void DsgSender::sendGraph(const DynamicSceneGraph& graph,
 
   // TODO(nathan) grab the right robot id
   auto msg = kimera_pgmo::conversions::toMsg(0, *mesh);
-  msg->header.stamp = stamp;
-  msg->header.frame_id = frame_id_;
+  msg->header.stamp = rclcpp::Time(timestamp_ns);
+  msg->header.frame_id = config.frame_id;
   mesh_pub_->publish(std::move(msg));
 }
 
