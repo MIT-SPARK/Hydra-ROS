@@ -82,6 +82,20 @@ DsgSender::DsgSender(const Config& config, ianvs::NodeHandle nh)
   }
 }
 
+DsgSender::DsgSender(ianvs::NodeHandle nh,
+                     const std::string& frame_id,
+                     const std::string& timer_name,
+                     bool publish_mesh,
+                     double min_mesh_separation_s,
+                     bool serialize_dsg_mesh)
+    : DsgSender(Config{frame_id,
+                       timer_name,
+                       serialize_dsg_mesh,
+                       publish_mesh,
+                       min_mesh_separation_s,
+                       0.0},
+                nh) {}
+
 void DsgSender::sendGraph(const DynamicSceneGraph& graph,
                           const rclcpp::Time& stamp) const {
   const uint64_t timestamp_ns = stamp.nanoseconds();

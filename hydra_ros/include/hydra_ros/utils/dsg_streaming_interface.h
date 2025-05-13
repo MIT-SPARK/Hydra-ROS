@@ -34,10 +34,10 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/common/dsg_types.h>
+#include <ianvs/node_handle.h>
 
 #include <optional>
 
-#include <ianvs/node_handle.h>
 #include <hydra_msgs/msg/dsg_update.hpp>
 #include <kimera_pgmo_msgs/msg/mesh.hpp>
 #include <rclcpp/publisher.hpp>
@@ -60,7 +60,14 @@ class DsgSender {
     Config with_frame(const std::string& frame) const;
   } const config;
 
-  explicit DsgSender(const Config& config, ianvs::NodeHandle nh);
+  DsgSender(const Config& config, ianvs::NodeHandle nh);
+
+  DsgSender(ianvs::NodeHandle nh,
+            const std::string& frame_id,
+            const std::string& timer_name = "publish_dsg",
+            bool publish_mesh = false,
+            double min_mesh_separation_s = 0.0,
+            bool serialize_dsg_mesh = true);
 
   void sendGraph(const DynamicSceneGraph& graph, const rclcpp::Time& stamp) const;
 
