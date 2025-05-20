@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+"""Node that broadcasts a CSV as a tf."""
+
+import pathlib
+import sys
+
+import rclpy
+import rclpy.node
+import rclpy.utilities
+import tf2_ros
+import geometry_msgs.msg
+
+
+DEFAULT_ORDER = ["x", "y", "z", "qw", "qx", "qy", "qz"]
+
+def _parse_file(trajectory_file, parent, child, skip_first=True, order=None):
+    if order is None:
+        order = DEFAULT_ORDER
+
+    transforms = []
+    have_first_line = False
+    with open(trajectory_file, "r") as fin:
+        for line in fin:
+            if not have_first_line:
+                have_first_line = True
+                if skip_first:
+                    continue
+
+            values = [x.strip() for x in line.split(",")]
+            time_ns = int(values[0])
+            pose = [float(x) for x in values[1:]]
+
+            t = geometry_msgs.msg.TransformStamped()
+            t.header.stamp = rclpy.time.Time(nanoseconds=time_ns).to_msg()
+            t.header.frame_id = parent
+            t.child_frame_id = child
+            t.transform.translation.x = pose[0]
+            t.transform.translation.y = pose[1]
+            t.transform.translation.z = pose[2]
+            t.transform.rotation.w = pose[3]
+            t.transform.rotation.x = pose[4]
+            t.transform.rotation.y = pose[5]
+            t.transform.rotation.z = pose[6]
+            transforms.append(t)
+
+    return transforms
+
+
+class CsvToTf(rclpy.node.Node):
+    def __init__(self):
+        super().__init__("csv_to_tf")
+        self._broadcaster = tf2_ros.TransformBroadcaster(self)
+
+        time_tolerance_s = self._get_param("time_tolerance_s", 0.05).double_value
+        self._delta_t = rclpy.duration.Duration(nanoseconds=time_tolerance_s)
+
+        trajectory_file = self._get_param("trajectory_file", "").string_value
+        if trajectory_file == "":
+            self.get_logger().fatal("File required!")
+            sys.exit(1)
+
+        trajectory_file = pathlib.Path(trajectory_file).expanduser().absolute()
+        if not trajectory_file.exists():
+            self.get_logger().fatal("Trajectory file {trajectory_file} does not exist!")
+            sys.exit(1)
+
+        parent_frame = self._get_param("parent_frame", "odom").string_value
+        child_frame = self._get_param("child_frame", "base_link").string_value
+        self._transforms = _parse_file(trajectory_file, parent_frame, child_frame)
+        self._idx = 0
+        self.get_logger().info(f"Publishing {parent_frame}_T_{child_frame}")
+
+        poll_period_s = self._get_param("poll_period_s", 0.01).double_value
+        self._timer = self.create_timer(poll_period_s, self._callback)
+
+    def _get_param(self, name, default=None):
+        return self.declare_parameter(name, default).get_parameter_value()
+
+    def _curr_tf_is_stale(self, stamp):
+        if self._idx >= len(self._transforms):
+            return False
+
+        # we want to reject any transforms that are outside the [stamp - delta, stamp + delta] range
+        bound = stamp - self._delta_t
+        next_stamp = rclpy.time.Time.from_msg(self._transforms[self._idx].header.stamp)
+        return bound > next_stamp
+
+    def _callback(self):
+        stamp = self.get_clock().now()
+
+        prev_idx = self._idx
+        while self._curr_tf_is_stale(stamp):
+            self._idx += 1
+
+        num_dropped = self._idx - prev_idx
+        if num_dropped > 0:
+            self.get_logger().warn(f"Dropped {num_dropped} TFs older than {stamp.nanoseconds} [ns]")
+
+        if self._idx >= len(self._transforms):
+            self.get_logger().info("Finished publishing transforms")
+            self._timer.cancel()
+            return
+
+        next_stamp = rclpy.time.Time.from_msg(self._transforms[self._idx].header.stamp)
+        diff_str = f"diff: {(next_stamp - stamp).nanoseconds} [ns]"
+        self.get_logger().debug(f"waiting for time {next_stamp.nanoseconds} [ns] ({diff_str})")
+        if stamp + self._delta_t < next_stamp:
+            return
+
+        self.get_logger().debug(f"sending {next_stamp.nanoseconds} [ns]")
+        self._broadcaster.sendTransform(self._transforms[self._idx])
+        self._idx += 1
+
+
+def main(args=None):
+    """Do stuff."""
+    rclpy.init(args=args)
+    try:
+        node = CsvToTf()
+        rclpy.spin(node)
+        node.destroy_node()
+    finally:
+        rclpy.utilities.try_shutdown()
+
+
+if __name__ == "__main__":
+    main()

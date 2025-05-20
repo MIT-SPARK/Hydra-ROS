@@ -111,7 +111,13 @@ install(
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 install(TARGETS hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
-install(PROGRAMS app/dsg_republisher app/odom_to_tf app/noisy_tf_publisher DESTINATION lib/${PROJECT_NAME})
+install(
+  PROGRAMS app/csv_to_tf
+           app/dsg_republisher
+           app/odom_to_tf
+           app/noisy_tf_publisher
+  DESTINATION lib/${PROJECT_NAME}
+)
 install(DIRECTORY include/ DESTINATION include/)
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 install(DIRECTORY config DESTINATION share/${PROJECT_NAME})
