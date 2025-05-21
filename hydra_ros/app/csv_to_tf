@@ -128,7 +128,9 @@ class CsvToTf(rclpy.node.Node):
             return
 
         self.get_logger().debug(f"sending {next_stamp.nanoseconds} [ns]")
-        self._broadcaster.sendTransform(self._transforms[self._idx])
+        msg = self._transforms[self._idx]
+        msg.header.stamp = next_stamp.to_msg()  # reset header stamp
+        self._broadcaster.sendTransform(msg)
         self._idx += 1
 
 
