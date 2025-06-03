@@ -41,26 +41,19 @@
 
 namespace hydra {
 
+using semantic_inference_msgs::msg::FeatureImage;
 using sensor_msgs::msg::Image;
-
-struct ImageSubImpl : public ImageSimpleFilter {
-  ImageSubImpl(ianvs::NodeHandle nh, const std::string& topic, uint32_t queue_size)
-      : subscriber(nh.create_subscription<Image>(
-            topic, queue_size, [this](const Image::ConstSharedPtr& msg) {
-              signalMessage(msg);
-            })) {}
-
-  rclcpp::Subscription<Image>::SharedPtr subscriber;
-};
 
 ColorSubscriber::ColorSubscriber() = default;
 
 ColorSubscriber::ColorSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
-    : impl_(std::make_shared<ImageSubImpl>(nh, "rgb/image_raw", queue_size)) {}
+    : impl_(std::make_shared<FilterSub<Image>>(nh, "rgb/image_raw", queue_size)) {}
 
 ColorSubscriber::~ColorSubscriber() = default;
 
-ImageSimpleFilter& ColorSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
+ColorSubscriber::Filter& ColorSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
 
 void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
@@ -73,12 +66,14 @@ void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
 DepthSubscriber::DepthSubscriber() = default;
 
 DepthSubscriber::DepthSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
-    : impl_(std::make_shared<ImageSubImpl>(
+    : impl_(std::make_shared<FilterSub<Image>>(
           nh, "depth_registered/image_rect", queue_size)) {}
 
 DepthSubscriber::~DepthSubscriber() = default;
 
-ImageSimpleFilter& DepthSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
+DepthSubscriber::Filter& DepthSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
 
 void DepthSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
@@ -91,17 +86,47 @@ void DepthSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
 LabelSubscriber::LabelSubscriber() = default;
 
 LabelSubscriber::LabelSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
-    : impl_(std::make_shared<ImageSubImpl>(nh, "semantic/image_raw", queue_size)) {}
+    : impl_(std::make_shared<FilterSub<Image>>(nh, "semantic/image_raw", queue_size)) {}
 
 LabelSubscriber::~LabelSubscriber() = default;
 
-ImageSimpleFilter& LabelSubscriber::getFilter() const { return *CHECK_NOTNULL(impl_); }
+LabelSubscriber::Filter& LabelSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
 
 void LabelSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   try {
     packet.labels = cv_bridge::toCvCopy(img)->image;
   } catch (const cv_bridge::Exception& e) {
     LOG(ERROR) << "Failed to convert label image: " << e.what();
+  }
+}
+
+FeatureSubscriber::FeatureSubscriber() = default;
+
+FeatureSubscriber::FeatureSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
+    : impl_(std::make_shared<FilterSub<FeatureImage>>(
+          nh, "semantic/image_raw", queue_size)) {}
+
+FeatureSubscriber::~FeatureSubscriber() = default;
+
+FeatureSubscriber::Filter& FeatureSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
+
+void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) const {
+  try {
+    packet.labels = cv_bridge::toCvCopy(msg.image)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert depth image: " << e.what();
+  }
+
+  CHECK_EQ(msg.mask_ids.size(), msg.features.size());
+  for (size_t i = 0; i < msg.mask_ids.size(); ++i) {
+    const auto& vec = msg.features[i].data;
+    packet.label_features.emplace(
+        msg.mask_ids[i],
+        Eigen::Map<const hydra::FeatureVector>(vec.data(), vec.size()));
   }
 }
 
@@ -115,12 +140,30 @@ ClosedSetImageReceiver::ClosedSetImageReceiver(const Config& config,
                                                const std::string& sensor_name)
     : ImageReceiverImpl<LabelSubscriber>(config, sensor_name) {}
 
+void declare_config(OpenSetImageReceiver::Config& config) {
+  using namespace config;
+  name("OpenSetImageReceiver::Config");
+  base<hydra::RosDataReceiver::Config>(config);
+}
+
+OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
+                                           const std::string& sensor_name)
+    : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
+
 namespace {
-static const auto registration =
+
+static const auto closed_registration =
     config::RegistrationWithConfig<DataReceiver,
                                    ClosedSetImageReceiver,
                                    ClosedSetImageReceiver::Config,
                                    std::string>("ClosedSetImageReceiver");
-}
+
+static const auto open_registration =
+    config::RegistrationWithConfig<hydra::DataReceiver,
+                                   OpenSetImageReceiver,
+                                   OpenSetImageReceiver::Config,
+                                   std::string>("OpenSetImageReceiver");
+
+}  // namespace
 
 }  // namespace hydra
