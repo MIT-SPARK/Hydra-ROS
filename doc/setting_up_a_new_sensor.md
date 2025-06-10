@@ -12,7 +12,7 @@ You will need:
 > For the purposes of this guide (and in the code-base), we use the convention `parent_T_child` to represent the 6-DOF homogeneous transformation between from the `child` frame to the `parent` frame, or equivalently the pose of the `child` frame with respect to the `parent` frame.
 
 Hydra does its best to follow [REP 105](https://www.ros.org/reps/rep-0105.html).  There are four coordinate frames you should be familiar with and identify for your system:
-- **robot_frame**: This is typically `base_link` and serves the same purpose of REP 105: it is meant to be the root of the TF tree for the robot's body frame.
+- **robot_frame**: This is typically `base_link` and serves the same purpose of REP 105; it is meant to be the root of the TF tree for the robot's body frame.
 - **sensor_frame**: This is the optical frame of the camera (i.e., x right, y down, z forward).
 - **odom_frame**: This is `odom` in REP 105. This serves as a reference frame for the robot and sensor poses (i.e., Hydra looks up `odom_T_robot` and `odom_T_sensor`).
 - **map_frame**: This is `map` in REP 105. Hydra can optionally broadcast `map_T_odom` as the relative transform between the last optimized and unoptimized robot pose.
@@ -26,7 +26,7 @@ We'll use the Zed2i camera as a working example. The camera provides the followi
 - `/zed/zed_node/left/camera_info`: Color camera information
 - `/zed/zed_node/depth/depth_registered`: Depth image (rectified to color camera)
 - `/zed/zed_node/depth/camera_info`: Depth camera information
-- others
+- ...
 
 #### Semantic Segmentation
 
@@ -75,7 +75,7 @@ Next, we add remappings to connect the input topics for Hydra to the camera:
 > We know the topics that Hydra expects for inputs based on the input name (`camera`) and receiver type (`ClosedSetImageReceiver`) that's specified in the input configuration (which we'll look at in more detail later).
 
 We then add Hydra:
-```
+```yaml
 - node:  # hydra
     pkg: hydra_ros
     exec: hydra_ros_node
@@ -92,12 +92,12 @@ We then add Hydra:
 
 The frame IDs that we identified earlier are specified here:
 ```yaml
-      --config-utilities-yaml {map_frame: map, odom_frame: odom, robot_frame: zed_camera_link, sensor_frame: zed_left_camera_frame}
+{map_frame: map, odom_frame: odom, robot_frame: zed_camera_link, sensor_frame: zed_left_camera_frame}
 ```
 
 When Hydra shuts down, it will save the scene graph and various artifacts to
-```
-      --config-utilities-yaml {log_path: $(env HOME)/.hydra/$(var dataset)}
+```yaml
+{log_path: $(env HOME)/.hydra/$(var dataset)}
 ```
 
 #### Visualization
