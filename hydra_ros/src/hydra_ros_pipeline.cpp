@@ -85,13 +85,12 @@ HydraRosPipeline::~HydraRosPipeline() {}
 
 void HydraRosPipeline::init() {
   const auto& pipeline_config = GlobalInfo::instance().getConfig();
-  const auto logs = GlobalInfo::instance().getLogs();
 
   auto nh = getHydraNodeHandle("~");
-  backend_ = config.backend.create(backend_dsg_, shared_state_, logs);
+  backend_ = config.backend.create(backend_dsg_, shared_state_);
   modules_["backend"] = CHECK_NOTNULL(backend_);
 
-  frontend_ = config.frontend.create(frontend_dsg_, shared_state_, logs);
+  frontend_ = config.frontend.create(frontend_dsg_, shared_state_);
   modules_["frontend"] = CHECK_NOTNULL(frontend_);
 
   active_window_ = config.active_window.create(frontend_->queue());

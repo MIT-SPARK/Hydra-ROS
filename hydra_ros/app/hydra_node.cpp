@@ -38,6 +38,7 @@
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/context.h>
 #include <hydra/common/global_info.h>
+#include <hydra/utils/log_utilities.h>
 #include <ianvs/node_handle_factory.h>
 #include <ianvs/spin_functions.h>
 
@@ -60,6 +61,7 @@ struct RunSettings {
   bool forward_glog_to_ros = true;
   int glog_level = 0;
   int glog_verbosity = 0;
+  hydra::LogSetup::Config logs;
 };
 
 void declare_config(RunSettings& config) {
@@ -79,6 +81,8 @@ void declare_config(RunSettings& config) {
   field(config.forward_glog_to_ros, "forward_glog_to_ros");
   field(config.glog_level, "glog_level");
   field(config.glog_verbosity, "glog_verbosity");
+  // don't namespace log config
+  field(config.logs, "logs", false);
 }
 
 struct RosSink : google::LogSink {
@@ -158,9 +162,7 @@ int main(int argc, char* argv[]) {
     hydra.start();
     ianvs::spinAndWait(nh, settings.exit_after_clock);
     hydra.stop();
-    hydra.save();
-    // TODO(nathan) save full config
-    hydra::GlobalInfo::exit();
+    hydra.save(hydra::LogSetup(settings.logs));
   }  // end hydra scope
 
   if (ros_sink) {
