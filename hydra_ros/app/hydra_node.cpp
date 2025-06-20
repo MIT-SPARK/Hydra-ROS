@@ -35,10 +35,10 @@
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/external_registry.h>
 #include <config_utilities/formatting/asl.h>
+#include <config_utilities/types/path.h>
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/context.h>
 #include <hydra/common/global_info.h>
-#include <hydra/utils/log_utilities.h>
 #include <ianvs/node_handle_factory.h>
 #include <ianvs/spin_functions.h>
 
@@ -61,7 +61,8 @@ struct RunSettings {
   bool forward_glog_to_ros = true;
   int glog_level = 0;
   int glog_verbosity = 0;
-  hydra::LogSetup::Config logs;
+  std::filesystem::path log_path;
+  hydra::DataDirectory::Config output;
 };
 
 void declare_config(RunSettings& config) {
@@ -81,8 +82,8 @@ void declare_config(RunSettings& config) {
   field(config.forward_glog_to_ros, "forward_glog_to_ros");
   field(config.glog_level, "glog_level");
   field(config.glog_verbosity, "glog_verbosity");
-  // don't namespace log config
-  field(config.logs, "logs", false);
+  field<Path::Absolute>(config.log_path, "log_path");
+  field(config.output, "output");
 }
 
 struct RosSink : google::LogSink {
@@ -162,7 +163,9 @@ int main(int argc, char* argv[]) {
     hydra.start();
     ianvs::spinAndWait(nh, settings.exit_after_clock);
     hydra.stop();
-    hydra.save(hydra::LogSetup(settings.logs));
+
+    const hydra::DataDirectory output(settings.log_path, settings.output);
+    hydra.save(output);
   }  // end hydra scope
 
   if (ros_sink) {

@@ -60,7 +60,6 @@ class FeatureReceiver : public Module {
   virtual ~FeatureReceiver();
   void start() override;
   void stop() override;
-  void save(const LogSetup& setup) override;
   std::string printInfo() const override;
 
  private:

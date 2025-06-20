@@ -133,8 +133,6 @@ FeatureReceiver::~FeatureReceiver() {}
 
 void FeatureReceiver::stop() {}
 
-void FeatureReceiver::save(const LogSetup&) {}
-
 std::string FeatureReceiver::printInfo() const { return config::toString(config); }
 
 }  // namespace hydra
