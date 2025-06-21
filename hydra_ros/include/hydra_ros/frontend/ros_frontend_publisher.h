@@ -65,8 +65,7 @@ class RosFrontendPublisher : public GraphBuilder::Sink {
   std::string printInfo() const override { return "RosFrontendPublisher"; }
 
  protected:
-  void processMeshDeltaRequest(const std::shared_ptr<rmw_request_id_t>,
-                               const MeshDeltaSrv::Request::SharedPtr& req,
+  void processMeshDeltaRequest(const MeshDeltaSrv::Request::SharedPtr& req,
                                MeshDeltaSrv::Response::SharedPtr resp);
 
   std::unique_ptr<DsgSender> dsg_sender_;

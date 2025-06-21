@@ -74,8 +74,7 @@ RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
   mesh_update_pub_ = nh.create_publisher<MeshDeltaTypeAdapter>(
       "full_mesh_update", rclcpp::QoS(100).transient_local());
   mesh_delta_server_ = nh.create_service<MeshDeltaSrv>(
-      "mesh_delta_request",
-      std::bind(&RosFrontendPublisher::processMeshDeltaRequest, this, _1, _2, _3));
+      "mesh_delta_request", &RosFrontendPublisher::processMeshDeltaRequest, this);
 }
 
 void RosFrontendPublisher::call(uint64_t timestamp_ns,
@@ -101,7 +100,6 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
 }
 
 void RosFrontendPublisher::processMeshDeltaRequest(
-    const std::shared_ptr<rmw_request_id_t>,
     const MeshDeltaSrv::Request::SharedPtr& req,
     MeshDeltaSrv::Response::SharedPtr resp) {
   for (const auto& seq : req->sequence_numbers) {
