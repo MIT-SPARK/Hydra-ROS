@@ -65,13 +65,13 @@ void declare_config(RosFrontendPublisher::Config& config) {
 
 RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
     : config(config::checkValid(get_config())) {
+  mesh_delta_server_ = nh.create_service<MeshDeltaSrv>(
+      "mesh_delta_request", &RosFrontendPublisher::processMeshDeltaRequest, this);
   dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
       "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
   mesh_update_pub_ = nh.create_publisher<MeshDeltaTypeAdapter>(
       "full_mesh_update", rclcpp::QoS(100).transient_local());
-  mesh_delta_server_ = nh.create_service<MeshDeltaSrv>(
-      "mesh_delta_request", &RosFrontendPublisher::processMeshDeltaRequest, this);
 }
 
 void RosFrontendPublisher::call(uint64_t timestamp_ns,
@@ -97,15 +97,17 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
 }
 
 void RosFrontendPublisher::processMeshDeltaRequest(
-    const MeshDeltaSrv::Request::SharedPtr& req,
+    const MeshDeltaSrv::Request::SharedPtr req,
     MeshDeltaSrv::Response::SharedPtr resp) {
   for (const auto& seq : req->sequence_numbers) {
     kimera_pgmo_msgs::msg::MeshDelta msg;
     // Check TypeAdater documentation TODO(Yun)
+    if (!stored_delta_.count(seq)) {
+      LOG(ERROR) << "Mesh delta sequence " << seq << " not found";
+    }
     mesh_delta_converter_.convert_to_ros_message(stored_delta_.at(seq), msg);
     resp->deltas.push_back(msg);
   }
-  resp->success = true;
 }
 
 }  // namespace hydra
