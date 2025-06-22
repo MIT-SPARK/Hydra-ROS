@@ -65,9 +65,6 @@ void declare_config(RosFrontendPublisher::Config& config) {
 
 RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
     : config(config::checkValid(get_config())) {
-  using std::placeholders::_1;
-  using std::placeholders::_2;
-  using std::placeholders::_3;
   dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
       "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
@@ -108,6 +105,7 @@ void RosFrontendPublisher::processMeshDeltaRequest(
     mesh_delta_converter_.convert_to_ros_message(stored_delta_.at(seq), msg);
     resp->deltas.push_back(msg);
   }
+  resp->success = true;
 }
 
 }  // namespace hydra
