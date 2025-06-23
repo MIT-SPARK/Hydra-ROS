@@ -104,6 +104,7 @@ void RosFrontendPublisher::processMeshDeltaRequest(
     // Check TypeAdater documentation TODO(Yun)
     if (!stored_delta_.count(seq)) {
       LOG(ERROR) << "Mesh delta sequence " << seq << " not found";
+      continue;
     }
     mesh_delta_converter_.convert_to_ros_message(stored_delta_.at(seq), msg);
     resp->deltas.push_back(msg);

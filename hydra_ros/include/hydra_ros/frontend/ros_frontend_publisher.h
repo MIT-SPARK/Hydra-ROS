@@ -53,7 +53,7 @@ class RosFrontendPublisher : public GraphBuilder::Sink {
   struct Config {
     //! @brief Configuration for dsg publisher
     DsgSender::Config dsg_sender;
-    int mesh_delta_queue_size = 100;  // Store mesh delta to resend. 0 for infinite
+    int mesh_delta_queue_size = 1000;  // Store mesh delta to resend. 0 for infinite
   } const config;
 
   explicit RosFrontendPublisher(ianvs::NodeHandle);
