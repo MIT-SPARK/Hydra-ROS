@@ -44,6 +44,8 @@ namespace hydra {
 
 using kimera_pgmo::MeshDeltaTypeAdapter;
 using pose_graph_tools::PoseGraphTypeAdapter;
+using BaseInterface = rclcpp::node_interfaces::NodeBaseInterface;
+using rclcpp::CallbackGroupType;
 
 namespace {
 
@@ -65,8 +67,14 @@ void declare_config(RosFrontendPublisher::Config& config) {
 
 RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
     : config(config::checkValid(get_config())) {
-  mesh_delta_server_ = nh.create_service<MeshDeltaSrv>(
-      "mesh_delta_request", &RosFrontendPublisher::processMeshDeltaRequest, this);
+  auto group = nh.as<BaseInterface>()->create_callback_group(
+      CallbackGroupType::MutuallyExclusive);
+  mesh_delta_server_ =
+      nh.create_service<MeshDeltaSrv>("mesh_delta_query",
+                                      &RosFrontendPublisher::processMeshDeltaQuery,
+                                      this,
+                                      rclcpp::ServicesQoS(),
+                                      group);
   dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
       "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
@@ -96,9 +104,11 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
   dsg_sender_->sendGraph(graph, rclcpp::Time(timestamp_ns));
 }
 
-void RosFrontendPublisher::processMeshDeltaRequest(
+void RosFrontendPublisher::processMeshDeltaQuery(
     const MeshDeltaSrv::Request::SharedPtr req,
     MeshDeltaSrv::Response::SharedPtr resp) {
+  LOG(INFO) << "Received request for " << req->sequence_numbers.size()
+            << " mesh deltas...";
   for (const auto& seq : req->sequence_numbers) {
     kimera_pgmo_msgs::msg::MeshDelta msg;
     // Check TypeAdater documentation TODO(Yun)
@@ -107,8 +117,9 @@ void RosFrontendPublisher::processMeshDeltaRequest(
       continue;
     }
     mesh_delta_converter_.convert_to_ros_message(stored_delta_.at(seq), msg);
-    resp->deltas.push_back(msg);
+    //resp->deltas.push_back(msg);
   }
+  LOG(INFO) << "Responding with " << resp->deltas.size() << " deltas...";
 }
 
 }  // namespace hydra

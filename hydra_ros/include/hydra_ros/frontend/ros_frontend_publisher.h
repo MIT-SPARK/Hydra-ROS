@@ -40,7 +40,7 @@
 #include <queue>
 #include <unordered_map>
 
-#include <kimera_pgmo_msgs/srv/mesh_delta_request.hpp>
+#include <kimera_pgmo_msgs/srv/mesh_delta_query.hpp>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
@@ -48,12 +48,12 @@ namespace hydra {
 
 class RosFrontendPublisher : public GraphBuilder::Sink {
  public:
-  using MeshDeltaSrv = kimera_pgmo_msgs::srv::MeshDeltaRequest;
+  using MeshDeltaSrv = kimera_pgmo_msgs::srv::MeshDeltaQuery;
 
   struct Config {
     //! @brief Configuration for dsg publisher
     DsgSender::Config dsg_sender;
-    int mesh_delta_queue_size = 1000;  // Store mesh delta to resend. 0 for infinite
+    int mesh_delta_queue_size = 100;  // Store mesh delta to resend. 0 for infinite
   } const config;
 
   explicit RosFrontendPublisher(ianvs::NodeHandle);
@@ -65,8 +65,8 @@ class RosFrontendPublisher : public GraphBuilder::Sink {
   std::string printInfo() const override { return "RosFrontendPublisher"; }
 
  protected:
-  void processMeshDeltaRequest(const MeshDeltaSrv::Request::SharedPtr req,
-                               MeshDeltaSrv::Response::SharedPtr resp);
+  void processMeshDeltaQuery(const MeshDeltaSrv::Request::SharedPtr req,
+                             MeshDeltaSrv::Response::SharedPtr resp);
 
   std::unique_ptr<DsgSender> dsg_sender_;
   mutable std::queue<uint16_t> delta_queue_;
