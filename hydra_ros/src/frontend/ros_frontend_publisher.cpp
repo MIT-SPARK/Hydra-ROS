@@ -90,14 +90,11 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
   if (backend_input.mesh_update) {
     backend_input.mesh_update->timestamp_ns = timestamp_ns;
     mesh_update_pub_->publish(*backend_input.mesh_update);
-    delta_queue_.push(backend_input.mesh_update->sequence_number);
     stored_delta_.insert(
-        {backend_input.mesh_update->sequence_number, *backend_input.mesh_update});
+        {backend_input.mesh_update->sequence_number, backend_input.mesh_update});
     if (config.mesh_delta_queue_size > 0 &&
-        delta_queue_.size() > static_cast<size_t>(config.mesh_delta_queue_size)) {
-      auto first_seq = delta_queue_.front();
-      stored_delta_.erase(first_seq);
-      delta_queue_.pop();
+        stored_delta_.size() > static_cast<size_t>(config.mesh_delta_queue_size)) {
+      stored_delta_.erase(stored_delta_.begin());
     }
   }
 
@@ -110,14 +107,13 @@ void RosFrontendPublisher::processMeshDeltaQuery(
   LOG(INFO) << "Received request for " << req->sequence_numbers.size()
             << " mesh deltas...";
   for (const auto& seq : req->sequence_numbers) {
-    kimera_pgmo_msgs::msg::MeshDelta msg;
+    auto& msg = resp->deltas.emplace_back();
     // Check TypeAdater documentation TODO(Yun)
     if (!stored_delta_.count(seq)) {
       LOG(ERROR) << "Mesh delta sequence " << seq << " not found";
       continue;
     }
-    mesh_delta_converter_.convert_to_ros_message(stored_delta_.at(seq), msg);
-    //resp->deltas.push_back(msg);
+    mesh_delta_converter_.convert_to_ros_message(*stored_delta_.at(seq), msg);
   }
   LOG(INFO) << "Responding with " << resp->deltas.size() << " deltas...";
 }
