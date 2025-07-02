@@ -46,40 +46,26 @@
 #include "hydra_visualizer/visualizer_node.h"
 
 namespace hydra::visualizer {
-struct ExternalPluginConfig {
-  bool allow_plugins = true;
-  bool verbose_plugins = false;
-  bool trace_plugin_allocations = false;
-  std::vector<std::string> paths;
-};
 
 struct NodeSettings {
-  ExternalPluginConfig external_plugins;
   int glog_verbosity = 1;
   int glog_level = 0;
+  std::vector<std::string> external_library_paths;
 };
-
-void declare_config(ExternalPluginConfig& config) {
-  using namespace config;
-  name("ExternalPluginConfig");
-  field(config.allow_plugins, "allow_plugins");
-  field(config.verbose_plugins, "verbose_plugins");
-  field(config.trace_plugin_allocations, "trace_plugin_allocations");
-  field(config.paths, "paths");
-}
 
 void declare_config(NodeSettings& config) {
   using namespace config;
   name("NodeSettings");
-  field(config.external_plugins, "external_plugins");
   field(config.glog_verbosity, "glog_verbosity");
   field(config.glog_level, "glog_level");
+  field(config.external_library_paths, "external_library_paths");
 }
 
 }  // namespace hydra::visualizer
 
 int main(int argc, char** argv) {
   config::initContext(argc, argv, true);
+  config::setConfigSettingsFromContext();
   rclcpp::init(argc, argv);
 
   const auto node_settings = config::fromContext<hydra::visualizer::NodeSettings>();
@@ -96,14 +82,8 @@ int main(int argc, char** argv) {
 
   VLOG(1) << "Settings:\n" << config::toString(node_settings);
 
-  auto& settings = config::Settings();
-  settings.allow_external_libraries = node_settings.external_plugins.allow_plugins;
-  settings.verbose_external_load = node_settings.external_plugins.verbose_plugins;
-  settings.print_external_allocations =
-      node_settings.external_plugins.trace_plugin_allocations;
   [[maybe_unused]] const auto plugins =
-      config::loadExternalFactories(node_settings.external_plugins.paths);
-
+      config::loadExternalFactories(node_settings.external_library_paths);
 
   rclcpp::executors::MultiThreadedExecutor executor;
   {  // start visualizer scope

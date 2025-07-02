@@ -1,3 +1,2 @@
 ---
-external_plugins:
-  allow_plugins: false
+external_libraries: {enabled: false}

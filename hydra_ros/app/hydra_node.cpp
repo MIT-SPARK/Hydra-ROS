@@ -50,12 +50,6 @@ struct RunSettings {
   size_t robot_id = 0;
   bool exit_after_clock = false;
   bool force_shutdown = false;
-  size_t print_width = 100;
-  size_t print_indent = 45;
-  bool print_missing = false;
-  bool allow_plugins = true;
-  bool verbose_plugins = false;
-  bool trace_plugin_allocations = false;
   std::vector<std::string> paths;
   int config_verbosity = 1;
   bool forward_glog_to_ros = true;
@@ -71,12 +65,6 @@ void declare_config(RunSettings& config) {
   field(config.robot_id, "robot_id");
   field(config.exit_after_clock, "exit_after_clock");
   field(config.force_shutdown, "force_shutdown");
-  field(config.print_width, "print_width");
-  field(config.print_indent, "print_indent");
-  field(config.print_missing, "print_missing");
-  field(config.allow_plugins, "allow_plugins");
-  field(config.verbose_plugins, "verbose_plugins");
-  field(config.trace_plugin_allocations, "trace_plugin_allocations");
   field(config.paths, "paths");
   field(config.config_verbosity, "config_verbosity");
   field(config.forward_glog_to_ros, "forward_glog_to_ros");
@@ -123,6 +111,7 @@ struct RosSink : google::LogSink {
 
 int main(int argc, char* argv[]) {
   config::initContext(argc, argv, true);
+  config::setConfigSettingsFromContext();
   rclcpp::init(argc, argv);
 
   const auto settings = config::fromContext<hydra::RunSettings>();
@@ -144,12 +133,6 @@ int main(int argc, char* argv[]) {
   }
 
   config::Settings().setLogger("glog");
-  config::Settings().print_width = settings.print_width;
-  config::Settings().print_indent = settings.print_indent;
-  config::Settings().print_missing = settings.print_missing;
-  config::Settings().allow_external_libraries = settings.allow_plugins;
-  config::Settings().verbose_external_load = settings.verbose_plugins;
-  config::Settings().print_external_allocations = settings.trace_plugin_allocations;
   [[maybe_unused]] const auto plugins = config::loadExternalFactories(settings.paths);
 
   ianvs::NodeHandle nh(*node);
