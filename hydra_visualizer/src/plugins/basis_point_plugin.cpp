@@ -75,6 +75,7 @@ void declare_config(BasisPointPlugin::Config& config) {
   field(config.basis_point_scale, "basis_point_scale");
   field(config.basis_point_alpha, "basis_point_alpha");
   field(config.colormap, "colormap");
+  field(config.graph, "graph");
 }
 
 struct BasisPoint {
@@ -114,10 +115,8 @@ BasisPointPlugin::BasisPointPlugin(const Config& config,
                                    ianvs::NodeHandle nh,
                                    const std::string& name)
     : VisualizerPlugin(name),
-      config(config::checkValid(config)),
-      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())),
-      layer_config_(nh, "graph"),
-      colormap_(config.colormap) {}
+      config_("", config::checkValid(config)),
+      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())) {}
 
 void BasisPointPlugin::draw(const std_msgs::msg::Header& header,
                             const DynamicSceneGraph& graph) {
@@ -148,9 +147,11 @@ void BasisPointPlugin::fillMarkers(const std_msgs::msg::Header& header,
     return;
   }
 
+  const auto config = config_.get();
+  const visualizer::CategoricalColormap colormap(config.colormap);
   const auto& places = graph.getLayer(DsgLayers::PLACES);
 
-  visualizer::LayerInfo info(layer_config_.get());
+  visualizer::LayerInfo info(config.graph);
   info.node_color = [&](const SceneGraphNode& node) {
     const auto parent = node.getParent();
     return parent ? graph.getNode(*parent).attributes<SemanticNodeAttributes>().color
@@ -166,13 +167,15 @@ void BasisPointPlugin::fillMarkers(const std_msgs::msg::Header& header,
     tracker_.add(makeLayerEdgeMarkers(header, info, places, "edges"), msg);
   }
 
-  drawEdges(header, graph, msg);
+  drawEdges(config, colormap, header, graph, msg);
   if (config.draw_basis_points) {
-    drawBasisPoints(header, graph, msg);
+    drawBasisPoints(config, colormap, header, graph, msg);
   }
 }
 
-void BasisPointPlugin::drawEdges(const std_msgs::msg::Header& header,
+void BasisPointPlugin::drawEdges(const Config& config,
+                                 const visualizer::CategoricalColormap& colormap,
+                                 const std_msgs::msg::Header& header,
                                  const DynamicSceneGraph& graph,
                                  MarkerArray& msg) const {
   Marker marker;
@@ -193,7 +196,7 @@ void BasisPointPlugin::drawEdges(const std_msgs::msg::Header& header,
     tf2::convert(attrs.position, start);
 
     const auto basis_points = getBasisPoints(
-        colormap_, attrs, config.show_voxblox_connections, graph.mesh().get());
+        colormap, attrs, config.show_voxblox_connections, graph.mesh().get());
     for (const auto& basis_point : basis_points) {
       marker.points.push_back(start);
       auto& point = marker.points.emplace_back();
@@ -204,7 +207,9 @@ void BasisPointPlugin::drawEdges(const std_msgs::msg::Header& header,
   tracker_.add(marker, msg);
 }
 
-void BasisPointPlugin::drawBasisPoints(const std_msgs::msg::Header& header,
+void BasisPointPlugin::drawBasisPoints(const Config& config,
+                                       const visualizer::CategoricalColormap& colormap,
+                                       const std_msgs::msg::Header& header,
                                        const DynamicSceneGraph& graph,
                                        MarkerArray& msg) const {
   const auto mesh = graph.mesh();
@@ -227,7 +232,7 @@ void BasisPointPlugin::drawBasisPoints(const std_msgs::msg::Header& header,
   for (const auto& id_node_pair : layer.nodes()) {
     auto& attrs = id_node_pair.second->attributes<PlaceNodeAttributes>();
     const auto points =
-        getBasisPoints(colormap_, attrs, config.show_voxblox_connections, mesh.get());
+        getBasisPoints(colormap, attrs, config.show_voxblox_connections, mesh.get());
     for (const auto& basis_point : points) {
       auto& point = marker.points.emplace_back();
       tf2::convert(basis_point.pos, point);

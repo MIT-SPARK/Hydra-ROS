@@ -73,15 +73,15 @@ void declare_config(PlacesFreespacePlugin::Config& config) {
   field(config.draw_edges, "draw_edges");
   field(config.sphere_color, "sphere_color");
   field(config.sphere_alpha, "sphere_alpha");
+  field(config.graph, "graph");
 }
 
 PlacesFreespacePlugin::PlacesFreespacePlugin(const Config& config,
                                              ianvs::NodeHandle nh,
                                              const std::string& name)
     : VisualizerPlugin(name),
-      config(config::checkValid(config)),
-      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())),
-      layer_config_(nh, "graph") {}
+      config_("", config::checkValid(config)),
+      pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())) {}
 
 void PlacesFreespacePlugin::draw(const std_msgs::msg::Header& header,
                                  const DynamicSceneGraph& graph) {
@@ -112,21 +112,22 @@ void PlacesFreespacePlugin::fillMarkers(const std_msgs::msg::Header& header,
     return;
   }
 
+  const auto config = config_.get();
   const auto& places = graph.getLayer(DsgLayers::PLACES);
-  const auto& info = layer_config_.get();
-  if (!info.visualize) {
+  if (!config.graph.visualize) {
     return;
   }
 
-  tracker_.add(makeLayerNodeMarkers(header, info, places, "nodes"), msg);
+  tracker_.add(makeLayerNodeMarkers(header, config.graph, places, "nodes"), msg);
   if (config.draw_edges) {
-    tracker_.add(makeLayerEdgeMarkers(header, info, places, "edges"), msg);
+    tracker_.add(makeLayerEdgeMarkers(header, config.graph, places, "edges"), msg);
   }
 
-  drawSpheres(header, places, msg);
+  drawSpheres(config, header, places, msg);
 }
 
-void PlacesFreespacePlugin::drawSpheres(const std_msgs::msg::Header& header,
+void PlacesFreespacePlugin::drawSpheres(const Config& config,
+                                        const std_msgs::msg::Header& header,
                                         const SceneGraphLayer& layer,
                                         MarkerArray& msg) const {
   size_t id = 0;

@@ -33,10 +33,10 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/dynamic_config.h>
 #include <hydra/frontend/gvd_place_extractor.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/layer_info.h>
-#include <hydra_visualizer/utils/config_wrapper.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
 #include <ianvs/node_handle.h>
 
@@ -77,8 +77,8 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  protected:
   ianvs::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  visualizer::ConfigWrapper<GvdVisualizerConfig> gvd_config_;
-  visualizer::ConfigWrapper<visualizer::LayerConfig> layer_config_;
+  config::DynamicConfig<GvdVisualizerConfig> gvd_config_;
+  config::DynamicConfig<visualizer::LayerConfig> layer_config_;
   const visualizer::RangeColormap colormap_;
 
  private:

@@ -33,15 +33,14 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/dynamic_config.h>
 #include <ianvs/node_handle.h>
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
-#include "hydra_visualizer/color/colormap_utilities.h"
-#include "hydra_visualizer/plugins/visualizer_plugin.h"
-#include "hydra_visualizer/utils/config_wrapper.h"
-#include "hydra_visualizer/utils/marker_tracker.h"
 #include "hydra_visualizer/layer_info.h"
+#include "hydra_visualizer/plugins/visualizer_plugin.h"
+#include "hydra_visualizer/utils/marker_tracker.h"
 
 namespace hydra {
 
@@ -51,7 +50,8 @@ class PlacesFreespacePlugin : public VisualizerPlugin {
     bool draw_edges = true;
     spark_dsg::Color sphere_color{spark_dsg::Color::red()};
     double sphere_alpha = 0.5;
-  } const config;
+    visualizer::LayerConfig graph;
+  };
 
   PlacesFreespacePlugin(const Config& config,
                         ianvs::NodeHandle nh,
@@ -69,13 +69,14 @@ class PlacesFreespacePlugin : public VisualizerPlugin {
                    const spark_dsg::DynamicSceneGraph& graph,
                    visualization_msgs::msg::MarkerArray& msg) const;
 
-  void drawSpheres(const std_msgs::msg::Header& header,
+  void drawSpheres(const Config& config,
+                   const std_msgs::msg::Header& header,
                    const spark_dsg::SceneGraphLayer& places,
                    visualization_msgs::msg::MarkerArray& msg) const;
 
   mutable MarkerTracker tracker_;
+  config::DynamicConfig<Config> config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
-  visualizer::ConfigWrapper<visualizer::LayerConfig> layer_config_;
 };
 
 void declare_config(PlacesFreespacePlugin::Config& config);

@@ -147,20 +147,22 @@ void declare_config(SceneGraphRenderer::Config& config) {
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
     : nh_(nh),
-      graph_config_(nh, "", config.graph),
-      pub_(
-          nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())) {
+      graph_config_("", config.graph, [this]() { has_change_ = true; }),
+      pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
+      has_change_(false) {
   // init wrappers from parsed initial config
   for (const auto& [layer_id, layer_config] : config.layers) {
     const auto ns = "config/layer" + std::to_string(layer_id);
     layers_.emplace(layer_id,
-                    std::make_unique<LayerConfigWrapper>(nh_, ns, layer_config));
+                    std::make_unique<LayerConfigWrapper>(
+                        ns, layer_config, [this]() { has_change_ = true; }));
   }
 
   for (const auto& [layer_id, layer_config] : config.partitions) {
     const auto ns = "config/partitions/layer" + std::to_string(layer_id);
     partitions_.emplace(layer_id,
-                        std::make_unique<LayerConfigWrapper>(nh_, ns, layer_config));
+                        std::make_unique<LayerConfigWrapper>(
+                            ns, layer_config, [this]() { has_change_ = true; }));
   }
 }
 
@@ -170,34 +172,11 @@ void SceneGraphRenderer::reset(const std_msgs::msg::Header& header) {
   if (!msg.markers.empty()) {
     pub_->publish(msg);
   }
-
-  // TODO(nathan) think if we actually want to do this
-  // config_.reset();
 }
 
-bool SceneGraphRenderer::hasChange() const {
-  bool has_change = graph_config_.hasChange();
-  for (const auto& [layer_id, config] : layers_) {
-    has_change |= config->hasChange();
-  }
+bool SceneGraphRenderer::hasChange() const { return has_change_; }
 
-  for (auto& [layer_id, config] : partitions_) {
-    has_change |= config->hasChange();
-  }
-
-  return has_change;
-}
-
-void SceneGraphRenderer::clearChangeFlag() {
-  graph_config_.clearChangeFlag();
-  for (auto& [layer_id, config] : layers_) {
-    config->clearChangeFlag();
-  }
-
-  for (auto& [layer_id, config] : partitions_) {
-    config->clearChangeFlag();
-  }
-}
+void SceneGraphRenderer::clearChangeFlag() { has_change_ = false; }
 
 void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
                               const DynamicSceneGraph& graph) const {
@@ -356,8 +335,8 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
     if (iter == layers_.end()) {
       // TODO(nathan) think about logging
       const auto ns = "config/layer" + std::to_string(layer_id);
-      iter = layers_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(nh_, ns))
-                 .first;
+      iter = layers_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(ns)).first;
+      iter->second->setCallback([this]() { has_change_ = true; });
     }
 
     // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
@@ -366,20 +345,19 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
         .graph(graph, layer_id);
   }
 
-  for (const auto& [layer_id, partitions] : graph.layer_partitions()) {
-    auto iter = partitions_.find(layer_id);
+  for (const auto& [l_id, partitions] : graph.layer_partitions()) {
+    auto iter = partitions_.find(l_id);
     if (iter == partitions_.end()) {
       // TODO(nathan) think about logging
-      const auto ns = "config/partitions/layer" + std::to_string(layer_id);
-      iter =
-          partitions_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(nh_, ns))
-              .first;
+      const auto ns = "config/partitions/layer" + std::to_string(l_id);
+      iter = partitions_.emplace(l_id, std::make_unique<LayerConfigWrapper>(ns)).first;
+      iter->second->setCallback([this]() { has_change_ = true; });
     }
 
     // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
-    partition_infos_.emplace(layer_id, LayerInfo(iter->second->get()))
+    partition_infos_.emplace(l_id, LayerInfo(iter->second->get()))
         .first->second.offset(graph_config.layer_z_step, graph_config.collapse_layers)
-        .graph(graph, layer_id);
+        .graph(graph, l_id);
   }
 }
 

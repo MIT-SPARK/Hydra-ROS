@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/dynamic_config.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 
@@ -42,7 +43,6 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/layer_info.h"
-#include "hydra_visualizer/utils/config_wrapper.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
 
 namespace hydra {
@@ -60,7 +60,7 @@ void declare_config(GraphRenderConfig& config);
 class SceneGraphRenderer {
  public:
   using Ptr = std::shared_ptr<SceneGraphRenderer>;
-  using LayerConfigWrapper = visualizer::ConfigWrapper<visualizer::LayerConfig>;
+  using LayerConfigWrapper = config::DynamicConfig<visualizer::LayerConfig>;
 
   struct Config {
     //! @brief Overall graph config
@@ -101,9 +101,10 @@ class SceneGraphRenderer {
 
  protected:
   ianvs::NodeHandle nh_;
-  visualizer::ConfigWrapper<GraphRenderConfig> graph_config_;
+  config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
 
+  mutable std::atomic<bool> has_change_;
   mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> layers_;
   mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> partitions_;
 

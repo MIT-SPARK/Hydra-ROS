@@ -72,8 +72,8 @@ PlacesVisualizer::PlacesVisualizer(const Config& config)
     : config(config),
       nh_(getHydraNodeHandle(config.ns)),
       pubs_(nh_),
-      gvd_config_(nh_, "gvd"),
-      layer_config_(nh_, "graph"),
+      gvd_config_("gvd"),
+      layer_config_("graph"),
       colormap_(config.colormap) {}
 
 std::string PlacesVisualizer::printInfo() const { return config::toString(config); }
