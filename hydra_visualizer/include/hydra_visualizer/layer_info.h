@@ -153,13 +153,13 @@ class LayerInfo {
       std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
   using TextFunction = std::function<std::string(const spark_dsg::SceneGraphNode&)>;
 
-  LayerInfo(const LayerConfig& config);
+  LayerInfo(const LayerConfig config);
   LayerInfo& offset(double offset_size = 1.0, bool collapse = true);
   LayerInfo& graph(const spark_dsg::DynamicSceneGraph& graph, spark_dsg::LayerId layer);
 
   bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
 
-  const LayerConfig& config;
+  const LayerConfig config;
 
   double z_offset;
   ColorFunction node_color;

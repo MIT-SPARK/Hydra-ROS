@@ -13,6 +13,7 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 find_package(ament_cmake REQUIRED)
 find_package(config_utilities REQUIRED)
+find_package(config_utilities_ros REQUIRED)
 find_package(glog REQUIRED)
 find_package(gflags REQUIRED)
 find_package(hydra_msgs REQUIRED)
@@ -59,6 +60,7 @@ target_include_directories(
 target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC config_utilities::config_utilities
+         config_utilities_ros::config_utilities_ros
          ianvs::ianvs
          rclcpp::rclcpp
          spark_dsg::spark_dsg
@@ -76,12 +78,22 @@ ament_target_dependencies(
 )
 
 add_executable(hydra_visualizer_node app/hydra_visualizer_node.cpp)
-target_link_libraries(hydra_visualizer_node ${PROJECT_NAME} gflags glog::glog)
+target_link_libraries(
+  hydra_visualizer_node
+  ${PROJECT_NAME}
+  gflags
+  glog::glog
+)
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest)
   ament_add_gtest(test_${PROJECT_NAME} tests/main.cpp tests/test_ear_clipping.cpp)
-  target_link_libraries(test_${PROJECT_NAME} ${PROJECT_NAME} gflags glog::glog)
+  target_link_libraries(
+    test_${PROJECT_NAME}
+    ${PROJECT_NAME}
+    gflags
+    glog::glog
+  )
 endif()
 
 install(
@@ -100,6 +112,7 @@ install(DIRECTORY rviz DESTINATION share/${PROJECT_NAME})
 ament_export_targets(${PROJECT_NAME}-targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(
   config_utilities
+  config_utilities_ros
   hydra_msgs
   ianvs
   kimera_pgmo_msgs

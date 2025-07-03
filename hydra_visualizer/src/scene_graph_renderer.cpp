@@ -147,19 +147,19 @@ void declare_config(SceneGraphRenderer::Config& config) {
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
     : nh_(nh),
-      graph_config_("", config.graph, [this]() { has_change_ = true; }),
+      graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
       has_change_(false) {
   // init wrappers from parsed initial config
   for (const auto& [layer_id, layer_config] : config.layers) {
-    const auto ns = "config/layer" + std::to_string(layer_id);
+    const auto ns = "renderer/config/layer" + std::to_string(layer_id);
     layers_.emplace(layer_id,
                     std::make_unique<LayerConfigWrapper>(
                         ns, layer_config, [this]() { has_change_ = true; }));
   }
 
   for (const auto& [layer_id, layer_config] : config.partitions) {
-    const auto ns = "config/partitions/layer" + std::to_string(layer_id);
+    const auto ns = "renderer/config/partitions/layer" + std::to_string(layer_id);
     partitions_.emplace(layer_id,
                         std::make_unique<LayerConfigWrapper>(
                             ns, layer_config, [this]() { has_change_ = true; }));
@@ -334,7 +334,7 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
     auto iter = layers_.find(layer_id);
     if (iter == layers_.end()) {
       // TODO(nathan) think about logging
-      const auto ns = "config/layer" + std::to_string(layer_id);
+      const auto ns = "renderer/config/layer" + std::to_string(layer_id);
       iter = layers_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(ns)).first;
       iter->second->setCallback([this]() { has_change_ = true; });
     }
@@ -349,7 +349,7 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
     auto iter = partitions_.find(l_id);
     if (iter == partitions_.end()) {
       // TODO(nathan) think about logging
-      const auto ns = "config/partitions/layer" + std::to_string(l_id);
+      const auto ns = "renderer/config/partitions/layer" + std::to_string(l_id);
       iter = partitions_.emplace(l_id, std::make_unique<LayerConfigWrapper>(ns)).first;
       iter->second->setCallback([this]() { has_change_ = true; });
     }

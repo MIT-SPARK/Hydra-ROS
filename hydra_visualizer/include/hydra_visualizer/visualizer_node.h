@@ -35,9 +35,10 @@
 #pragma once
 
 #include <config_utilities/virtual_config.h>
+#include <config_utilities_ros/ros_dynamic_config_server.h>
 
-#include <std_srvs/srv/empty.hpp>
 #include <rclcpp/node.hpp>
+#include <std_srvs/srv/empty.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
@@ -81,6 +82,7 @@ class DsgVisualizer : public rclcpp::Node {
   GraphWrapper::Ptr graph_;
   SceneGraphRenderer::Ptr renderer_;
   std::vector<VisualizerPlugin::Ptr> plugins_;
+  const config::RosDynamicConfigServer server_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr redraw_service_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr reset_service_;
 };

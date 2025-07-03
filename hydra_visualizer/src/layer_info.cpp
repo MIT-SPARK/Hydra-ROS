@@ -132,7 +132,7 @@ void declare_config(LayerConfig& config) {
   field(config.boundaries, "boundaries");
 }
 
-LayerInfo::LayerInfo(const LayerConfig& config)
+LayerInfo::LayerInfo(const LayerConfig config)
     : config(config),
       z_offset(0.0),
       node_color(&getNodeColor),

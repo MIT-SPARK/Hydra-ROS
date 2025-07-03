@@ -12,6 +12,7 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>config_utilities</depend>
+  <depend>config_utilities_ros</depend>
   <depend>hydra_msgs</depend>
   <depend>ianvs</depend>
   <depend>kimera_pgmo_msgs</depend>

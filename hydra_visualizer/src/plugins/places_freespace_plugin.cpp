@@ -80,7 +80,7 @@ PlacesFreespacePlugin::PlacesFreespacePlugin(const Config& config,
                                              ianvs::NodeHandle nh,
                                              const std::string& name)
     : VisualizerPlugin(name),
-      config_("", config::checkValid(config)),
+      config_(name, config::checkValid(config)),
       pub_(nh.create_publisher<MarkerArray>(name, rclcpp::QoS(1).transient_local())) {}
 
 void PlacesFreespacePlugin::draw(const std_msgs::msg::Header& header,
