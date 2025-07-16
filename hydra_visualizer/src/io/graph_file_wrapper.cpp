@@ -58,7 +58,7 @@ using std_srvs::srv::Empty;
 void declare_config(GraphFileWrapper::Config& config) {
   using namespace config;
   name("GraphFileWrapper::Config");
-  field<Path>(config.filepath, "filepath");
+  field<Path::Absolute>(config.filepath, "filepath");
   field(config.wrapper_ns, "wrapper_ns");
 
   check<Path::Exists>(config.filepath, "filepath");

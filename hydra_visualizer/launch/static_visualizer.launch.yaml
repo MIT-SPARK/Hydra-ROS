@@ -27,3 +27,6 @@ launch:
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
   - arg: {name: rviz_path, default: $(find-pkg-share hydra_visualizer)/rviz/static_visualizer.rviz, description: rviz file to load}
   - node: {if: $(var start_rviz), name: rviz, pkg: rviz2, exec: rviz2, args: -d $(var rviz_path)}
+  # reconfiguration of dynamic configurations
+  - arg: {name: start_config_gui, default: 'true', description: automatically start config_utilities configuration GUI}
+  - node: {if: $(var start_config_gui), name: dynamic_config_gui, pkg: config_utilities_ros, exec: gui}
