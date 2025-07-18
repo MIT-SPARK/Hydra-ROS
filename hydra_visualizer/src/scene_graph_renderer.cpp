@@ -46,18 +46,6 @@
 #include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/drawing.h"
 
-namespace spark_dsg {
-
-bool operator<(const LayerKey& lhs, const LayerKey& rhs) {
-  if (lhs.layer == rhs.layer) {
-    return lhs.partition < rhs.partition;
-  }
-
-  return lhs.layer < rhs.layer;
-}
-
-}  // namespace spark_dsg
-
 namespace hydra {
 
 using namespace spark_dsg;
