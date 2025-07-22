@@ -122,7 +122,7 @@ See [here](https://github.com/MIT-SPARK/semantic_inference/blob/main/docs/closed
 For the uHumans2 office scene, start Hydra via
 ```
 source ~/hydra_ws/install/setup.zsh
-ros2 launch hydra_ros uhumans2.launch.yaml use_gt_semantic:=false
+ros2 launch hydra_ros uhumans2.launch.yaml use_gt_semantics:=false
 ```
 
 You may need to wait for about a minute for TensorRT to compile the model the first time you run the launch file. Once Hydra initializes, then run

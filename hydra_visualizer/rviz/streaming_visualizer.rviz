@@ -10,7 +10,7 @@ Panels:
         - /Scene Graph1
         - /Scene Graph1/Topic1
       Splitter Ratio: 0.5
-    Tree Height: 555
+    Tree Height: 365
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -73,7 +73,22 @@ Visualization Manager:
       Enabled: true
       Name: Scene Graph
       Namespaces:
-        {}
+        interlayer_edges_3_2: true
+        interlayer_edges_4_3: true
+        layer_2_bounding_boxes: true
+        layer_2_nodes: true
+        layer_2_text: true
+        layer_2p97_edges: true
+        layer_2p97_nodes: true
+        layer_2p97_text: true
+        layer_3_edges: true
+        layer_3_nodes: true
+        layer_3p1_edges: true
+        layer_3p1_nodes: true
+        layer_3p1_polygon_boundaries: true
+        layer_4_edges: true
+        layer_4_nodes: true
+        layer_4_text: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -148,25 +163,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 53.02678680419922
+      Distance: 101.67281341552734
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 30.05879020690918
-        Y: 25.254615783691406
-        Z: -10.599756240844727
+        X: 21.39339828491211
+        Y: -2.054657220840454
+        Z: -4.211402893066406
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8653979301452637
+      Pitch: 0.5053982734680176
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.755398988723755
+      Yaw: 2.4153940677642822
     Saved: ~
 Window Geometry:
   Displays:
