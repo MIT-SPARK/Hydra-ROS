@@ -17,7 +17,7 @@ Hydra does its best to follow [REP 105](https://www.ros.org/reps/rep-0105.html).
 - **odom_frame**: This is `odom` in REP 105. This serves as a reference frame for the robot and sensor poses (i.e., Hydra looks up `odom_T_robot` and `odom_T_sensor`).
 - **map_frame**: This is `map` in REP 105. Hydra can optionally broadcast `map_T_odom` as the relative transform between the last optimized and unoptimized robot pose.
 
-Finally, you will need to have set up `semantic_inference` following [these](https://github.com/MIT-SPARK/semantic_inference/blob/ros2/docs/closed_set.md) instructions, or have another 2D closed set dense semantic segmentation network capable of producing category labels.
+Finally, you will need to have set up `semantic_inference` following [these](https://github.com/MIT-SPARK/semantic_inference/blob/main/docs/closed_set.md) instructions, or have another 2D closed set dense semantic segmentation network capable of producing category labels.
 
 ### Putting together the launch file
 
