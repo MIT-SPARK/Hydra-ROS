@@ -80,6 +80,9 @@ cd ..
 colcon build --continue-on-error
 ```
 
+> **Note**<br>
+> Depending on the amount of RAM available on your machine, you may run out of memory when compiling with `colcon build` directly (which will result in a `GCC killed` error). If this occurs, you can either specify fewer threads for colcon via `MAKEFLAGS="-j2" colcon build --parallel-workers 2` (which builds 2 packages at a time with 2 threads for 4 threads total) or compile certain larger packages directly first by building them specifically.
+
 > :warning: **Warning**</br>
 > In the `vcs import` step, GitHub may block too many concurrent requests. If you receive `kex_exchange_identification: read: Connection reset by peer` errors, try running `vcs import . < hydra/install/hydra.rosinstall --workers 1`.
 
