@@ -131,8 +131,6 @@ rosbag play path/to/rosbag --clock
 
 ## Filing Issues
 
-Depending on the nature of the issue, it may be helpful to browse [this](https://github.com/MIT-SPARK/Hydra/blob/main/doc/debugging.md) page about debugging Hydra first.
-
 Please understand that this is research code maintained by busy graduate students, **which comes with some caveats**:
   1. We do our best to maintain and keep the code up-to-date, but things may break or change occasionally
   2. We do not have bandwidth to help adapt the code to new applications
@@ -145,7 +143,7 @@ Depending on the nature of the issue, it may be helpful to browse [this](doc/deb
 
 Thank you in advance for your understanding!
 
-### Additional Resources
+## Additional Resources
 
 We maintain information on the ROS2 interfaces that Hydra uses [here](doc/hydra_ros_interfaces.md) that may be useful if you are trying to understand how to use Hydra with a new dataset.
 We also have a preliminary guide to setting up Hydra with the Zed2i camera [here](doc/setting_up_a_new_sensor.md).
