@@ -121,12 +121,13 @@ See [here](https://github.com/MIT-SPARK/semantic_inference/blob/main/docs/closed
 
 For the uHumans2 office scene, start Hydra via
 ```
-roslaunch hydra_ros uhumans2.launch use_gt_semantics:=false
+source ~/hydra_ws/install/setup.zsh
+ros2 launch hydra_ros uhumans2.launch.yaml use_gt_semantic:=false
 ```
 
 You may need to wait for about a minute for TensorRT to compile the model the first time you run the launch file. Once Hydra initializes, then run
 ```
-rosbag play path/to/rosbag --clock
+ros2 bag play path/to/rosbag --clock --qos-profile-overrides-path ~/.tf_overrides.yaml
 ```
 
 ## Filing Issues
