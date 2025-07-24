@@ -123,6 +123,7 @@ void DsgSender::publishGraph(const DynamicSceneGraph& graph,
 
   auto msg = std::make_unique<DsgUpdate>();
   msg->header.stamp = rclcpp::Time(timestamp_ns);
+  msg->header.frame_id = config.frame_id;
   spark_dsg::io::binary::writeGraph(
       graph, msg->layer_contents, config.serialize_dsg_mesh);
   msg->full_update = true;
