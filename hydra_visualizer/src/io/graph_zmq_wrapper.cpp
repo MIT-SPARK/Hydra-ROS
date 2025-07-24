@@ -52,9 +52,11 @@ using spark_dsg::DynamicSceneGraph;
 void declare_config(GraphZmqWrapper::Config& config) {
   using namespace config;
   name("GraphZmqWrapper::Config");
+  field(config.frame_id, "frame_id");
   field(config.url, "url");
   field(config.num_threads, "num_threads");
   field(config.poll_time_ms, "poll_time_ms");
+  checkCondition(!config.frame_id.empty(), "frame_id");
 }
 
 GraphZmqWrapper::GraphZmqWrapper(const Config& config, ianvs::NodeHandle)
@@ -90,7 +92,7 @@ StampedGraph GraphZmqWrapper::get() const {
     return {nullptr};
   }
 
-  return {graph_->clone()};
+  return {graph_->clone(), config.frame_id};
 }
 
 void GraphZmqWrapper::spin() {

@@ -65,12 +65,20 @@ bool GraphRosWrapper::hasChange() const { return has_change_; }
 
 void GraphRosWrapper::clearChangeFlag() { has_change_ = false; }
 
-StampedGraph GraphRosWrapper::get() const { return {graph_, last_time_}; }
+StampedGraph GraphRosWrapper::get() const {
+  return {graph_, last_frame_id_, last_time_};
+}
 
 void GraphRosWrapper::callback(const DsgUpdate::ConstSharedPtr& msg) {
   // not designed to be threadsafe; should lock and clone graph on return if desired
+  last_time_ = msg->header.stamp;
+  last_frame_id_ = msg->header.frame_id;
+  if (last_frame_id_.empty()) {
+    LOG(ERROR) << "Received scene grpah with empty frame_id field!";
+    return;
+  }
+
   try {
-    last_time_ = msg->header.stamp;
     if (!graph_) {
       graph_ = spark_dsg::io::binary::readGraph(msg->layer_contents);
     } else {

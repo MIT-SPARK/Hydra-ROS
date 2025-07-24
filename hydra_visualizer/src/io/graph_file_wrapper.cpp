@@ -58,9 +58,11 @@ using std_srvs::srv::Empty;
 void declare_config(GraphFileWrapper::Config& config) {
   using namespace config;
   name("GraphFileWrapper::Config");
+  field(config.frame_id, "frame_id");
   field<Path::Absolute>(config.filepath, "filepath");
   field(config.wrapper_ns, "wrapper_ns");
 
+  checkCondition(!config.frame_id.empty(), "frame_id");
   check<Path::Exists>(config.filepath, "filepath");
 }
 
@@ -77,7 +79,7 @@ bool GraphFileWrapper::hasChange() const { return has_change_; }
 
 void GraphFileWrapper::clearChangeFlag() { has_change_ = false; }
 
-StampedGraph GraphFileWrapper::get() const { return {graph_}; }
+StampedGraph GraphFileWrapper::get() const { return {graph_, config.frame_id}; }
 
 void GraphFileWrapper::reload(const std_srvs::srv::Empty::Request::SharedPtr&,
                               std_srvs::srv::Empty::Response::SharedPtr) {

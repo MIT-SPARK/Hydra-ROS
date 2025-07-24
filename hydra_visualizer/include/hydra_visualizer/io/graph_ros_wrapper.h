@@ -65,6 +65,7 @@ class GraphRosWrapper : public GraphWrapper {
   ianvs::NodeHandle nh_;
   rclcpp::Subscription<hydra_msgs::msg::DsgUpdate>::SharedPtr sub_;
   rclcpp::Time last_time_;
+  std::string last_frame_id_;
   spark_dsg::DynamicSceneGraph::Ptr graph_;
 };
 

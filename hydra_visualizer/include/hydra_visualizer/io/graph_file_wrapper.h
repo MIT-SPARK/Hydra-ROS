@@ -49,6 +49,7 @@ namespace hydra {
 class GraphFileWrapper : public GraphWrapper {
  public:
   struct Config {
+    std::string frame_id;
     std::filesystem::path filepath;
     std::string wrapper_ns = "~/graph";
   } const config;

@@ -50,7 +50,6 @@ class DsgVisualizer : public rclcpp::Node {
  public:
   struct Config {
     double loop_period_s = 0.1;
-    std::string visualizer_frame = "map";
     SceneGraphRenderer::Config renderer;
     config::VirtualConfig<GraphWrapper> graph;
     // Specify additional plugins that should be loaded <name, config>

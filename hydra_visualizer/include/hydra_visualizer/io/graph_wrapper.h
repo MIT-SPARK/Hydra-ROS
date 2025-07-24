@@ -41,6 +41,7 @@ namespace hydra {
 
 struct StampedGraph {
   spark_dsg::DynamicSceneGraph::Ptr graph;
+  std::string frame_id = "";
   std::optional<rclcpp::Time> timestamp = std::nullopt;
   inline operator bool() const { return graph != nullptr; }
 };

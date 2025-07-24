@@ -48,6 +48,7 @@ namespace hydra {
 class GraphZmqWrapper : public GraphWrapper {
  public:
   struct Config {
+    std::string frame_id;
     std::string url = "tcp://127.0.0.1:8001";
     size_t num_threads = 2;
     size_t poll_time_ms = 10;

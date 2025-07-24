@@ -45,11 +45,9 @@ void declare_config(DsgVisualizer::Config& config) {
   using namespace config;
   name("HydraVisualizerConfig");
   field(config.loop_period_s, "loop_period_s", "s");
-  field(config.visualizer_frame, "visualizer_frame");
   field(config.renderer, "renderer");
   field(config.graph, "graph");
   field(config.plugins, "plugins");
-  checkCondition(!config.visualizer_frame.empty(), "visualizer_frame");
 }
 
 DsgVisualizer::DsgVisualizer(const Config& config)
@@ -81,7 +79,6 @@ void DsgVisualizer::start() {
 void DsgVisualizer::reset() {
   std_msgs::msg::Header header;
   header.stamp = now();
-  header.frame_id = config.visualizer_frame;
 
   renderer_->reset(header);
   for (const auto& plugin : plugins_) {
@@ -123,7 +120,7 @@ void DsgVisualizer::spinOnce(bool force) {
   }
 
   std_msgs::msg::Header header;
-  header.frame_id = config.visualizer_frame;
+  header.frame_id = stamped_graph.frame_id;
   header.stamp = stamped_graph.timestamp.value_or(now());
 
   renderer_->draw(header, *stamped_graph.graph);
