@@ -62,7 +62,7 @@ void declare_config(GraphFileWrapper::Config& config) {
   field<Path::Absolute>(config.filepath, "filepath");
   field(config.wrapper_ns, "wrapper_ns");
 
-  checkCondition(!config.frame_id.empty(), "frame_id");
+  checkCondition(!config.frame_id.empty(), "'frame_id' must be non-empty");
   check<Path::Exists>(config.filepath, "filepath");
 }
 

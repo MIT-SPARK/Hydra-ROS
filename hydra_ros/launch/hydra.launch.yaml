@@ -53,7 +53,5 @@ launch:
         --config-utilities-yaml $(var extra_yaml)
   # hydra visualizer
   - set_remap: {from: hydra_visualizer/dsg, to: hydra/backend/dsg}
-  - include:
-      file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml
-      arg:
-        - {name: visualizer_frame, value: $(var map_frame)}
+  - arg: {name: start_visualizer, default: 'true', description: run hydra visualizer}
+  - include: {file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml, if: $(var start_visualizer)}

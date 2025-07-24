@@ -56,7 +56,7 @@ void declare_config(GraphZmqWrapper::Config& config) {
   field(config.url, "url");
   field(config.num_threads, "num_threads");
   field(config.poll_time_ms, "poll_time_ms");
-  checkCondition(!config.frame_id.empty(), "frame_id");
+  checkCondition(!config.frame_id.empty(), "'frame_id' must be non-empty!");
 }
 
 GraphZmqWrapper::GraphZmqWrapper(const Config& config, ianvs::NodeHandle)
