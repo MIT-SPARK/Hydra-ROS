@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_ros/utils/input_data_to_messages.h"
 
+#include <config_utilities/config.h>
 #include <hydra/input/input_data.h>
 
 #include <cv_bridge/cv_bridge.hpp>
@@ -59,19 +60,42 @@ PointField makeField(const std::string& name,
   return field;
 }
 
+cv::Mat showImage(const cv::Mat& input, const DisplayConfig& config) {
+  if (config.width_scale == 1.0f && config.height_scale == 1.0f) {
+    return input;
+  }
+
+  cv::Mat output;
+  cv::resize(input,
+             output,
+             cv::Size(),
+             config.width_scale,
+             config.height_scale,
+             cv::INTER_NEAREST);
+  return output;
+}
+
 }  // namespace
+
+void declare_config(DisplayConfig& config) {
+  using namespace config;
+  name("DisplayConfig");
+  field(config.width_scale, "width_scale");
+  field(config.height_scale, "height_scale");
+}
 
 Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
                            const InputData& sensor_data,
-                           const CmapFunc& colormap) {
+                           const CmapFunc& colormap,
+                           const DisplayConfig& config) {
   const auto& labels = sensor_data.label_image;
   cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
   msg->header = header;
   msg->encoding = "rgb8";
-  msg->image = cv::Mat(labels.rows, labels.cols, CV_8UC3);
+  cv::Mat img(labels.rows, labels.cols, CV_8UC3);
   for (int r = 0; r < labels.rows; ++r) {
     for (int c = 0; c < labels.cols; ++c) {
-      auto pixel = msg->image.ptr<uint8_t>(r, c);
+      auto pixel = img.ptr<uint8_t>(r, c);
       const auto color = colormap(labels.at<int>(r, c));
       *pixel = color.r;
       *(pixel + 1) = color.g;
@@ -79,16 +103,27 @@ Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
     }
   }
 
+  msg->image = showImage(img, config);
   return msg->toImageMsg();
 }
 
 Image::SharedPtr makeDepthImage(const std_msgs::msg::Header& header,
-                                const InputData& sensor_data) {
-  const auto& depth = sensor_data.depth_image;
+                                const InputData& sensor_data,
+                                const DisplayConfig& config) {
   cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
   msg->header = header;
   msg->encoding = "32FC1";
-  msg->image = depth;
+  msg->image = showImage(sensor_data.depth_image, config);
+  return msg->toImageMsg();
+}
+
+Image::SharedPtr makeRangeImage(const std_msgs::msg::Header& header,
+                                const InputData& sensor_data,
+                                const DisplayConfig& config) {
+  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
+  msg->header = header;
+  msg->encoding = "32FC1";
+  msg->image = showImage(sensor_data.range_image, config);
   return msg->toImageMsg();
 }
 

@@ -45,18 +45,34 @@ namespace hydra {
 struct InputData;
 using CmapFunc = std::function<spark_dsg::Color(uint32_t)>;
 
+struct DisplayConfig {
+  float width_scale = 1.0f;
+  float height_scale = 1.0f;
+};
+
+void declare_config(DisplayConfig& config);
+
 /**
  * @brief Make a colored image for the current labels in the input data
  */
 sensor_msgs::msg::Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
                                              const InputData& sensor_data,
-                                             const CmapFunc& colormap);
+                                             const CmapFunc& colormap,
+                                             const DisplayConfig& config = {});
 
 /**
  * @brief Copy the current depth image to ros
  */
 sensor_msgs::msg::Image::SharedPtr makeDepthImage(const std_msgs::msg::Header& header,
-                                                  const InputData& sensor_data);
+                                                  const InputData& sensor_data,
+                                                  const DisplayConfig& config = {});
+
+/**
+ * @brief Copy the current range image to ros
+ */
+sensor_msgs::msg::Image::SharedPtr makeRangeImage(const std_msgs::msg::Header& header,
+                                                  const InputData& sensor_data,
+                                                  const DisplayConfig& config = {});
 
 /**
  * @brief Convert the input pointcloud to a ROS type
