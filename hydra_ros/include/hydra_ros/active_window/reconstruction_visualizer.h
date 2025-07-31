@@ -34,8 +34,8 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/active_window/active_window_module.h>
-#include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/adapters/mesh_color.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
 #include <ianvs/lazy_publisher_group.h>
 #include <ianvs/node_handle.h>
@@ -44,6 +44,8 @@
 #include <kimera_pgmo_msgs/msg/mesh.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
+
+#include "hydra_ros/utils/input_data_to_messages.h"
 
 namespace hydra {
 
@@ -68,6 +70,7 @@ class ReconstructionVisualizer : public ActiveWindowModule::Sink {
     visualizer::RangeColormap::Config colormap;
     visualizer::CategoricalColormap::Config label_colormap;
     config::VirtualConfig<MeshColoring> mesh_coloring;
+    DisplayConfig image_display;
   } const config;
 
   explicit ReconstructionVisualizer(const Config& config);

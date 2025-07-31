@@ -44,7 +44,6 @@
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_ros/common.h"
-#include "hydra_ros/utils/input_data_to_messages.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
@@ -102,6 +101,7 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.filter_points_by_range, "filter_points_by_range");
   field(config.colormap, "colormap");
   field(config.label_colormap, "label_colormap");
+  field(config.image_display, "image_display");
   config.mesh_coloring.setOptional();
   field(config.mesh_coloring, "mesh_coloring");
 }
@@ -187,12 +187,18 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
 
     const auto sensor_name = output.sensor_data->getSensor().name;
     image_pubs_.publish(sensor_name + "/labels", [&]() {
-      return makeImage(header, *output.sensor_data, [this](uint32_t label) {
-        return label_colormap_(label);
-      });
+      return makeImage(
+          header,
+          *output.sensor_data,
+          [this](uint32_t label) { return label_colormap_(label); },
+          config.image_display);
     });
-    image_pubs_.publish(sensor_name + "/depth",
-                        [&]() { return makeDepthImage(header, *output.sensor_data); });
+    image_pubs_.publish(sensor_name + "/depth", [&]() {
+      return makeDepthImage(header, *output.sensor_data, config.image_display);
+    });
+    image_pubs_.publish(sensor_name + "/range", [&]() {
+      return makeRangeImage(header, *output.sensor_data, config.image_display);
+    });
     cloud_pubs_.publish(sensor_name + "/pointcloud", [&]() {
       return makeCloud(header, *output.sensor_data, config.filter_points_by_range);
     });
