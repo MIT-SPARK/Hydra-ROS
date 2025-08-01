@@ -35,6 +35,9 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
+#include <ianvs/node_handle_factory.h>
+
+#include <rclcpp/rclcpp.hpp>
 
 auto main(int argc, char** argv) -> int {
   int verbosity = 0;
@@ -45,6 +48,10 @@ auto main(int argc, char** argv) -> int {
   FLAGS_colorlogtostderr = true;
   FLAGS_minloglevel = minloglevel;
   FLAGS_v = verbosity;
+
+  rclcpp::init(argc, argv);
+  auto node = std::make_shared<rclcpp::Node>("hydra_ros_tests");
+  ianvs::NodeHandleFactory::addNode("hydra_ros_node", *node);
 
   ::testing::InitGoogleTest(&argc, argv);
   google::InitGoogleLogging(argv[0]);

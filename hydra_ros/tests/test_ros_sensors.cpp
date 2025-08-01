@@ -37,6 +37,7 @@
 #include <glog/stl_logging.h>
 #include <gtest/gtest.h>
 #include <hydra/input/lidar.h>
+#include <hydra_ros/common.h>
 #include <hydra_ros/input/ros_sensors.h>
 
 #include <rclcpp/node.hpp>
@@ -67,8 +68,9 @@ class RosSensors : public ::testing::Test {
   virtual ~RosSensors() = default;
   void SetUp() override {
     // TODO(nathan) not sure this will work correctly
-    auto node = std::make_shared<rclcpp::Node>("test_ros_sensors");
-    info_pub = node->create_publisher<sensor_msgs::msg::CameraInfo>(
+
+    auto nh = getHydraNodeHandle("");
+    info_pub = nh.create_publisher<sensor_msgs::msg::CameraInfo>(
         "/some/camera/camera_info", rclcpp::QoS(1).transient_local());
     sensor_msgs::msg::CameraInfo msg;
     msg.header.frame_id = "lidar";
@@ -110,7 +112,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // non-ros should always be the same
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(sensor, 0);
+    const auto result = input::loadSensor(sensor, "test_lidar");
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "lidar");
     const auto expected_yaml = getExportedConfig(config);
@@ -123,7 +125,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(sensor, 0);
+    const auto result = input::loadSensor(sensor, "test_lidar");
     EXPECT_FALSE(result);
   }
 
@@ -132,7 +134,7 @@ TEST_F(RosSensors, TestNonCamera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(sensor, 0);
+    const auto result = input::loadSensor(sensor, "test_lidar");
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "lidar");
 
@@ -152,7 +154,7 @@ TEST_F(RosSensors, Camera) {
 
   {  // should be able to parse intrinsics and extrinsics separately
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(sensor, 0);
+    const auto result = input::loadSensor(sensor, "test_camera");
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "camera");
 
@@ -168,7 +170,7 @@ TEST_F(RosSensors, Camera) {
 
   {  // ros without a frame should not be valid
     VirtualSensor sensor(config);
-    const auto result = input::loadSensor(sensor, 0);
+    const auto result = input::loadSensor(sensor, "test_camera");
     ASSERT_TRUE(result);
     EXPECT_EQ(result.getType(), "camera");
 
