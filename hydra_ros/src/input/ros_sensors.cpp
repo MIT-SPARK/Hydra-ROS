@@ -78,11 +78,11 @@ std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Confi
             << " to initialize sensor model";
 
   const auto start = nh.now();
-  const auto qos = rclcpp::QoS(1);
+  const auto qos = rclcpp::QoS(1).transient_local();
   const size_t timeout = std::floor(c.warning_timeout_s * 1000);
 
   std::optional<sensor_msgs::msg::CameraInfo> msg;
-  while (!msg) {
+  while (!msg && rclcpp::ok()) {
     msg = ianvs::getSingleMessage<CameraInfo>(nh, "camera_info", true, qos, timeout);
     if (!msg) {
       LOG(WARNING) << "Cannot find intrinsics on topic '" << resolved_topic << "'";
