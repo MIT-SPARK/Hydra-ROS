@@ -46,18 +46,14 @@
 
 namespace hydra {
 
-PoseStatus lookupTransform(const std::string& target,
-                           const std::string& source,
-                           double wait_duration_s = 0.1,
-                           int verbosity = 10);
-
 PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
                            const std::optional<rclcpp::Time>& stamp,
                            const std::string& target,
                            const std::string& source,
-                           std::optional<size_t> max_tries = std::nullopt,
+                           size_t max_tries = 0,
                            double wait_duration_s = 0.1,
-                           int verbosity = 10);
+                           int verbosity = 10,
+                           std::string* message = nullptr);
 
 struct TFLookup {
   struct Config {
@@ -65,8 +61,8 @@ struct TFLookup {
     double wait_duration_s = 0.1;
     //! Buffer size in second for tf
     double buffer_size_s = 30.0;
-    //! Number of lookup attempts before giving up
-    int max_tries = 5;
+    //! Number of lookup attempts before giving up (0 will try forever)
+    size_t max_tries = 5;
     //! Logging verbosity of tf lookup process
     int verbosity = 3;
     //! Get the buffer size in nanoseconds

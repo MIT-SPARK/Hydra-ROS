@@ -85,15 +85,46 @@ std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const std::string& ns)
   return *msg;
 }
 
-ParamSensorExtrinsics::Config lookupExtrinsics(const std::string& sensor_frame,
+ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& config,
+                                               const std::string& sensor_frame,
                                                const std::string& robot_frame) {
-  const auto pose = lookupTransform(robot_frame, sensor_frame);
-  CHECK(pose.is_valid) << "Could not look up extrinsics from ros!";
+  auto nh = getHydraNodeHandle("");
+  auto clock = nh.node().get<rclcpp::node_interfaces::NodeClockInterface>();
 
-  ParamSensorExtrinsics::Config config;
-  config.body_R_sensor = pose.target_R_source;
-  config.body_p_sensor = pose.target_p_source;
-  return config;
+  tf2_ros::Buffer buffer(clock->get_clock());
+  tf2_ros::TransformListener listener(buffer);
+
+  size_t warning_tries = config.warning_timeout_s / config.wait_duration_s;
+
+  const auto start = nh.now();
+  PoseStatus status;
+  while (!status) {
+    std::string message;
+    status = lookupTransform(buffer,
+                             std::nullopt,
+                             robot_frame,
+                             sensor_frame,
+                             warning_tries,
+                             config.wait_duration_s,
+                             config.verbosity,
+                             &message);
+    if (!status) {
+      LOG(WARNING) << "Cannot find sensor extrinsics: " << message;
+    }
+
+    const auto diff = nh.now() - start;
+    if (config.error_timeout_s && (diff.seconds() > config.error_timeout_s)) {
+      LOG(ERROR) << "Sensor extrinsics lookup timed out: " << message;
+      break;
+    }
+  }
+
+  CHECK(status.is_valid) << "Could not look up extrinsics from ros!";
+
+  ParamSensorExtrinsics::Config params;
+  params.body_R_sensor = status.target_R_source;
+  params.body_p_sensor = status.target_p_source;
+  return params;
 }
 
 RosExtrinsics::RosExtrinsics(const Config&) {
@@ -109,6 +140,10 @@ void declare_config(RosExtrinsics::Config& config) {
   name("RosExtrinsics::Config");
   field(config.sensor_frame, "sensor_frame");
   field(config.robot_frame, "robot_frame");
+  field(config.warning_timeout_s, "warning_timeout_s");
+  field(config.error_timeout_s, "error_timeout_s");
+  check(config.warning_timeout_s, GE, 0.0, "warning_timeout_s");
+  check(config.error_timeout_s, GE, 0.0, "error_timeout_s");
 }
 
 void declare_config(RosCamera::Config& config) {
@@ -145,7 +180,7 @@ VirtualSensor loadExtrinsics(const VirtualSensor& sensor,
     return {};
   }
 
-  const auto info = lookupExtrinsics(frame, parent);
+  const auto info = lookupExtrinsics(derived, frame, parent);
   config::VirtualConfig<SensorExtrinsics> new_config(info);
   base_contents["extrinsics"] = config::toYaml(new_config);
   return config::fromYaml<VirtualSensor>(base_contents);

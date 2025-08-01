@@ -61,6 +61,14 @@ struct RosExtrinsics : SensorExtrinsics {
     std::string sensor_frame = "";
     //! @brief Override global robot frame ID
     std::string robot_frame = "";
+    //! @brief Amount of time before warning about missing TF (0 disables warning)
+    double warning_timeout_s = 10.0;
+    //! @brief Amount of time before forcing Hydra to exit (0 disables exit)
+    double error_timeout_s = 0.0;
+    //! @brief Sample period for looking up extrinsics transform
+    double wait_duration_s = 0.1;
+    //! @brief TF lookup verbosity
+    int verbosity = 3;
   } const config;
 
   explicit RosExtrinsics(const Config& config);
