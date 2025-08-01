@@ -70,19 +70,32 @@ void fillConfigFromInfo(const CameraInfo& msg, Camera::Config& cam_config) {
   cam_config.cy = msg.k[5];
 }
 
-std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const std::string& ns) {
+std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Config& c,
+                                                          const std::string& ns) {
   auto nh = getHydraNodeHandle(ns);
   const auto resolved_topic = nh.resolve_name("camera_info", false);
   LOG(INFO) << "Waiting for CameraInfo on " << resolved_topic
             << " to initialize sensor model";
 
-  auto msg = ianvs::getSingleMessage<CameraInfo>(nh, "camera_info", true);
-  if (!msg) {
-    LOG(ERROR) << "did not receive message on " << resolved_topic;
-    return std::nullopt;
+  const auto start = nh.now();
+  const auto qos = rclcpp::QoS(1);
+  const size_t timeout = std::floor(c.warning_timeout_s * 1000);
+
+  std::optional<sensor_msgs::msg::CameraInfo> msg;
+  while (!msg) {
+    msg = ianvs::getSingleMessage<CameraInfo>(nh, "camera_info", true, qos, timeout);
+    if (!msg) {
+      LOG(WARNING) << "Cannot find intrinsics on topic '" << resolved_topic << "'";
+    }
+
+    const auto diff = nh.now() - start;
+    if (c.error_timeout_s && (diff.seconds() > c.error_timeout_s)) {
+      LOG(ERROR) << "Sensor intrinsics lookup timed out on '" << resolved_topic << "'";
+      break;
+    }
   }
 
-  return *msg;
+  return msg;
 }
 
 ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& config,
@@ -153,6 +166,10 @@ void declare_config(RosCamera::Config& config) {
   name("RosCamera::Config");
   base<Sensor::Config>(config);
   field(config.ns, "ns");
+  field(config.warning_timeout_s, "warning_timeout_s", "s");
+  field(config.error_timeout_s, "error_timeout_s", "s");
+  check(config.warning_timeout_s, GE, 0.0, "warning_timeout_s");
+  check(config.error_timeout_s, GE, 0.0, "error_timeout_s");
 }
 
 namespace input {
@@ -198,7 +215,7 @@ VirtualSensor loadSensor(const VirtualSensor& sensor, const std::string& sensor_
 
   const auto ns =
       derived.ns.empty() ? "~/input/" + sensor_name + std::string("/rgb") : derived.ns;
-  const auto msg = getCameraInfo(ns);
+  const auto msg = getCameraInfo(derived, ns);
   if (!msg) {
     return {};
   }
