@@ -39,6 +39,7 @@
 #include <hydra/input/lidar.h>
 #include <hydra_ros/common.h>
 #include <hydra_ros/input/ros_sensors.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include <rclcpp/node.hpp>
 #include <rclcpp/publisher.hpp>
@@ -90,11 +91,27 @@ class RosSensors : public ::testing::Test {
 
     expected_extrinsics.body_R_sensor = Eigen::Quaterniond(0.0, 0.0, 1.0, 0.0);
     expected_extrinsics.body_p_sensor << 1.0, 2.0, 3.0;
+
+    tf_pub = std::make_shared<tf2_ros::StaticTransformBroadcaster>(nh.node());
+
+    geometry_msgs::msg::TransformStamped tf;
+    tf.header.stamp = nh.now();
+    tf.header.frame_id = "base_link";
+    tf.child_frame_id = "lidar";
+    tf.transform.translation.x = 1.0;
+    tf.transform.translation.y = 2.0;
+    tf.transform.translation.z = 3.0;
+    tf.transform.rotation.x = 0.0;
+    tf.transform.rotation.y = 1.0;
+    tf.transform.rotation.z = 0.0;
+    tf.transform.rotation.w = 0.0;
+    tf_pub->sendTransform(tf);
   }
 
   ParamSensorExtrinsics::Config expected_extrinsics;
   Camera::Config expected_intrinsics;
 
+  std::shared_ptr<tf2_ros::StaticTransformBroadcaster> tf_pub;
   rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr info_pub;
 };
 
@@ -121,6 +138,8 @@ TEST_F(RosSensors, TestNonCamera) {
   }
 
   RosExtrinsics::Config extrinsics_config;
+  extrinsics_config.warning_timeout_s = 1.0;
+  extrinsics_config.error_timeout_s = 5.0;
   config.extrinsics = extrinsics_config;
 
   {  // ros without a frame should not be valid
@@ -166,6 +185,8 @@ TEST_F(RosSensors, Camera) {
   }
 
   RosExtrinsics::Config extrinsics_config;
+  extrinsics_config.warning_timeout_s = 1.0;
+  extrinsics_config.error_timeout_s = 5.0;
   config.extrinsics = extrinsics_config;
 
   {  // ros without a frame should not be valid

@@ -98,7 +98,7 @@ ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& conf
 
   const auto start = nh.now();
   PoseStatus status;
-  while (!status) {
+  while (!status && rclcpp::ok()) {
     std::string message;
     status = lookupTransform(buffer,
                              std::nullopt,
