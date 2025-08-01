@@ -169,6 +169,8 @@ TEST_F(RosSensors, Camera) {
   config.ns = "/some/camera";
   config.min_range = 10;
   config.max_range = 15;
+  config.warning_timeout_s = 1.0;
+  config.error_timeout_s = 5.0;
   config.extrinsics = IdentitySensorExtrinsics::Config();
 
   {  // should be able to parse intrinsics and extrinsics separately

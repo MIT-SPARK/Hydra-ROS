@@ -55,5 +55,7 @@ auto main(int argc, char** argv) -> int {
 
   ::testing::InitGoogleTest(&argc, argv);
   google::InitGoogleLogging(argv[0]);
-  return RUN_ALL_TESTS();
+  const auto ret = RUN_ALL_TESTS();
+  rclcpp::shutdown();
+  return ret;
 }
