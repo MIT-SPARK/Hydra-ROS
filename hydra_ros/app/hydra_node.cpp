@@ -155,5 +155,6 @@ int main(int argc, char* argv[]) {
     google::RemoveLogSink(ros_sink.get());
   }
 
+  rclcpp::shutdown();
   return 0;
 }

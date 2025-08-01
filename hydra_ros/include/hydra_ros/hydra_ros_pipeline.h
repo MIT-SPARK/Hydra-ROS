@@ -38,6 +38,7 @@
 #include <hydra/backend/backend_module.h>
 #include <hydra/common/hydra_pipeline.h>
 #include <hydra/frontend/graph_builder.h>
+
 #include <memory>
 
 #include "hydra_ros/input/feature_receiver.h"
@@ -52,15 +53,26 @@ class ExternalLoopClosureSubscriber;
 class HydraRosPipeline : public HydraPipeline {
  public:
   struct Config {
+    //! @brief Configuration for active window / metric-semantic reconstruction
     config::VirtualConfig<ActiveWindowModule> active_window{
         ReconstructionModule::Config()};
+    //! @brief Configuration for frontend module
     config::VirtualConfig<GraphBuilder> frontend{GraphBuilder::Config()};
+    //! @brief Configuration for backend module
     config::VirtualConfig<BackendModule> backend{BackendModule::Config()};
+    //! @brief Publish frontend scene graph in addition to backend
     bool enable_frontend_output = true;
-    bool enable_zmq_interface = true;
+    //! @brief Turn on zmq-based publishing
+    bool enable_zmq_interface = false;
+    //! @brief Configuration for sensor inputs
     RosInputModule::Config input;
+    //! @brief Receiver for language features
     config::VirtualConfig<FeatureReceiver> features;
+    //! @brief Verbosity setting for main pipeline class
     int verbosity = 1;
+    //! @brief Show the config passed to Hydra (before resolving sensor configurations)
+    bool preprint_config = false;
+    //! @brief Monitor to report whether or Hydra is running normally
     StatusMonitor::Config status_monitor;
   } const config;
 

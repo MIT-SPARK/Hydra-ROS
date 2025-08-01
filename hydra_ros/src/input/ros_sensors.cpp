@@ -85,7 +85,7 @@ std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Confi
   while (!msg && rclcpp::ok()) {
     msg = ianvs::getSingleMessage<CameraInfo>(nh, "camera_info", true, qos, timeout);
     if (!msg) {
-      LOG(WARNING) << "Cannot find intrinsics on topic '" << resolved_topic << "'";
+      LOG(WARNING) << "Waiting for CameraInfo on topic '" << resolved_topic << "'";
     }
 
     const auto diff = nh.now() - start;
@@ -101,6 +101,9 @@ std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Confi
 ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& config,
                                                const std::string& sensor_frame,
                                                const std::string& robot_frame) {
+  LOG(INFO) << "Looking for sensor extrinsics '" << robot_frame << "_T_" << sensor_frame
+            << "' via TF";
+
   auto nh = getHydraNodeHandle("");
   auto clock = nh.node().get<rclcpp::node_interfaces::NodeClockInterface>();
 
@@ -122,12 +125,12 @@ ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& conf
                              config.verbosity,
                              &message);
     if (!status) {
-      LOG(WARNING) << "Cannot find sensor extrinsics: " << message;
+      LOG(WARNING) << "Waiting for sensor extrinsics " << message;
     }
 
     const auto diff = nh.now() - start;
     if (config.error_timeout_s && (diff.seconds() > config.error_timeout_s)) {
-      LOG(ERROR) << "Sensor extrinsics lookup timed out: " << message;
+      LOG(ERROR) << "Sensor extrinsics lookup timed out for " << message;
       break;
     }
   }

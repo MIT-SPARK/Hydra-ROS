@@ -104,8 +104,11 @@ PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
 
   if (!have_transform) {
     std::stringstream ss;
-    ss << "'" << target << "_T_" << source << stamp_suffix << "' with error '"
-       << err_str << "'";
+    ss << "'" << target << "_T_" << source << stamp_suffix;
+    if (!err_str.empty()) {
+      ss << "' (last error: '" << err_str << "')";
+    }
+
     if (message) {
       *message = ss.str();
     } else {

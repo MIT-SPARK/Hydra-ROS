@@ -71,14 +71,20 @@ void declare_config(HydraRosPipeline::Config& config) {
   config.features.setOptional();
   field(config.features, "features");
   field(config.verbosity, "verbosity");
+  field(config.preprint_config, "preprint_config");
   field(config.status_monitor, "status_monitor");
 }
 
 HydraRosPipeline::HydraRosPipeline(int robot_id, int config_verbosity)
     : HydraPipeline(config::fromContext<PipelineConfig>(), robot_id, config_verbosity),
       config(config::checkValid(config::fromContext<Config>())) {
-  LOG_IF(INFO, config.verbosity >= 1) << "Starting Hydra-ROS with input configuration\n"
-                                      << config::toString(config.input);
+  if (config.preprint_config) {
+    LOG(INFO) << "Using configuration to start Hydra\n" << config::toString(config);
+  } else {
+    LOG_IF(INFO, config.verbosity >= 1)
+        << "Starting Hydra-ROS with input configuration\n"
+        << config::toString(config.input);
+  }
 }
 
 HydraRosPipeline::~HydraRosPipeline() {}
