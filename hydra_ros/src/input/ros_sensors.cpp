@@ -140,8 +140,10 @@ void declare_config(RosExtrinsics::Config& config) {
   name("RosExtrinsics::Config");
   field(config.sensor_frame, "sensor_frame");
   field(config.robot_frame, "robot_frame");
-  field(config.warning_timeout_s, "warning_timeout_s");
-  field(config.error_timeout_s, "error_timeout_s");
+  field(config.warning_timeout_s, "warning_timeout_s", "s");
+  field(config.error_timeout_s, "error_timeout_s", "s");
+  field(config.wait_duration_s, "wait_duration_s", "s");
+  field(config.verbosity, "verbosity");
   check(config.warning_timeout_s, GE, 0.0, "warning_timeout_s");
   check(config.error_timeout_s, GE, 0.0, "error_timeout_s");
 }
