@@ -49,13 +49,18 @@ auto main(int argc, char** argv) -> int {
   FLAGS_minloglevel = minloglevel;
   FLAGS_v = verbosity;
 
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("hydra_ros_tests");
-  ianvs::NodeHandleFactory::addNode("hydra_ros_node", *node);
-
   ::testing::InitGoogleTest(&argc, argv);
   google::InitGoogleLogging(argv[0]);
-  const auto ret = RUN_ALL_TESTS();
+
+  int ret;
+  rclcpp::init(argc, argv);
+  {  // Start node scope
+    auto node = std::make_shared<rclcpp::Node>("hydra_ros_tests");
+    ianvs::NodeHandleFactory::addNode("hydra_ros_node", *node);
+    ret = RUN_ALL_TESTS();
+    ianvs::NodeHandleFactory::clear();
+  }  // End node scope
+
   rclcpp::shutdown();
   return ret;
 }
