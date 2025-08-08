@@ -35,11 +35,12 @@
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/external_registry.h>
 #include <config_utilities/formatting/asl.h>
-#include <config_utilities/printing.h>
 #include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/context.h>
+#include <config_utilities/printing.h>
 #include <config_utilities/types/path.h>
 #include <hydra/common/global_info.h>
+#include <ianvs/glog_sink.h>
 #include <ianvs/node_handle_factory.h>
 #include <ianvs/spin_functions.h>
 
@@ -75,46 +76,11 @@ void declare_config(RunSettings& config) {
   field(config.output, "output");
 }
 
-struct RosSink : google::LogSink {
-  explicit RosSink(const rclcpp::Logger& logger) : logger_(logger) {}
-
-  void send(google::LogSeverity severity,
-            const char* /*full_filename*/,
-            const char* base_filename,
-            int line,
-            const struct ::tm* /*time*/,
-            const char* message,
-            size_t message_len) override {
-    std::stringstream ss;
-    ss << "[" << base_filename << ":" << line << "] "
-       << std::string(message, message_len);
-    switch (severity) {
-      case google::GLOG_WARNING:
-        RCLCPP_WARN_STREAM(logger_, ss.str());
-        break;
-      case google::GLOG_ERROR:
-        RCLCPP_ERROR_STREAM(logger_, ss.str());
-        break;
-      case google::GLOG_FATAL:
-        RCLCPP_FATAL_STREAM(logger_, ss.str());
-        break;
-      case google::GLOG_INFO:
-      default:
-        RCLCPP_INFO_STREAM(logger_, ss.str());
-        break;
-    }
-  }
-
-  rclcpp::Logger logger_;
-};
-
 }  // namespace hydra
 
 int main(int argc, char* argv[]) {
   config::initContext(argc, argv, true);
   config::setConfigSettingsFromContext();
-  rclcpp::init(argc, argv);
-
   const auto settings = config::fromContext<hydra::RunSettings>();
 
   FLAGS_minloglevel = settings.glog_level;
@@ -125,12 +91,12 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
+  rclcpp::init(argc, argv);
   auto node = std::make_shared<rclcpp::Node>("hydra_ros_node");
 
-  std::shared_ptr<hydra::RosSink> ros_sink;
+  std::shared_ptr<ianvs::RosGlogSink> ros_sink;
   if (settings.forward_glog_to_ros) {
-    ros_sink = std::make_shared<hydra::RosSink>(node->get_logger());
-    google::AddLogSink(ros_sink.get());
+    ros_sink = std::make_shared<ianvs::RosGlogSink>(node->get_logger());
   }
 
   config::Settings().setLogger("glog");
@@ -154,10 +120,7 @@ int main(int argc, char* argv[]) {
     hydra.save(output);
   }  // end hydra scope
 
-  if (ros_sink) {
-    google::RemoveLogSink(ros_sink.get());
-  }
-
+  ros_sink.reset();
   rclcpp::shutdown();
   return 0;
 }

@@ -35,7 +35,6 @@
 #include "hydra_ros/input/ros_data_receiver.h"
 
 #include <config_utilities/config.h>
-#include <ianvs/node_handle_factory.h>
 
 namespace hydra {
 

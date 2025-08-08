@@ -39,7 +39,6 @@
 #include <hydra/common/global_info.h>
 #include <hydra_visualizer/color/color_parsing.h>
 #include <hydra_visualizer/drawing.h>
-#include <ianvs/node_handle_factory.h>
 
 #include <tf2_eigen/tf2_eigen.hpp>
 
