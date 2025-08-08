@@ -54,6 +54,8 @@ class FeatureReceiver : public Module {
     TFLookup::Config tf_lookup;
     //! Sensors to not subscribe to
     std::vector<std::string> sensors_to_exclude;
+    //! Verbosity for receiver
+    size_t verbosity = 0;
   } const config;
 
   explicit FeatureReceiver(const Config& config);

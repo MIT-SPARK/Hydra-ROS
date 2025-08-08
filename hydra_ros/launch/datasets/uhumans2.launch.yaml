@@ -14,8 +14,8 @@ launch:
   - let: {name: extra_yaml_gt, value: '{semantic_label_remap_filepath: $(var label_remap_path)}'}
   - let: {name: extra_yaml_no_gt, value: '{}'}
   - group:
-      - push_ros_namespace: {namespace: /tesse/left_cam}
-      - set_remap: {from: rgb/image_raw, to: color/image_raw}
+      - push_ros_namespace: {namespace: tesse/left_cam}
+      - set_remap: {from: color/image_raw, to: rgb/image_raw}
       - include:
           if: $(not $(var use_gt_semantics))
           file: $(find-pkg-share semantic_inference_ros)/launch/closed_set.launch.yaml

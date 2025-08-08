@@ -55,6 +55,7 @@ void declare_config(FeatureReceiver::Config& config) {
   field(config.queue_size, "queue_size");
   field(config.tf_lookup, "tf_lookup");
   field(config.sensors_to_exclude, "sensors_to_exclude");
+  field(config.verbosity, "verbosity");
 }
 
 using semantic_inference_msgs::msg::FeatureVectorStamped;
@@ -66,20 +67,23 @@ struct FeatureSubscriber {
   FeatureSubscriber(ianvs::NodeHandle nh,
                     const std::string& sensor_name,
                     const Callback& pose_callback,
-                    size_t queue_size = 10);
+                    size_t queue_size = 10,
+                    size_t verbosity = 0);
 
   void callback(const FeatureVectorStamped& msg);
 
   rclcpp::Subscription<FeatureVectorStamped>::SharedPtr sub;
   const std::string sensor_name;
   const Callback pose_callback;
+  const size_t verbosity;
 };
 
 FeatureSubscriber::FeatureSubscriber(ianvs::NodeHandle nh,
                                      const std::string& sensor_name,
                                      const Callback& pose_callback,
-                                     size_t queue_size)
-    : sensor_name(sensor_name), pose_callback(pose_callback) {
+                                     size_t queue_size,
+                                     size_t verbosity)
+    : sensor_name(sensor_name), pose_callback(pose_callback), verbosity(verbosity) {
   const std::string topic = sensor_name + "/feature";
   sub = nh.create_subscription<FeatureVectorStamped>(
       topic, queue_size, &FeatureSubscriber::callback, this);
@@ -105,6 +109,8 @@ void FeatureSubscriber::callback(const FeatureVectorStamped& msg) {
       Eigen::Map<const Eigen::VectorXf>(vec.data(), vec.size()),
       GlobalInfo::instance().getSensor(sensor_name).get());
 
+  LOG_IF(INFO, verbosity >= 2) << "Pushing new feature to input queue @ "
+                               << timestamp_ns << "[ns] for '" << sensor_name << "'";
   PipelineQueues::instance().input_features_queue.push(std::move(packet));
 }
 
@@ -114,15 +120,20 @@ void FeatureReceiver::start() {
   const auto sensor_names = GlobalInfo::instance().getAvailableSensors();
   for (const auto& name : sensor_names) {
     if (to_exclude.count(name)) {
+      LOG_IF(INFO, config.verbosity >= 1)
+          << "Excluding '" << name << "' from feature receivers!";
       continue;
     }
 
     auto nh = getHydraNodeHandle(config.ns);
+    LOG_IF(INFO, config.verbosity >= 1)
+        << "Making feature receiver for '" << name << "'";
     subs_.push_back(std::make_unique<FeatureSubscriber>(
         nh,
         name,
         [this](uint64_t timestamp_ns) { return lookup_.getBodyPose(timestamp_ns); },
-        config.queue_size));
+        config.queue_size,
+        config.verbosity));
   }
 }
 
