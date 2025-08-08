@@ -54,4 +54,8 @@ launch:
   # hydra visualizer
   - set_remap: {from: hydra_visualizer/dsg, to: hydra/backend/dsg}
   - arg: {name: start_visualizer, default: 'true', description: run hydra visualizer}
-  - include: {file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml, if: $(var start_visualizer)}
+  - include:
+      file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml
+      if: $(var start_visualizer)
+      arg:
+        - {name: external_plugins_path, value: $(find-pkg-share hydra_ros)/config/hydra_ros_visualizer_plugins.yaml}
