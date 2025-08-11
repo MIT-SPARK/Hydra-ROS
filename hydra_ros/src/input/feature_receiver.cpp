@@ -41,10 +41,9 @@
 #include <hydra/common/global_info.h>
 #include <hydra/common/pipeline_queues.h>
 #include <hydra/frontend/view_selector.h>
+#include <ianvs/node_handle.h>
 
 #include <semantic_inference_msgs/msg/feature_vector_stamped.hpp>
-
-#include "hydra_ros/common.h"
 
 namespace hydra {
 
@@ -125,7 +124,7 @@ void FeatureReceiver::start() {
       continue;
     }
 
-    auto nh = getHydraNodeHandle(config.ns);
+    auto nh = ianvs::NodeHandle::this_node(config.ns);
     LOG_IF(INFO, config.verbosity >= 1)
         << "Making feature receiver for '" << name << "'";
     subs_.push_back(std::make_unique<FeatureSubscriber>(

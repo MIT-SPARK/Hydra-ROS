@@ -41,7 +41,7 @@
 #include <config_utilities/types/path.h>
 #include <hydra/common/global_info.h>
 #include <ianvs/glog_sink.h>
-#include <ianvs/node_handle_factory.h>
+#include <ianvs/node_init.h>
 #include <ianvs/spin_functions.h>
 
 #include "hydra_ros/hydra_ros_pipeline.h"
@@ -91,12 +91,12 @@ int main(int argc, char* argv[]) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
-  rclcpp::init(argc, argv);
-  auto node = std::make_shared<rclcpp::Node>("hydra_ros_node");
+  [[maybe_unused]] const auto node = ianvs::init_node(argc, argv, "hydra_ros_node");
+  auto nh = ianvs::NodeHandle::this_node();
 
   std::shared_ptr<ianvs::RosGlogSink> ros_sink;
   if (settings.forward_glog_to_ros) {
-    ros_sink = std::make_shared<ianvs::RosGlogSink>(node->get_logger());
+    ros_sink = std::make_shared<ianvs::RosGlogSink>(nh);
   }
 
   config::Settings().setLogger("glog");
@@ -104,11 +104,8 @@ int main(int argc, char* argv[]) {
 
   [[maybe_unused]] const auto plugins = config::loadExternalFactories(settings.paths);
 
-  ianvs::NodeHandle nh(*node);
-  ianvs::NodeHandleFactory::addNode("hydra_ros_node", *node);
-  hydra::GlobalInfo::instance().setForceShutdown(settings.force_shutdown);
-
   {  // start hydra scope
+    hydra::GlobalInfo::instance().setForceShutdown(settings.force_shutdown);
     hydra::HydraRosPipeline hydra(settings.robot_id, settings.config_verbosity);
     hydra.init();
 

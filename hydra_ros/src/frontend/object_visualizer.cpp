@@ -39,8 +39,6 @@
 #include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
 
-#include "hydra_ros/common.h"
-
 namespace hydra {
 
 using visualization_msgs::msg::Marker;
@@ -56,7 +54,7 @@ void declare_config(ObjectVisualizer::Config& config) {
 
 ObjectVisualizer::ObjectVisualizer(const Config& config)
     : config(config::checkValid(config)),
-      nh_(getHydraNodeHandle(config.module_ns)),
+      nh_(ianvs::NodeHandle::this_node(config.module_ns)),
       pubs_(nh_) {}
 
 std::string ObjectVisualizer::printInfo() const { return config::toString(config); }

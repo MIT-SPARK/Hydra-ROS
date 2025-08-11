@@ -42,7 +42,6 @@
 
 #include <tf2_eigen/tf2_eigen.hpp>
 
-#include "hydra_ros/common.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
@@ -107,7 +106,7 @@ void declare_config(ReconstructionVisualizer::Config& config) {
 
 ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
     : config(config),
-      nh_(getHydraNodeHandle(config.ns)),
+      nh_(ianvs::NodeHandle::this_node(config.ns)),
       pubs_(nh_),
       active_mesh_pub_(nh_.create_publisher<kimera_pgmo_msgs::msg::Mesh>("mesh", 1)),
       pose_pub_(nh_.create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10)),

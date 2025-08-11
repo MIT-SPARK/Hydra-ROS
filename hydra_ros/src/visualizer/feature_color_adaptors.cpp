@@ -6,11 +6,10 @@
 #include <hydra/openset/embedding_distances.h>
 #include <hydra/openset/embedding_group.h>
 #include <hydra_visualizer/color/color_parsing.h>
+#include <ianvs/node_handle.h>
 #include <spark_dsg/colormaps.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/node_symbol.h>
-
-#include "hydra_ros/common.h"
 
 namespace hydra {
 
@@ -97,8 +96,7 @@ FeatureScoreColor::FeatureScoreColor(const Config& config)
       has_change_(false),
       has_feature_(false),
       metric_(config.metric.create()) {
-  // TODO(nathan) this is wrong
-  auto nh = getHydraNodeHandle(config.ns);
+  auto nh = ianvs::NodeHandle::this_node(config.ns);
   sub_ = nh.create_subscription<FeatureVectorStamped>(
       "feature", 1, &FeatureScoreColor::callback, this);
 }

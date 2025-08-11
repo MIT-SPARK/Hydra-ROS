@@ -39,24 +39,17 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
+#include <ianvs/node_handle.h>
 #include <tf2_ros/transform_listener.h>
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
-
-#include "hydra_ros/common.h"
 
 namespace hydra {
 
 std::chrono::nanoseconds TFLookup::Config::buffer_size_ns() const {
   return std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::duration<double>(buffer_size_s));
-}
-
-rclcpp::Clock::SharedPtr getHydraClock() {
-  auto nh = getHydraNodeHandle("");
-  auto clock = nh.node().get<rclcpp::node_interfaces::NodeClockInterface>();
-  return clock->get_clock();
 }
 
 PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
@@ -146,7 +139,7 @@ void declare_config(TFLookup::Config& config) {
 
 TFLookup::TFLookup(const Config& config)
     : config(config),
-      buffer(getHydraClock(), config.buffer_size_ns()),
+      buffer(ianvs::NodeHandle::this_node().clock(), config.buffer_size_ns()),
       listener(buffer) {}
 
 PoseStatus TFLookup::getBodyPose(uint64_t timestamp_ns) const {

@@ -37,8 +37,8 @@
 #include <glog/stl_logging.h>
 #include <gtest/gtest.h>
 #include <hydra/input/lidar.h>
-#include <hydra_ros/common.h>
 #include <hydra_ros/input/ros_sensors.h>
+#include <ianvs/node_handle.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
 #include <rclcpp/node.hpp>
@@ -68,9 +68,7 @@ class RosSensors : public ::testing::Test {
   RosSensors() = default;
   virtual ~RosSensors() = default;
   void SetUp() override {
-    // TODO(nathan) not sure this will work correctly
-
-    auto nh = getHydraNodeHandle("");
+    auto nh = ianvs::NodeHandle::this_node();
     info_pub = nh.create_publisher<sensor_msgs::msg::CameraInfo>(
         "/some/camera/camera_info", rclcpp::QoS(1).transient_local());
     sensor_msgs::msg::CameraInfo msg;

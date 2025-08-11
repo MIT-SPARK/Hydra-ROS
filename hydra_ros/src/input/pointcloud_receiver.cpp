@@ -3,8 +3,8 @@
 #include <config_utilities/config.h>
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
+#include <ianvs/node_handle.h>
 
-#include "hydra_ros/common.h"
 #include "hydra_ros/input/pointcloud_adaptor.h"
 
 namespace hydra {
@@ -22,7 +22,7 @@ PointcloudReceiver::PointcloudReceiver(const Config& config,
     : RosDataReceiver(config, sensor_name), config(config) {}
 
 bool PointcloudReceiver::initImpl() {
-  auto nh = getHydraNodeHandle(ns_);
+  auto nh = ianvs::NodeHandle::this_node(ns_);
   sub_ = nh.create_subscription<PointCloud2>(
       "pointcloud", config.queue_size, &PointcloudReceiver::callback, this);
   return true;

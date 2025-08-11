@@ -8,8 +8,6 @@
 #include <semantic_inference_msgs/msg/feature_vectors.hpp>
 #include <semantic_inference_msgs/srv/encode_feature.hpp>
 
-#include "hydra_ros/common.h"
-
 using semantic_inference_msgs::msg::FeatureVectors;
 using semantic_inference_msgs::srv::EncodeFeature;
 
@@ -42,7 +40,7 @@ void declare_config(RosEmbeddingGroup::Config& config) {
 
 RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
   if (config.prompts.empty()) {
-    auto nh = getHydraNodeHandle(config.ns);
+    auto nh = ianvs::NodeHandle::this_node(config.ns);
     const auto topic_name = nh.resolve_name("features", false);
     LOG_IF(INFO, !config.silent_wait)
         << "Waiting for embeddings on '" << topic_name << "'";
@@ -65,7 +63,7 @@ RosEmbeddingGroup::RosEmbeddingGroup(const Config& config) {
     return;
   }
 
-  auto nh = getHydraNodeHandle(config.ns);
+  auto nh = ianvs::NodeHandle::this_node(config.ns);
   const auto service_name = nh.resolve_name("embed", true);
   LOG_IF(INFO, !config.silent_wait)
       << "Waiting for embedding encoder on '" << service_name << "'...";

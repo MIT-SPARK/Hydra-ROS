@@ -35,7 +35,7 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <gtest/gtest.h>
-#include <ianvs/node_handle_factory.h>
+#include <ianvs/node_init.h>
 
 #include <rclcpp/rclcpp.hpp>
 
@@ -53,14 +53,11 @@ auto main(int argc, char** argv) -> int {
   google::InitGoogleLogging(argv[0]);
 
   int ret;
-  rclcpp::init(argc, argv);
   {  // Start node scope
-    auto node = std::make_shared<rclcpp::Node>("hydra_ros_tests");
-    ianvs::NodeHandleFactory::addNode("hydra_ros_node", *node);
+    const auto node = ianvs::init_node(argc, argv, "hydra_ros_tests");
     ret = RUN_ALL_TESTS();
-    ianvs::NodeHandleFactory::clear();
+    rclcpp::shutdown();
   }  // End node scope
 
-  rclcpp::shutdown();
   return ret;
 }

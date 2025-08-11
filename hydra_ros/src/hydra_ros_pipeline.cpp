@@ -51,7 +51,6 @@
 #include <memory>
 
 #include "hydra_ros/backend/ros_backend_publisher.h"
-#include "hydra_ros/common.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
 #include "hydra_ros/utils/bow_subscriber.h"
 #include "hydra_ros/utils/external_loop_closure_subscriber.h"
@@ -92,7 +91,7 @@ HydraRosPipeline::~HydraRosPipeline() {}
 void HydraRosPipeline::init() {
   const auto& pipeline_config = GlobalInfo::instance().getConfig();
 
-  auto nh = getHydraNodeHandle("~");
+  auto nh = ianvs::NodeHandle::this_node("~");
   backend_ = config.backend.create(backend_dsg_, shared_state_);
   modules_["backend"] = CHECK_NOTNULL(backend_);
 

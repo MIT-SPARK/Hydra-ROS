@@ -41,7 +41,6 @@
 #include <semantic_inference_msgs/msg/feature_image.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
-#include "hydra_ros/common.h"
 #include "hydra_ros/input/ros_data_receiver.h"
 
 namespace hydra {
@@ -155,9 +154,9 @@ ImageReceiverImpl<SemanticT>::ImageReceiverImpl(const Config& config,
 
 template <typename SemanticT>
 bool ImageReceiverImpl<SemanticT>::initImpl() {
-  color_sub_ = ColorSubscriber(getHydraNodeHandle(ns_));
-  depth_sub_ = DepthSubscriber(getHydraNodeHandle(ns_));
-  semantic_sub_ = SemanticT(getHydraNodeHandle(ns_));
+  color_sub_ = ColorSubscriber(ianvs::NodeHandle::this_node(ns_));
+  depth_sub_ = DepthSubscriber(ianvs::NodeHandle::this_node(ns_));
+  semantic_sub_ = SemanticT(ianvs::NodeHandle::this_node(ns_));
   sync_.reset(new Synchronizer(Policy(config.queue_size),
                                color_sub_.getFilter(),
                                depth_sub_.getFilter(),

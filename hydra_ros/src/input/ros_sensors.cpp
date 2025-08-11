@@ -41,7 +41,6 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
-#include <hydra_ros/common.h>
 #include <ianvs/message_wait_functor.h>
 
 #include <rclcpp/rclcpp.hpp>
@@ -72,7 +71,7 @@ void fillConfigFromInfo(const CameraInfo& msg, Camera::Config& cam_config) {
 
 std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Config& c,
                                                           const std::string& ns) {
-  auto nh = getHydraNodeHandle(ns);
+  auto nh = ianvs::NodeHandle::this_node(ns);
   const auto resolved_topic = nh.resolve_name("camera_info", false);
   LOG(INFO) << "Waiting for CameraInfo on " << resolved_topic
             << " to initialize sensor model";
@@ -104,7 +103,7 @@ ParamSensorExtrinsics::Config lookupExtrinsics(const RosExtrinsics::Config& conf
   LOG(INFO) << "Looking for sensor extrinsics '" << robot_frame << "_T_" << sensor_frame
             << "' via TF";
 
-  auto nh = getHydraNodeHandle("");
+  auto nh = ianvs::NodeHandle::this_node();
   auto clock = nh.node().get<rclcpp::node_interfaces::NodeClockInterface>();
 
   tf2_ros::Buffer buffer(clock->get_clock());
