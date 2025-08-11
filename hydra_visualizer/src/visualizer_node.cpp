@@ -50,9 +50,8 @@ void declare_config(DsgVisualizer::Config& config) {
   field(config.plugins, "plugins");
 }
 
-DsgVisualizer::DsgVisualizer(const Config& config)
-    : Node("dsg_visualizer"), config(config::checkValid(config)), server_(this) {
-  ianvs::NodeHandle nh(*this, "~");
+DsgVisualizer::DsgVisualizer(const Config& config, ianvs::NodeHandle nh)
+    : nh_(nh), config(config::checkValid(config)), server_(this) {
   renderer_ = std::make_shared<SceneGraphRenderer>(config.renderer, nh);
   for (auto&& [name, plugin] : config.plugins) {
     plugins_.push_back(plugin.create(nh, name));
@@ -60,11 +59,11 @@ DsgVisualizer::DsgVisualizer(const Config& config)
 
   graph_ = config.graph.create(nh);
   // TODO(nathan) think about flagging change instead
-  redraw_service_ = create_service<std_srvs::srv::Empty>(
+  redraw_service_ = nh_.create_service<std_srvs::srv::Empty>(
       "redraw",
       [this](const std_srvs::srv::Empty::Request::SharedPtr&,
              std_srvs::srv::Empty::Response::SharedPtr) { spinOnce(true); });
-  reset_service_ = create_service<std_srvs::srv::Empty>(
+  reset_service_ = nh_.create_service<std_srvs::srv::Empty>(
       "reset",
       [this](const std_srvs::srv::Empty::Request::SharedPtr&,
              std_srvs::srv::Empty::Response::SharedPtr) { reset(); });
@@ -72,13 +71,15 @@ DsgVisualizer::DsgVisualizer(const Config& config)
 
 void DsgVisualizer::start() {
   // default chrono time unit is seconds...
-  loop_timer_ = create_wall_timer(std::chrono::duration<double>(config.loop_period_s),
-                                  [this]() { spinOnce(); });
+  const std::chrono::duration<double> period_s(config.loop_period_s);
+  loop_timer_ = nh_.create_timer(std::chrono::duration_cast<std::chrono::milliseconds>(period_s),
+                                 true,
+                                 [this]() { spinOnce(); });
 }
 
 void DsgVisualizer::reset() {
   std_msgs::msg::Header header;
-  header.stamp = now();
+  header.stamp = nh_.now();
 
   renderer_->reset(header);
   for (const auto& plugin : plugins_) {
@@ -121,7 +122,7 @@ void DsgVisualizer::spinOnce(bool force) {
 
   std_msgs::msg::Header header;
   header.frame_id = stamped_graph.frame_id;
-  header.stamp = stamped_graph.timestamp.value_or(now());
+  header.stamp = stamped_graph.timestamp.value_or(nh_.now());
 
   renderer_->draw(header, *stamped_graph.graph);
   for (const auto& plugin : plugins_) {

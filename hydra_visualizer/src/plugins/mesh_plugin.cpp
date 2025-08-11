@@ -75,7 +75,7 @@ MeshPlugin::MeshPlugin(const Config& config,
           name, rclcpp::QoS(1).transient_local())),
       mesh_coloring_(config.coloring.create()) {
   if (mesh_coloring_) {
-    toggle_service_ = nh.create_service<std_srvs::srv::SetBool>(
+    toggle_service_ = (nh / name).create_service<std_srvs::srv::SetBool>(
         "use_color_adapter", &MeshPlugin::handleService, this);
   }
 }

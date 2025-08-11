@@ -36,8 +36,8 @@
 
 #include <config_utilities/virtual_config.h>
 #include <config_utilities_ros/ros_dynamic_config_server.h>
+#include <ianvs/node_handle.h>
 
-#include <rclcpp/node.hpp>
 #include <std_srvs/srv/empty.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
@@ -46,7 +46,7 @@
 
 namespace hydra {
 
-class DsgVisualizer : public rclcpp::Node {
+class DsgVisualizer {
  public:
   struct Config {
     double loop_period_s = 0.1;
@@ -57,7 +57,7 @@ class DsgVisualizer : public rclcpp::Node {
   } const config;
 
   //! Construct the visualizer from a config
-  explicit DsgVisualizer(const Config& config);
+  DsgVisualizer(const Config& config, ianvs::NodeHandle nh);
 
   ~DsgVisualizer() = default;
 
@@ -76,6 +76,7 @@ class DsgVisualizer : public rclcpp::Node {
  private:
   void spinOnce(bool force = false);
 
+  ianvs::NodeHandle nh_;
   rclcpp::TimerBase::SharedPtr loop_timer_;
 
   GraphWrapper::Ptr graph_;

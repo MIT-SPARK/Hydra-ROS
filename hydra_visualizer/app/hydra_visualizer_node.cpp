@@ -34,10 +34,12 @@
  * -------------------------------------------------------------------------- */
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/external_registry.h>
-#include <config_utilities/logging/log_to_stdout.h>
+#include <config_utilities/logging/log_to_glog.h>
 #include <config_utilities/parsing/context.h>
 #include <config_utilities/settings.h>
 #include <glog/logging.h>
+#include <ianvs/glog_sink.h>
+#include <ianvs/node_init.h>
 
 #include <filesystem>
 
@@ -66,9 +68,12 @@ void declare_config(NodeSettings& config) {
 int main(int argc, char** argv) {
   config::initContext(argc, argv, true);
   config::setConfigSettingsFromContext();
-  rclcpp::init(argc, argv);
-
   const auto node_settings = config::fromContext<hydra::visualizer::NodeSettings>();
+
+  [[maybe_unused]] const auto guard =
+      ianvs::init_node(argc, argv, "hydra_visualizer_node");
+  auto nh = ianvs::NodeHandle::this_node("~");
+  auto ros_sink = std::make_shared<ianvs::RosGlogSink>(nh);
 
   FLAGS_minloglevel = node_settings.glog_level;
   FLAGS_v = node_settings.glog_verbosity;
@@ -80,6 +85,8 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
 
+  config::Settings().setLogger("glog");
+
   VLOG(1) << "Settings:\n" << config::toString(node_settings);
 
   [[maybe_unused]] const auto plugins =
@@ -89,13 +96,14 @@ int main(int argc, char** argv) {
   {  // start visualizer scope
     const auto config = config::fromContext<hydra::DsgVisualizer::Config>();
     VLOG(1) << "Config:\n" << config::toString(config);
-    auto node = std::make_shared<hydra::DsgVisualizer>(config);
+    auto node = std::make_shared<hydra::DsgVisualizer>(config, nh);
     node->start();
 
-    executor.add_node(node);
+    executor.add_node(nh.as<rclcpp::node_interfaces::NodeBaseInterface>());
     executor.spin();
   }  // end visualizer scope
 
+  ros_sink.reset();
   rclcpp::shutdown();
   return 0;
 }
