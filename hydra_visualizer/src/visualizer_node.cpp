@@ -51,7 +51,7 @@ void declare_config(DsgVisualizer::Config& config) {
 }
 
 DsgVisualizer::DsgVisualizer(const Config& config, ianvs::NodeHandle nh)
-    : nh_(nh), config(config::checkValid(config)), server_(this) {
+    : nh_(nh), config(config::checkValid(config)) {
   renderer_ = std::make_shared<SceneGraphRenderer>(config.renderer, nh);
   for (auto&& [name, plugin] : config.plugins) {
     plugins_.push_back(plugin.create(nh, name));
