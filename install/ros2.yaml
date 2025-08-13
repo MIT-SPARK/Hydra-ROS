@@ -6,11 +6,11 @@ repositories:
   hydra:
     type: git
     url: git@github.com:MIT-SPARK/Hydra.git
-    version: develop
+    version: main
   hydra_ros:
     type: git
     url: git@github.com:MIT-SPARK/Hydra-ROS.git
-    version: ros2
+    version: main
   ianvs:
     type: git
     url: git@github.com:MIT-SPARK/Ianvs.git
@@ -30,11 +30,11 @@ repositories:
   semantic_inference:
     type: git
     url: git@github.com:MIT-SPARK/semantic_inference.git
-    version: ros2
+    version: main
   spark_dsg:
     type: git
     url: git@github.com:MIT-SPARK/Spark-DSG.git
-    version: develop
+    version: main
   spatial_hash:
     type: git
     url: git@github.com:MIT-SPARK/Spatial-Hash.git
