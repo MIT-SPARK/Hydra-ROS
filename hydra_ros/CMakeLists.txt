@@ -14,7 +14,6 @@ option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(glog REQUIRED)  # TODO(nathan) fix this?
 find_package(gflags REQUIRED)
 find_package(hydra REQUIRED)
 find_package(hydra_msgs REQUIRED)

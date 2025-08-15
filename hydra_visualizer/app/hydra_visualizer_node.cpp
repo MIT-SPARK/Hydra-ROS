@@ -38,7 +38,6 @@
 #include <config_utilities/parsing/context.h>
 #include <config_utilities/settings.h>
 #include <glog/logging.h>
-#include <ianvs/glog_sink.h>
 #include <ianvs/node_init.h>
 
 #include <filesystem>
@@ -73,7 +72,6 @@ int main(int argc, char** argv) {
   [[maybe_unused]] const auto guard =
       ianvs::init_node(argc, argv, "hydra_visualizer_node");
   auto nh = ianvs::NodeHandle::this_node("~");
-  auto ros_sink = std::make_shared<ianvs::RosGlogSink>(nh);
 
   FLAGS_minloglevel = node_settings.glog_level;
   FLAGS_v = node_settings.glog_verbosity;
@@ -103,7 +101,6 @@ int main(int argc, char** argv) {
     executor.spin();
   }  // end visualizer scope
 
-  ros_sink.reset();
   rclcpp::shutdown();
   return 0;
 }
