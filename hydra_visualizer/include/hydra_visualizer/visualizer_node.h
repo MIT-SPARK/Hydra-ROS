@@ -82,7 +82,7 @@ class DsgVisualizer {
   GraphWrapper::Ptr graph_;
   SceneGraphRenderer::Ptr renderer_;
   std::vector<VisualizerPlugin::Ptr> plugins_;
-  //const config::RosDynamicConfigServer server_;
+  const config::RosDynamicConfigServer server_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr redraw_service_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr reset_service_;
 };

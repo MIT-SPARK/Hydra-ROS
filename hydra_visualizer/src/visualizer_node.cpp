@@ -51,13 +51,13 @@ void declare_config(DsgVisualizer::Config& config) {
 }
 
 DsgVisualizer::DsgVisualizer(const Config& config, ianvs::NodeHandle nh)
-    : nh_(nh), config(config::checkValid(config)) {
-  renderer_ = std::make_shared<SceneGraphRenderer>(config.renderer, nh);
+    : config(config::checkValid(config)), nh_(nh), server_(nh_.node()) {
+  renderer_ = std::make_shared<SceneGraphRenderer>(config.renderer, nh_);
   for (auto&& [name, plugin] : config.plugins) {
-    plugins_.push_back(plugin.create(nh, name));
+    plugins_.push_back(plugin.create(nh_, name));
   }
 
-  graph_ = config.graph.create(nh);
+  graph_ = config.graph.create(nh_);
   // TODO(nathan) think about flagging change instead
   redraw_service_ = nh_.create_service<std_srvs::srv::Empty>(
       "redraw",
@@ -72,9 +72,10 @@ DsgVisualizer::DsgVisualizer(const Config& config, ianvs::NodeHandle nh)
 void DsgVisualizer::start() {
   // default chrono time unit is seconds...
   const std::chrono::duration<double> period_s(config.loop_period_s);
-  loop_timer_ = nh_.create_timer(std::chrono::duration_cast<std::chrono::milliseconds>(period_s),
-                                 true,
-                                 [this]() { spinOnce(); });
+  loop_timer_ = nh_.create_timer(
+      std::chrono::duration_cast<std::chrono::milliseconds>(period_s), true, [this]() {
+        spinOnce();
+      });
 }
 
 void DsgVisualizer::reset() {
