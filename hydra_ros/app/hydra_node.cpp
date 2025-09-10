@@ -48,6 +48,7 @@
 namespace hydra {
 
 struct RunSettings {
+  bool show_run_settings = true;
   size_t robot_id = 0;
   bool exit_after_clock = false;
   bool force_shutdown = false;
@@ -63,6 +64,7 @@ struct RunSettings {
 void declare_config(RunSettings& config) {
   using namespace config;
   name("RunSettings");
+  field(config.show_run_settings, "show_run_settings");
   field(config.robot_id, "robot_id");
   field(config.exit_after_clock, "exit_after_clock");
   field(config.force_shutdown, "force_shutdown");
@@ -133,7 +135,9 @@ int main(int argc, char* argv[]) {
   }
 
   config::Settings().setLogger("glog");
-  LOG(INFO) << "Using node settings\n" << config::toString(settings);
+  if (settings.show_run_settings) {
+    LOG(INFO) << "Using node settings\n" << config::toString(settings);
+  }
 
   [[maybe_unused]] const auto plugins = config::loadExternalFactories(settings.paths);
 
