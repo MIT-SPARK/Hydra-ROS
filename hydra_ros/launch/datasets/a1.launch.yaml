@@ -24,8 +24,8 @@ launch:
       name: map_to_odom
       args: "0 0 0 0 0 0 1 map cam_t265_odom_frame"
 
-  #result from kalibr --- difficult to connect to tf tree, so we use 
-  #t265_to_d455_bridge below, which was computed backward through 
+  #result from kalibr --- difficult to connect to tf tree, so we use
+  #t265_to_d455_bridge below, which was computed backward through
   #the static tf tree e.g., T^IMU_CAM = T^IMU_OPT * T^OPT_CAM
   # - node:
   #     pkg: tf2_ros

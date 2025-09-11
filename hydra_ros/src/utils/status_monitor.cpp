@@ -72,12 +72,13 @@ void StatusMonitor::publish() {
   {  // get observations in critical section
     std::lock_guard<std::mutex> lock(mutex_);
     if (module_observations_.empty()) {
-      return; // this lets us reuse heartbeat monitoring in monitor
+      return;  // this lets us reuse heartbeat monitoring in monitor
     }
 
     for (const auto& [modname, time_ns] : module_observations_) {
       const auto diff_ns = curr_time_ns - time_ns;
-      const auto diff_s = std::chrono::duration_cast<std::chrono::duration<double>>(diff_ns);
+      const auto diff_s =
+          std::chrono::duration_cast<std::chrono::duration<double>>(diff_ns);
       average_elapsed_s += diff_s.count();
       if (diff_s.count() > config.max_time_between_spins_s) {
         valid = false;
@@ -94,7 +95,8 @@ void StatusMonitor::publish() {
   if (valid) {
     record["status"] = "NOMINAL";
     std::stringstream ss;
-    ss << "average observation gap: " << std::setprecision(3) << average_elapsed_s << " s";
+    ss << "average observation gap: " << std::setprecision(3) << average_elapsed_s
+       << " s";
     record["note"] = ss.str();
   } else {
     record["status"] = "ERROR";

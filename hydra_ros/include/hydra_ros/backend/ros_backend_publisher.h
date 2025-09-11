@@ -34,9 +34,10 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/backend/backend_module.h>
-#include <tf2_ros/transform_broadcaster.h>
 #include <ianvs/node_handle.h>
 #include <pose_graph_tools_ros/conversions.h>
+#include <tf2_ros/transform_broadcaster.h>
+
 #include <rclcpp/publisher.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
@@ -51,11 +52,14 @@ class RosBackendPublisher : public BackendModule::Sink {
     DsgSender::Config dsg_sender;
     //! @brief Publish odom to map transform
     bool publish_backend_tf = false;
-    //! @brief Frame to use when publishing map_T_robot. An empty frame disables publishing
+    //! @brief Frame to use when publishing map_T_robot. An empty frame disables
+    //! publishing
     std::string tf_pub_robot_frame = "";
-    //! @brief Optional override for the map frame ID (defaults to current Hydra global setting)
+    //! @brief Optional override for the map frame ID (defaults to current Hydra global
+    //! setting)
     std::string tf_pub_map_frame = "";
-    //! @brief Optional override for the odom frame ID (defaults to current Hydra global setting)
+    //! @brief Optional override for the odom frame ID (defaults to current Hydra global
+    //! setting)
     std::string tf_pub_odom_frame = "";
   } const config;
 

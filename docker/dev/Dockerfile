@@ -44,7 +44,7 @@ RUN apt-get update && apt-get install -y pipx && \
     echo 'export PATH=$PATH:/root/.local/bin' >> /root/.bashrc && \
     rm -rf /var/lib/apt/lists/*
 
-#install tensorrt (must remove conflicting cuda repo to make work, unsure why 
+#install tensorrt (must remove conflicting cuda repo to make work, unsure why
 #cuda12.8 comes with the base image instead of cuda12.6)
 RUN rm -f /etc/apt/sources.list.d/cuda-ubuntu2404-x86_64.list && \
     rm -f /etc/apt/sources.list.d/cuda*.list && \

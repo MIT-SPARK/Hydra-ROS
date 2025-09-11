@@ -82,7 +82,8 @@ struct RosCamera : InvalidSensor {
   struct Config : Sensor::Config {
     //! @brief Optional namespace for overriding Hydra's default sensor namespaces
     std::string ns = "";
-    //! @brief Amount of time before warning about missing camera info (0 disables warning)
+    //! @brief Amount of time before warning about missing camera info (0 disables
+    //! warning)
     double warning_timeout_s = 10.0;
     //! @brief Amount of time to wait before forcing Hydra to exit (0 disables exit)
     double error_timeout_s = 0.0;

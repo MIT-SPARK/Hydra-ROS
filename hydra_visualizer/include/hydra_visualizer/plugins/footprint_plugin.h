@@ -34,12 +34,13 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
+#include <ianvs/node_handle.h>
+
 #include <rclcpp/publisher.hpp>
 #include <std_srvs/srv/set_bool.hpp>
 
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
-#include <ianvs/node_handle.h>
 
 namespace hydra {
 
@@ -57,9 +58,7 @@ class FootprintPlugin : public VisualizerPlugin {
     std::string layer = spark_dsg::DsgLayers::PLACES;
   } const config;
 
-  FootprintPlugin(const Config& config,
-                  ianvs::NodeHandle nh,
-                  const std::string& name);
+  FootprintPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
   virtual ~FootprintPlugin() = default;
 
   void draw(const std_msgs::msg::Header& header,

@@ -3,7 +3,7 @@
 This directory contains multiple examples to build and run Hydra with different Docker configurations.
 
 ## Requirements
-You will need `git`, `make`, and `vcstool` as well as [docker](https://docs.docker.com/engine/install/ubuntu/) and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for the profiles with GPU support. You may need to run `sudo usermod -aG docker $USER` + `newgrp docker` after installing docker, and similarly, you may need to run `sudo systemctl restart docker` after installing the toolkit. 
+You will need `git`, `make`, and `vcstool` as well as [docker](https://docs.docker.com/engine/install/ubuntu/) and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html) for the profiles with GPU support. You may need to run `sudo usermod -aG docker $USER` + `newgrp docker` after installing docker, and similarly, you may need to run `sudo systemctl restart docker` after installing the toolkit.
 
 ## Profiles
 
@@ -98,7 +98,7 @@ ros2 launch hydra_ros uhumans2.launch.yaml
 ```
 
 
-> **:warning: Warning**<br> 
+> **:warning: Warning**<br>
 > If you encounter graphical issues (e.g. rviz not displaying), make sure you run `xhost +local:root` on the host machine and that `DISPLAY` is correctly set.
 
 2. In a separate terminal, open another shell in the container:
@@ -116,13 +116,13 @@ ros2 bag play /root/data/path/to/rosbag --clock --qos-profile-overrides-path ~/.
 ```
 
 
-> **:warning: Warning**<br> 
+> **:warning: Warning**<br>
 > You must convert the ROS 1 bag to a ROS 2 bag before playing it. The `rosbags-convert` tool is preinstalled in the container, and you can use it to convert the bag using the following command: `rosbags-convert --src path/to/office.bag --dst path/to/office` (in ROS2, you do not need `.bag` since a ROS 2 bag is a directory). You should run this in the container if you don't have `rosbags-convert` installed on your host machine.
 
 ## Quick Start (PROFILE=zed)
 
 ### Host (PROFILE=zed)
-You can repeat the steps above using the `zed` profile instead of `minimal`, but you must complete a few additional steps on the host to run with hardware. 
+You can repeat the steps above using the `zed` profile instead of `minimal`, but you must complete a few additional steps on the host to run with hardware.
 
 1. Add the `zed-ros2-wrapper` to your workspace, and the dependencies will be installed automatically via the dockerfile (if you forget this step, you must rebuild the image):
 
