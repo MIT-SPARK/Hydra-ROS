@@ -35,6 +35,7 @@
 #pragma once
 #include <config_utilities/virtual_config.h>
 #include <spark_dsg/color.h>
+
 #include <std_msgs/msg/color_rgba.hpp>
 
 namespace hydra::visualizer {
@@ -165,8 +166,9 @@ struct RangeColormap {
   } const config;
 
   explicit RangeColormap(const Config& config);
-  spark_dsg::Color getColor(double value, double min, double max) const;
-  spark_dsg::Color operator()(double value, double min, double max) const {
+
+  spark_dsg::Color getColor(double value, double min = 0.0, double max = 1.0) const;
+  spark_dsg::Color operator()(double value, double min = 0.0, double max = 1.0) const {
     return getColor(value, min, max);
   }
 

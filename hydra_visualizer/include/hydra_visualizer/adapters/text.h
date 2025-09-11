@@ -99,4 +99,14 @@ struct NameIdTextAdapter : GraphTextAdapter {
 
 void declare_config(NameIdTextAdapter::Config& config);
 
+struct AttributesTextAdaptor : GraphTextAdapter {
+  struct Config {};
+  explicit AttributesTextAdaptor(const Config&) {}
+  virtual ~AttributesTextAdaptor() = default;
+  std::string getText(const spark_dsg::DynamicSceneGraph& graph,
+                      const spark_dsg::SceneGraphNode& node) const override;
+};
+
+void declare_config(AttributesTextAdaptor::Config& config);
+
 }  // namespace hydra::visualizer

@@ -41,6 +41,7 @@ add_library(
   src/frontend/object_visualizer.cpp
   src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
+  src/frontend/traversability_visualizer.cpp
   src/input/feature_receiver.cpp
   src/input/image_receiver.cpp
   src/input/pointcloud_adaptor.cpp

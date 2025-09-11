@@ -13,6 +13,8 @@ plugins:
   khronos_objects:
     type: KhronosObjectPlugin
     dynamic_color_mode: CONSTANT # ID, SEMANTIC, CONSTANT
+  places_traversability:
+    type: TraversabilityPlugin
   agent_poses:
     type: PosePlugin
     num_to_skip: 0
