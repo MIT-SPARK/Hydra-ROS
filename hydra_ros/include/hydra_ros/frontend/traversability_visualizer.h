@@ -48,7 +48,7 @@ namespace hydra {
 class TraversabilityVisualizer : public places::TraversabilityPlaceExtractor::Sink {
  public:
   struct Config {
-    std::string ns = "~traversability";
+    std::string ns = "~/traversability";
     visualizer::RangeColormap::Config traversability_colormap{
         createSpectrumColormap({spark_dsg::Color::red(),
                                 spark_dsg::Color::yellow(),
