@@ -60,8 +60,8 @@ void declare_config(TraversabilityVisualizer::Config& config) {
   field(config.traversability_colormap, "traversability_colormap");
   field(config.confidence_colormap, "confidence_colormap");
   field(config.state_colors, "state_colors");
-  field(config.slice_height, "slice_height", "m");
-  field(config.use_relative_height, "use_relative_height");
+  field(config.drawing_offset_z, "drawing_offset_z", "m");
+  field(config.use_relative_offset, "use_relative_offset");
   check(config.state_colors.size(), EQ, 4, "state_colors");
 }
 
@@ -128,8 +128,8 @@ void TraversabilityVisualizer::visualizeLayer(
   visualization_msgs::msg::Marker msg4 = msg;
   msg4.ns = "debug";
 
-  auto height = active_config_.slice_height;
-  if (active_config_.use_relative_height) {
+  auto height = active_config_.drawing_offset_z;
+  if (active_config_.use_relative_offset) {
     height += world_t_body.z();
   }
   geometry_msgs::msg::Point pos;
