@@ -44,6 +44,7 @@
 
 #include <rclcpp/time.hpp>
 
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {

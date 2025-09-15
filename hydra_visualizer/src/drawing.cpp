@@ -341,12 +341,12 @@ Marker makeLayerPolygonBoundaries(const std_msgs::msg::Header& header,
   marker.pose.position.z += info.config.boundaries.collapse ? 0.0 : info.z_offset;
 
   for (const auto& [node_id, node] : layer.nodes()) {
-    const auto& attrs = node->attributes<Place2dNodeAttributes>();
-    if (attrs.boundary.size() <= 1) {
+    const auto attrs = node->tryAttributes<Place2dNodeAttributes>();
+    if (!attrs || attrs->boundary.size() <= 1) {
       continue;
     }
 
-    const auto pos = attrs.position;
+    const auto pos = attrs->position;
 
     std_msgs::msg::ColorRGBA color;
     if (info.config.boundaries.use_node_color) {
@@ -356,14 +356,14 @@ Marker makeLayerPolygonBoundaries(const std_msgs::msg::Header& header,
     }
 
     geometry_msgs::msg::Point last_point;
-    tf2::convert(attrs.boundary.back(), last_point);
+    tf2::convert(attrs->boundary.back(), last_point);
     last_point.z = pos.z();
 
-    for (size_t i = 0; i < attrs.boundary.size(); ++i) {
+    for (size_t i = 0; i < attrs->boundary.size(); ++i) {
       marker.points.push_back(last_point);
       marker.colors.push_back(color);
 
-      tf2::convert(attrs.boundary[i], last_point);
+      tf2::convert(attrs->boundary[i], last_point);
       last_point.z = pos.z();
       marker.points.push_back(last_point);
       marker.colors.push_back(color);

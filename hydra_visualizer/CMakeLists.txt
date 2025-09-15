@@ -29,29 +29,30 @@ find_package(visualization_msgs REQUIRED)
 
 add_library(
   ${PROJECT_NAME}
-  src/drawing.cpp
-  src/layer_info.cpp
-  src/scene_graph_renderer.cpp
-  src/visualizer_node.cpp
+  src/plugins/traversability_plugin.cpp
   src/adapters/graph_color.cpp
   src/adapters/mesh_color.cpp
   src/adapters/text.cpp
   src/color/colormap_utilities.cpp
+  src/drawing.cpp
+  src/groundtruth/bounding_box_publisher.cpp
+  src/groundtruth/region_publisher.cpp
   src/io/graph_file_wrapper.cpp
   src/io/graph_ros_wrapper.cpp
   src/io/graph_zmq_wrapper.cpp
-  src/groundtruth/region_publisher.cpp
-  src/groundtruth/bounding_box_publisher.cpp
+  src/layer_info.cpp
   src/plugins/basis_point_plugin.cpp
-  src/plugins/places_freespace_plugin.cpp
+  src/plugins/footprint_plugin.cpp
   src/plugins/khronos_object_plugin.cpp
   src/plugins/mesh_plugin.cpp
-  src/plugins/footprint_plugin.cpp
+  src/plugins/places_freespace_plugin.cpp
   src/plugins/pose_plugin.cpp
+  src/scene_graph_renderer.cpp
   src/utils/ear_clipping.cpp
   src/utils/marker_group_pub.cpp
   src/utils/marker_tracker.cpp
   src/utils/polygon_utilities.cpp
+  src/visualizer_node.cpp
 )
 target_include_directories(
   ${PROJECT_NAME} PUBLIC "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"

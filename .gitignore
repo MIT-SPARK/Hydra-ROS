@@ -214,3 +214,6 @@ pyrightconfig.json
 .vscode/
 
 .clangd
+
+# ROS2
+log/

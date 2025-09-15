@@ -73,6 +73,12 @@ static const auto name_id_reg =
                                    NameIdTextAdapter,
                                    NameIdTextAdapter::Config>("NameIdTextAdapter");
 
+static const auto attributes_reg =
+    config::RegistrationWithConfig<GraphTextAdapter,
+                                   AttributesTextAdaptor,
+                                   AttributesTextAdaptor::Config>(
+        "AttributesTextAdaptor");
+
 inline std::string getNodeName(const SceneGraphNode& node) {
   const auto attrs = node.tryAttributes<SemanticNodeAttributes>();
   return attrs ? attrs->name : "";
@@ -141,6 +147,15 @@ std::string NameIdTextAdapter::getText(const DynamicSceneGraph&,
   const auto id = NodeSymbol(node.id).str();
   const auto name = getNodeName(node);
   return name.empty() ? id : name + " : " + id;
+}
+
+void declare_config(AttributesTextAdaptor::Config&) {}
+
+std::string AttributesTextAdaptor::getText(const DynamicSceneGraph&,
+                                           const SceneGraphNode& node) const {
+  std::stringstream ss;
+  ss << node.attributes();
+  return ss.str();
 }
 
 }  // namespace hydra::visualizer
