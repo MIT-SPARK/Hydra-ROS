@@ -3,9 +3,9 @@ repositories:
     type: git
     url: https://github.com/MIT-SPARK/config_utilities.git
     version: main
-  hydra_ros:
+  hydra:
     type: git
-    url: https://github.com/MIT-SPARK/Hydra-ROS.git
+    url: https://github.com/MIT-SPARK/Hydra.git
     version: main
   ianvs:
     type: git
