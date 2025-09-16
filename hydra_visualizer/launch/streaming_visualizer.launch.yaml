@@ -12,7 +12,7 @@ launch:
   # communication
   - arg: {name: use_zmq, default: 'false', description: use zmq to receive scene graphs}
   - arg: {name: visualizer_frame, default: map, description: frame ID for zmq to use}
-  - arg: {name: zmq_url, default: tcp://127.0.0.1:8001, description: full zmq url}
+  - arg: {name: zmq_url, default: 'tcp://127.0.0.1:8001', description: full zmq url}
   # visualizer node and control for launching
   - arg: {name: start_visualizer, default: 'true'}
   - node:

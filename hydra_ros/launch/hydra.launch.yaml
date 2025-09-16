@@ -7,8 +7,8 @@ launch:
   - arg: {name: print_missing, default: 'false', description: Have config utilities print all missing parameters when parsing configs}
   # robot configuration
   - arg: {name: use_sim_time, default: 'false', description: Use ROS sim time}
-  - arg: {name: dataset, description: dataset name, description: Dataset hydra is running}
-  - arg: {name: labelspace, description: labelspace to use, description: Closed-set semantics description}
+  - arg: {name: dataset, description: Dataset hydra is running}
+  - arg: {name: labelspace, description: Closed-set semantics description}
   - arg: {name: robot_id, default: '0', description: Unique robot identifier}
   - arg: {name: sensor_frame, default: left_cam, description: Camera frame}
   - arg: {name: robot_frame, default: base_link_gt, description: Robot body tf frame}
@@ -26,7 +26,7 @@ launch:
   - arg: {name: log_path, default: $(env HOME)/.hydra/$(var log_name), description: Directory to output to}
   - arg: {name: exit_after_clock, default: 'false', description: Shutdown hydra node after a rosbag finishes playing}
   - arg: {name: enable_zmq, default: 'false', description: Turn on zmq-based publishing for scene graph}
-  - arg: {name: zmq_url, default: tcp://127.0.0.1:8001, description: ZMQ publish url}
+  - arg: {name: zmq_url, default: 'tcp://127.0.0.1:8001', description: ZMQ publish url}
   - arg: {name: zmq_send_mesh, default: 'false', description: Whether or not to serialize mesh when using ZMQ}
   # hydra node
   - node:
