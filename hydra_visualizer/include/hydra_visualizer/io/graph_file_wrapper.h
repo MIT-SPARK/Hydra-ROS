@@ -34,6 +34,8 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 
+#include <ianvs/node_handle.h>
+
 #include <filesystem>
 
 #include <rclcpp/service.hpp>
@@ -42,7 +44,6 @@
 #include <std_srvs/srv/empty.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
-#include <ianvs/node_handle.h>
 
 namespace hydra {
 

@@ -42,10 +42,10 @@
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/drawing.h>
 
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include <rclcpp/time.hpp>
 
 #include "hydra_ros/common.h"
+#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {

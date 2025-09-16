@@ -33,11 +33,12 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <ianvs/node_handle.h>
+
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <rclcpp/publisher.hpp>
 
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
-#include <ianvs/node_handle.h>
 
 namespace hydra {
 

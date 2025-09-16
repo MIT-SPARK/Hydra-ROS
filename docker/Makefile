@@ -40,7 +40,7 @@ build: check-profile check-env
 run: check-profile check-env
 	docker compose --env-file .env -f $(DOCKER_DIR)/docker-compose.yml run --rm $(SERVICE_NAME) bash
 
-#start the container in detached mode to keep container running 
+#start the container in detached mode to keep container running
 up: check-profile check-env
 	docker compose --env-file .env -f $(DOCKER_DIR)/docker-compose.yml up -d
 

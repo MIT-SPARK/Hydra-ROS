@@ -35,6 +35,7 @@
 #pragma once
 #include <config_utilities/virtual_config.h>
 #include <spark_dsg/color.h>
+
 #include <std_msgs/msg/color_rgba.hpp>
 
 namespace hydra::visualizer {

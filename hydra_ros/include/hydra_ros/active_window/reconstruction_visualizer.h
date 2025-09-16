@@ -34,8 +34,8 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/active_window/active_window_module.h>
-#include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/adapters/mesh_color.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
 #include <ianvs/lazy_publisher_group.h>
 #include <ianvs/node_handle.h>

@@ -72,9 +72,9 @@ RosPoseGraphTracker::RosPoseGraphTracker(const Config& config)
       "pose_graph", config.queue_size, &RosPoseGraphTracker::odomCallback, this);
   prior_sub_ =
       nh.create_subscription<PoseGraphTypeAdapter>("agent_node_measurements",
-                                                  config.queue_size,
-                                                  &RosPoseGraphTracker::priorCallback,
-                                                  this);
+                                                   config.queue_size,
+                                                   &RosPoseGraphTracker::priorCallback,
+                                                   this);
 }
 
 // Return pose graphs and priors received from Kimera since the last call

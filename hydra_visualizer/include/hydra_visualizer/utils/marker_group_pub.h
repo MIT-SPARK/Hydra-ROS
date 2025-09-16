@@ -33,12 +33,13 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <ianvs/node_handle.h>
+
 #include <rclcpp/publisher.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/utils/marker_tracker.h"
-#include <ianvs/node_handle.h>
 
 namespace hydra {
 
