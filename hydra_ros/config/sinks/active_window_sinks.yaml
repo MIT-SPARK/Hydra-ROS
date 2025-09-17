@@ -8,5 +8,4 @@ sinks:
       type: UniformMeshColoring
       color: [255, 0, 0]
   - type: TsdfOccupancyPublisher
-    extraction:
-      min_distance: 0.25
+    min_distance: 0.25

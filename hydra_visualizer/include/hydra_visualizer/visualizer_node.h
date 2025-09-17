@@ -53,7 +53,7 @@ class DsgVisualizer {
     SceneGraphRenderer::Config renderer;
     config::VirtualConfig<GraphWrapper> graph;
     // Specify additional plugins that should be loaded <name, config>
-    std::map<std::string, config::VirtualConfig<VisualizerPlugin>> plugins;
+    std::map<std::string, config::VirtualConfig<VisualizerPlugin, true>> plugins;
   } const config;
 
   //! Construct the visualizer from a config
