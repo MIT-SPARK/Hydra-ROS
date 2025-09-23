@@ -99,7 +99,7 @@ void declare_config(ReconstructionVisualizer::Config& config) {
   field(config.filter_points_by_range, "filter_points_by_range");
   field(config.colormap, "colormap");
   field(config.label_colormap, "label_colormap");
-  field(config.image_display, "image_display");
+  field(config.sensor_displays, "sensor_displays");
   config.mesh_coloring.setOptional();
   field(config.mesh_coloring, "mesh_coloring");
 }
@@ -110,6 +110,7 @@ ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
       pubs_(nh_),
       active_mesh_pub_(nh_.create_publisher<kimera_pgmo_msgs::msg::Mesh>("mesh", 1)),
       pose_pub_(nh_.create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10)),
+      sensor_displays_(config.sensor_displays),
       image_pubs_(nh_),
       cloud_pubs_(nh_),
       colormap_(config.colormap),
@@ -182,24 +183,36 @@ void ReconstructionVisualizer::call(uint64_t timestamp_ns,
     std_msgs::msg::Header header;
     header.stamp = rclcpp::Time(output.timestamp_ns);
     header.frame_id = GlobalInfo::instance().getFrames().map;
-
     const auto sensor_name = output.sensor_data->getSensor().name;
+
+    DisplayConfig display_config;
+    const auto display = sensor_displays_.get(sensor_name);
+    if (display) {
+      display_config = display->config;
+    }
+
     image_pubs_.publish(sensor_name + "/labels", [&]() {
-      return makeImage(
+      return makeOverlayImage(
           header,
-          *output.sensor_data,
-          [this](uint32_t label) { return label_colormap_(label); },
-          config.image_display);
-    });
-    image_pubs_.publish(sensor_name + "/depth", [&]() {
-      return makeDepthImage(header, *output.sensor_data, config.image_display);
+          output.sensor_data->label_image,
+          output.sensor_data->color_image,
+          [this](const cv::Mat& img, int r, int c) {
+            return label_colormap_(img.at<int32_t>(r, c));
+          },
+          display_config);
     });
     image_pubs_.publish(sensor_name + "/range", [&]() {
-      return makeRangeImage(header, *output.sensor_data, config.image_display);
+      return makeDistImage(header, output.sensor_data->range_image, display_config);
     });
     cloud_pubs_.publish(sensor_name + "/pointcloud", [&]() {
       return makeCloud(header, *output.sensor_data, config.filter_points_by_range);
     });
+
+    if (!output.sensor_data->depth_image.empty()) {
+      image_pubs_.publish(sensor_name + "/depth", [&]() {
+        return makeDistImage(header, output.sensor_data->depth_image, display_config);
+      });
+    }
   }
 }  // namespace hydra
 
