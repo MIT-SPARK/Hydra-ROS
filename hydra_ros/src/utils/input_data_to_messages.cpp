@@ -90,13 +90,20 @@ void declare_config(DisplayConfig& config) {
   checkInRange(config.overlay_alpha, 0.0f, 1.0f, "overlay_alpha", false, true);
 }
 
+Image::SharedPtr convertImage(const std_msgs::msg::Header& header,
+                              const cv::Mat& img,
+                              const DisplayConfig& config) {
+  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
+  msg->header = header;
+  msg->encoding = "rgb8";
+  msg->image = resizeImage(img, config);
+  return msg->toImageMsg();
+}
+
 Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
                            const cv::Mat& img_in,
                            const CmapFunc& colormap,
                            const DisplayConfig& config) {
-  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
-  msg->header = header;
-  msg->encoding = "rgb8";
   cv::Mat img(img_in.rows, img_in.cols, CV_8UC3);
   for (int r = 0; r < img_in.rows; ++r) {
     for (int c = 0; c < img_in.cols; ++c) {
@@ -108,8 +115,7 @@ Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
     }
   }
 
-  msg->image = resizeImage(img, config);
-  return msg->toImageMsg();
+  return convertImage(header, img, config);
 }
 
 Image::SharedPtr makeOverlayImage(const std_msgs::msg::Header& header,
@@ -121,9 +127,6 @@ Image::SharedPtr makeOverlayImage(const std_msgs::msg::Header& header,
     return makeImage(header, img_in, colormap, config);
   }
 
-  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
-  msg->header = header;
-  msg->encoding = "rgb8";
   cv::Mat img(img_in.rows, img_in.cols, CV_8UC3);
   for (int r = 0; r < img_in.rows; ++r) {
     for (int c = 0; c < img_in.cols; ++c) {
@@ -139,8 +142,7 @@ Image::SharedPtr makeOverlayImage(const std_msgs::msg::Header& header,
     }
   }
 
-  msg->image = resizeImage(img, config);
-  return msg->toImageMsg();
+  return convertImage(header, img, config);
 }
 
 Image::SharedPtr makeDistImage(const std_msgs::msg::Header& header,

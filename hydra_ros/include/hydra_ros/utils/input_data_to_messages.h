@@ -60,6 +60,13 @@ struct DisplayConfig {
 void declare_config(DisplayConfig& config);
 
 /**
+ * @brief Turn an image into a message, optionally applying display config
+ */
+sensor_msgs::msg::Image::SharedPtr convertImage(const std_msgs::msg::Header& header,
+                                                const cv::Mat& img,
+                                                const DisplayConfig& config);
+
+/**
  * @brief Make a colored image for the current labels in the input data
  */
 sensor_msgs::msg::Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
