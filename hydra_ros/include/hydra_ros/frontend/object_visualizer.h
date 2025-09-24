@@ -37,7 +37,7 @@
 #include <ianvs/lazy_publisher_group.h>
 #include <kimera_pgmo/mesh_delta.h>
 
-#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 namespace hydra {
 
@@ -68,7 +68,7 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
 
  protected:
   ianvs::NodeHandle nh_;
-  ianvs::RosPublisherGroup<visualization_msgs::msg::Marker> pubs_;
+  ianvs::RosPublisherGroup<visualization_msgs::msg::MarkerArray> pubs_;
 
  private:
   inline static const auto registration_ =

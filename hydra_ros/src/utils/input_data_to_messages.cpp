@@ -60,7 +60,7 @@ PointField makeField(const std::string& name,
   return field;
 }
 
-cv::Mat showImage(const cv::Mat& input, const DisplayConfig& config) {
+cv::Mat resizeImage(const cv::Mat& input, const DisplayConfig& config) {
   if (config.width_scale == 1.0f && config.height_scale == 1.0f) {
     return input;
   }
@@ -82,49 +82,85 @@ void declare_config(DisplayConfig& config) {
   name("DisplayConfig");
   field(config.width_scale, "width_scale");
   field(config.height_scale, "height_scale");
+  field(config.overlay_alpha, "overlay_alpha");
+  field(config.min_distance, "min_distance", "m");
+  field(config.max_distance, "max_distance", "m");
+  field(config.distance_colormap, "distance_colormap", "m");
+  // overlay == 0.0 doesn't make sense, but overlay == 1.0 does
+  checkInRange(config.overlay_alpha, 0.0f, 1.0f, "overlay_alpha", false, true);
 }
 
-Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
-                           const InputData& sensor_data,
-                           const CmapFunc& colormap,
-                           const DisplayConfig& config) {
-  const auto& labels = sensor_data.label_image;
+Image::SharedPtr convertImage(const std_msgs::msg::Header& header,
+                              const cv::Mat& img,
+                              const DisplayConfig& config) {
   cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
   msg->header = header;
   msg->encoding = "rgb8";
-  cv::Mat img(labels.rows, labels.cols, CV_8UC3);
-  for (int r = 0; r < labels.rows; ++r) {
-    for (int c = 0; c < labels.cols; ++c) {
+  msg->image = resizeImage(img, config);
+  return msg->toImageMsg();
+}
+
+Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
+                           const cv::Mat& img_in,
+                           const CmapFunc& colormap,
+                           const DisplayConfig& config) {
+  cv::Mat img(img_in.rows, img_in.cols, CV_8UC3);
+  for (int r = 0; r < img_in.rows; ++r) {
+    for (int c = 0; c < img_in.cols; ++c) {
       auto pixel = img.ptr<uint8_t>(r, c);
-      const auto color = colormap(labels.at<int>(r, c));
+      const auto color = colormap(img_in, r, c);
       *pixel = color.r;
       *(pixel + 1) = color.g;
       *(pixel + 2) = color.b;
     }
   }
 
-  msg->image = showImage(img, config);
-  return msg->toImageMsg();
+  return convertImage(header, img, config);
 }
 
-Image::SharedPtr makeDepthImage(const std_msgs::msg::Header& header,
-                                const InputData& sensor_data,
-                                const DisplayConfig& config) {
-  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
-  msg->header = header;
-  msg->encoding = "32FC1";
-  msg->image = showImage(sensor_data.depth_image, config);
-  return msg->toImageMsg();
+Image::SharedPtr makeOverlayImage(const std_msgs::msg::Header& header,
+                                  const cv::Mat& img_in,
+                                  const cv::Mat& color_in,
+                                  const CmapFunc& colormap,
+                                  const DisplayConfig& config) {
+  if (color_in.empty()) {
+    return makeImage(header, img_in, colormap, config);
+  }
+
+  cv::Mat img(img_in.rows, img_in.cols, CV_8UC3);
+  for (int r = 0; r < img_in.rows; ++r) {
+    for (int c = 0; c < img_in.cols; ++c) {
+      auto pixel = img.ptr<uint8_t>(r, c);
+      const auto c_in = colormap(img_in, r, c);
+      const auto c_cv = color_in.at<cv::Vec3b>(r, c);
+      const auto color =
+          c_in.blend(spark_dsg::Color(c_cv[0], c_cv[1], c_cv[2]), config.overlay_alpha);
+
+      *pixel = color.r;
+      *(pixel + 1) = color.g;
+      *(pixel + 2) = color.b;
+    }
+  }
+
+  return convertImage(header, img, config);
 }
 
-Image::SharedPtr makeRangeImage(const std_msgs::msg::Header& header,
-                                const InputData& sensor_data,
-                                const DisplayConfig& config) {
-  cv_bridge::CvImagePtr msg(new cv_bridge::CvImage());
-  msg->header = header;
-  msg->encoding = "32FC1";
-  msg->image = showImage(sensor_data.range_image, config);
-  return msg->toImageMsg();
+Image::SharedPtr makeDistImage(const std_msgs::msg::Header& header,
+                               const cv::Mat& distances,
+                               const DisplayConfig& config) {
+  double min_v = 0.0;
+  double max_v = std::numeric_limits<double>::infinity();
+  cv::minMaxIdx(distances, &min_v, &max_v);
+  const float v_min = config.min_distance >= 0.0f ? config.min_distance : min_v;
+  const float v_max = config.max_distance >= 0.0f ? config.max_distance : max_v;
+  const visualizer::RangeColormap cmap(config.distance_colormap);
+  return makeImage(
+      header,
+      distances,
+      [&](const cv::Mat& img, int r, int c) {
+        return cmap(img.at<float>(r, c), v_min, v_max);
+      },
+      config);
 }
 
 // TODO(nathan) pcl_ros would avoid this but it causes compile issues (and would also

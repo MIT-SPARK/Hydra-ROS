@@ -33,46 +33,59 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra_visualizer/color/colormap_utilities.h>
 #include <spark_dsg/color.h>
 
 #include <functional>
+#include <limits>
 
+#include <opencv2/core/mat.hpp>
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 
 namespace hydra {
 
 struct InputData;
-using CmapFunc = std::function<spark_dsg::Color(uint32_t)>;
+using CmapFunc = std::function<spark_dsg::Color(cv::Mat, int, int)>;
 
 struct DisplayConfig {
   float width_scale = 1.0f;
   float height_scale = 1.0f;
+  float overlay_alpha = 0.5f;
+  float min_distance = -1.0f;
+  float max_distance = -1.0f;
+  visualizer::RangeColormap::Config distance_colormap;
 };
 
 void declare_config(DisplayConfig& config);
 
 /**
+ * @brief Turn an image into a message, optionally applying display config
+ */
+sensor_msgs::msg::Image::SharedPtr convertImage(const std_msgs::msg::Header& header,
+                                                const cv::Mat& img,
+                                                const DisplayConfig& config);
+
+/**
  * @brief Make a colored image for the current labels in the input data
  */
 sensor_msgs::msg::Image::SharedPtr makeImage(const std_msgs::msg::Header& header,
-                                             const InputData& sensor_data,
+                                             const cv::Mat& img_in,
                                              const CmapFunc& colormap,
                                              const DisplayConfig& config = {});
 
 /**
- * @brief Copy the current depth image to ros
+ * @brief Make a colored image for the current labels in the input data
  */
-sensor_msgs::msg::Image::SharedPtr makeDepthImage(const std_msgs::msg::Header& header,
-                                                  const InputData& sensor_data,
-                                                  const DisplayConfig& config = {});
+sensor_msgs::msg::Image::SharedPtr makeOverlayImage(const std_msgs::msg::Header& header,
+                                                    const cv::Mat& img_in,
+                                                    const cv::Mat& color_in,
+                                                    const CmapFunc& colormap,
+                                                    const DisplayConfig& config = {});
 
-/**
- * @brief Copy the current range image to ros
- */
-sensor_msgs::msg::Image::SharedPtr makeRangeImage(const std_msgs::msg::Header& header,
-                                                  const InputData& sensor_data,
-                                                  const DisplayConfig& config = {});
+sensor_msgs::msg::Image::SharedPtr makeDistImage(const std_msgs::msg::Header& header,
+                                                 const cv::Mat& img_in,
+                                                 const DisplayConfig& config = {});
 
 /**
  * @brief Convert the input pointcloud to a ROS type

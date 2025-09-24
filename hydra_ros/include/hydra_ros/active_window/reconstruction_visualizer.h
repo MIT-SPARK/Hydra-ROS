@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/active_window/active_window_module.h>
+#include <hydra/input/sensor_map.h>
 #include <hydra_visualizer/adapters/mesh_color.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/utils/marker_group_pub.h>
@@ -51,6 +52,12 @@ namespace hydra {
 
 class ReconstructionVisualizer : public ActiveWindowModule::Sink {
  public:
+  struct SensorDisplay {
+    using Config = DisplayConfig;
+    const Config config;
+    explicit SensorDisplay(const Config& config) : config(config) {}
+  };
+
   struct Config {
     std::string ns = "~/reconstruction";
     double min_weight = 0.0;
@@ -70,7 +77,7 @@ class ReconstructionVisualizer : public ActiveWindowModule::Sink {
     visualizer::RangeColormap::Config colormap;
     visualizer::CategoricalColormap::Config label_colormap;
     config::VirtualConfig<MeshColoring> mesh_coloring;
-    DisplayConfig image_display;
+    SensorMap<SensorDisplay>::Config sensor_displays;
   } const config;
 
   explicit ReconstructionVisualizer(const Config& config);
@@ -90,6 +97,7 @@ class ReconstructionVisualizer : public ActiveWindowModule::Sink {
   MarkerGroupPub pubs_;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr active_mesh_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
+  SensorMap<SensorDisplay> sensor_displays_;
   ianvs::RosPublisherGroup<sensor_msgs::msg::Image> image_pubs_;
   ianvs::RosPublisherGroup<sensor_msgs::msg::PointCloud2> cloud_pubs_;
   const visualizer::RangeColormap colormap_;

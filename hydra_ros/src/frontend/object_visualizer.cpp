@@ -42,6 +42,7 @@
 namespace hydra {
 
 using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 void declare_config(ObjectVisualizer::Config& config) {
   using namespace config;
@@ -61,30 +62,21 @@ std::string ObjectVisualizer::printInfo() const { return config::toString(config
 
 void ObjectVisualizer::call(uint64_t timestamp_ns,
                             const kimera_pgmo::MeshDelta& delta,
-                            const std::vector<size_t>& active,
+                            const std::vector<size_t>& /* active */,
                             const LabelIndices& label_indices) const {
-  pubs_.publish("active_vertices", [&]() {
-    auto msg = std::make_unique<Marker>();
-    msg->header.stamp = rclcpp::Time(timestamp_ns);
-    msg->header.frame_id = GlobalInfo::instance().getFrames().odom;
-    msg->ns = "active_vertices";
-    msg->id = 0;
-    fillMarkerFromCloud(delta, active, *msg);
-    return msg;
-  });
+  pubs_.publish("object_vertices", [&]() {
+    auto msg_arr = std::make_unique<MarkerArray>();
+    for (const auto& [label, indices] : label_indices) {
+      auto& msg = msg_arr->markers.emplace_back();
+      msg.header.stamp = rclcpp::Time(timestamp_ns);
+      msg.header.frame_id = GlobalInfo::instance().getFrames().odom;
+      msg.ns = "label_vertices_" + std::to_string(label);
+      msg.id = 0;
+      fillMarkerFromCloud(delta, indices, msg);
+    }
 
-  for (const auto& id_label_pair : label_indices) {
-    pubs_.publish("object_vertices/label" + std::to_string(id_label_pair.first), [&]() {
-      const auto& [label, indices] = id_label_pair;
-      auto msg = std::make_unique<Marker>();
-      msg->header.stamp = rclcpp::Time(timestamp_ns);
-      msg->header.frame_id = GlobalInfo::instance().getFrames().odom;
-      msg->ns = "label_vertices_" + std::to_string(label);
-      msg->id = 0;
-      fillMarkerFromCloud(delta, indices, *msg);
-      return msg;
-    });
-  }
+    return msg_arr;
+  });
 }
 
 void ObjectVisualizer::fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
