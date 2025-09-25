@@ -14,6 +14,7 @@
 #include <config_utilities_ros/ros_dynamic_config_server.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
+#include <hydra/backend/dsg_updater.h>
 #include <hydra/openset/embedding_distances.h>
 #include <hydra/rooms/room_finder.h>
 #include <hydra/utils/cognition_labels.h>
@@ -48,6 +49,7 @@ struct Config {
   CognitionLabels::Config cognition_labels;
   std::string places_layer = DsgLayers::TRAVERSABILITY;
   hydra::RoomFinderConfig room_finder;
+  hydra::DsgUpdater::Config backend;
 };
 
 void declare_config(NodeConfig& config) {
@@ -65,6 +67,13 @@ void declare_config(Config& config) {
   field(config.cognition_labels, "cognition_labels");
   field(config.places_layer, "places_layer");
   field(config.room_finder, "room_finder");
+  field(config.backend, "backend");
+}
+
+template <typename ConfigT>
+bool isEqual(const ConfigT& a, const ConfigT& b) {
+  // Identical configs should produce identical renderings.
+  return config::toString(a) == config::toString(b);
 }
 
 class Clusterer {
@@ -75,18 +84,22 @@ class Clusterer {
   void process(const Config& config) {
     LOG(INFO) << "Processing:\n" << config::toString(config);
     // Load.
+    graph_updated_ = false;
     if (!load(config)) {
       return;
     }
 
-    // compute features and distances.
+    // If requested, merge nodes in the graph.
+    mergeGraph(config);
+
+    // If needed, compute distances for place nodes.
     computeFeatures(config);
 
-    // Cluster.
+    // Cluster places.
     cluster(config);
 
     // Publish.
-    sender_.sendGraph(*graph_, rclcpp::Time(0));
+    sender_.sendGraph(*merged_graph_, rclcpp::Time(0));
     LOG(INFO) << "Published clustered graph.";
 
     // Save.
@@ -97,14 +110,47 @@ class Clusterer {
  private:
   const hydra::DsgSender sender_;
   DynamicSceneGraph::Ptr graph_;
+  bool graph_updated_;
+  DynamicSceneGraph::Ptr merged_graph_;
   Config prev_config_;
   std::unique_ptr<LazyCognitionLabels> labels_;
+
+  void mergeGraph(const Config& config) {
+    if (!graph_updated_ && merged_graph_) {
+      return;
+    }
+    // Always set the merged graph for downstream processing.
+    if (!config.backend.enable_node_merging ||
+        isEqual(config.backend, prev_config_.backend)) {
+      merged_graph_ = graph_;
+      return;
+    }
+
+    // Apply merging by wrapping around the hydra interfaces.
+    merged_graph_ = graph_->clone();
+    auto merged_graph_info =
+        std::make_shared<hydra::SharedDsgInfo>(hydra::SharedDsgInfo::Config{});
+    merged_graph_info->graph = merged_graph_;
+    hydra::DsgUpdater updater(config.backend, graph_, merged_graph_info);
+    hydra::UpdateInfo::ConstPtr info(new hydra::UpdateInfo{0});
+    updater.callUpdateFunctions(0, info);
+
+    // Log some stats.
+    std::stringstream ss;
+    for (const auto& [layer_id, layer] : merged_graph_->layers()) {
+      const size_t num_prev = graph_->getLayer(layer_id).nodes().size();
+      const size_t num_merged = layer->nodes().size();
+      ss << "\n- Layer " << layer_id << ": Merged " << (num_prev - num_merged)
+         << " nodes (" << num_prev << "->" << num_merged << ")";
+    }
+    LOG(INFO) << "Merged graph:" << ss.str();
+  }
 
   void computeFeatures(const Config& config) {
     // Check for feature changes.
     if (!labels_ || config.cognition_labels.feature_type !=
                         prev_config_.cognition_labels.feature_type) {
-      labels_ = std::make_unique<LazyCognitionLabels>(*graph_);
+      labels_ = std::make_unique<LazyCognitionLabels>(*merged_graph_);
     } else if (config.cognition_labels.distance_metric ==
                prev_config_.cognition_labels.distance_metric) {
       // No feature or metric changes.
@@ -112,7 +158,7 @@ class Clusterer {
     }
 
     CognitionLabels::setup(config.cognition_labels);
-    const auto& layer = graph_->getLayer(config.places_layer);
+    const auto& layer = merged_graph_->getLayer(config.places_layer);
 
     size_t num_with_id = 0;
     size_t num_with_feature = 0;
@@ -202,10 +248,11 @@ class Clusterer {
 
   void cluster(const Config& config) {
     hydra::RoomFinder room_finder(config.room_finder);
-    auto rooms = room_finder.findRooms(*graph_->getLayer(config.places_layer).clone());
+    auto rooms =
+        room_finder.findRooms(*merged_graph_->getLayer(config.places_layer).clone());
     // auto rooms = room_finder.findRooms(graph_->getLayer(config.places_layer));
-    rewriteRooms(rooms.get(), *graph_);
-    room_finder.addRoomPlaceEdges(*graph_, config.places_layer);
+    rewriteRooms(rooms.get(), *merged_graph_);
+    room_finder.addRoomPlaceEdges(*merged_graph_, config.places_layer);
   }
 
   void rewriteRooms(const SceneGraphLayer* new_rooms, DynamicSceneGraph& graph) const {
@@ -244,6 +291,14 @@ class Clusterer {
     }
     LOG(INFO) << "Loaded graph from '" << config.src_path << "'.";
 
+    // Mark nodes inactive by default.
+    for (auto& [_, layer] : graph_->layers()) {
+      for (auto& [_, node] : layer->nodes()) {
+        node->attributes().is_active = false;
+      }
+    }
+    graph_updated_ = true;
+
     if (!graph_->hasLayer(config.places_layer)) {
       LOG(ERROR) << "Graph does not have a layer named '" << config.places_layer
                  << "', cannot cluster places.";
@@ -256,7 +311,7 @@ class Clusterer {
     if (config.dst_path == prev_config_.dst_path) {
       return;
     }
-    graph_->save(config.dst_path);
+    merged_graph_->save(config.dst_path);
     LOG(INFO) << "Saved clustered graph to '" << config.dst_path << "'.";
   }
 };
