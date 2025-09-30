@@ -69,16 +69,18 @@ void fillConfigFromInfo(const CameraInfo& msg, Camera::Config& cam_config) {
   cam_config.cy = msg.k[5];
 }
 
-std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Config& c,
-                                                          const std::string& ns) {
+std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(
+    const RosCamera::Config& config, const std::string& ns) {
   auto nh = ianvs::NodeHandle::this_node(ns);
   const auto resolved_topic = nh.resolve_name("camera_info", false);
   LOG(INFO) << "Waiting for CameraInfo on " << resolved_topic
             << " to initialize sensor model";
 
   const auto start = nh.now();
-  const auto qos = rclcpp::QoS(1).durability(rclcpp::DurabilityPolicy::BestAvailable);
-  const size_t timeout = std::floor(c.warning_timeout_s * 1000);
+  const auto qos = rclcpp::QoS(1).durability(
+      config.latch_info_sub ? rclcpp::DurabilityPolicy::TransientLocal
+                            : rclcpp::DurabilityPolicy::Volatile);
+  const size_t timeout = std::floor(config.warning_timeout_s * 1000);
 
   std::optional<sensor_msgs::msg::CameraInfo> msg;
   while (!msg && rclcpp::ok()) {
@@ -88,7 +90,7 @@ std::optional<sensor_msgs::msg::CameraInfo> getCameraInfo(const RosCamera::Confi
     }
 
     const auto diff = nh.now() - start;
-    if (c.error_timeout_s && (diff.seconds() > c.error_timeout_s)) {
+    if (config.error_timeout_s && (diff.seconds() > config.error_timeout_s)) {
       LOG(ERROR) << "Sensor intrinsics lookup timed out on '" << resolved_topic << "'";
       break;
     }
@@ -170,6 +172,7 @@ void declare_config(RosCamera::Config& config) {
   field(config.ns, "ns");
   field(config.warning_timeout_s, "warning_timeout_s", "s");
   field(config.error_timeout_s, "error_timeout_s", "s");
+  field(config.latch_info_sub, "latch_info_sub");
   check(config.warning_timeout_s, GE, 0.0, "warning_timeout_s");
   check(config.error_timeout_s, GE, 0.0, "error_timeout_s");
 }

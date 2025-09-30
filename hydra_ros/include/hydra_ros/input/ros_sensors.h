@@ -87,6 +87,8 @@ struct RosCamera : InvalidSensor {
     double warning_timeout_s = 10.0;
     //! @brief Amount of time to wait before forcing Hydra to exit (0 disables exit)
     double error_timeout_s = 0.0;
+    //! @brief Whether or not to use latching for subscriber
+    bool latch_info_sub = false;
   } const config;
 
   explicit RosCamera(const Config& config);
