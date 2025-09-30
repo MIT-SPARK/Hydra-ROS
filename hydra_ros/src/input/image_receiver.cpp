@@ -130,6 +130,39 @@ void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) 
   }
 }
 
+void declare_config(NoSemanticImageReceiver::Config& config) {
+  using namespace config;
+  name("NoSemanticImageReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
+
+NoSemanticImageReceiver::NoSemanticImageReceiver(const Config& config,
+                                                 const std::string& sensor_name)
+    : RosDataReceiver(config, sensor_name) {}
+
+bool NoSemanticImageReceiver::initImpl() {
+  color_sub_ = ColorSubscriber(ianvs::NodeHandle::this_node(ns_));
+  depth_sub_ = DepthSubscriber(ianvs::NodeHandle::this_node(ns_));
+  sync_.reset(new Synchronizer(
+      Policy(config.queue_size), color_sub_.getFilter(), depth_sub_.getFilter()));
+  sync_->registerCallback(&NoSemanticImageReceiver::callback, this);
+  return true;
+}
+
+void NoSemanticImageReceiver::callback(
+    const sensor_msgs::msg::Image::ConstSharedPtr& color,
+    const sensor_msgs::msg::Image::ConstSharedPtr& depth) {
+  const auto timestamp_ns = rclcpp::Time(color->header.stamp).nanoseconds();
+  if (!checkInputTimestamp(timestamp_ns)) {
+    return;
+  }
+
+  auto packet = std::make_shared<ImageInputPacket>(timestamp_ns, sensor_name_);
+  color_sub_.fillInput(*color, *packet);
+  depth_sub_.fillInput(*depth, *packet);
+  queue.push(packet);
+}
+
 void declare_config(ClosedSetImageReceiver::Config& config) {
   using namespace config;
   name("ClosedSetImageReceiver::Config");
@@ -151,6 +184,12 @@ OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
     : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
 
 namespace {
+
+static const auto no_semantic_registration =
+    config::RegistrationWithConfig<DataReceiver,
+                                   NoSemanticImageReceiver,
+                                   NoSemanticImageReceiver::Config,
+                                   std::string>("NoSemanticImageReceiver");
 
 static const auto closed_registration =
     config::RegistrationWithConfig<DataReceiver,
