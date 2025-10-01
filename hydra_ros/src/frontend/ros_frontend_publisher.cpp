@@ -101,6 +101,8 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
   dsg_sender_->sendGraph(graph, rclcpp::Time(timestamp_ns));
 }
 
+std::string RosFrontendPublisher::printInfo() const { return config::toString(config); }
+
 void RosFrontendPublisher::processMeshDeltaQuery(
     const MeshDeltaSrv::Request::SharedPtr req,
     MeshDeltaSrv::Response::SharedPtr resp) {

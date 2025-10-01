@@ -62,7 +62,7 @@ class RosFrontendPublisher : public GraphBuilder::Sink {
             const DynamicSceneGraph& graph,
             const BackendInput& backend_input) const override;
 
-  std::string printInfo() const override { return "RosFrontendPublisher"; }
+  std::string printInfo() const override;
 
  protected:
   void processMeshDeltaQuery(const MeshDeltaSrv::Request::SharedPtr req,
