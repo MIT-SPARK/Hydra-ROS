@@ -161,9 +161,9 @@ class Clusterer {
           << "Skipping feature computation, no feature or metric changes detected.";
       return;
     }
-    LOG(INFO) << "Updating place features and edge weights..."
+    LOG(INFO) << "Updating place features and edge weights...";
 
-        CognitionLabels::setup(config.cognition_labels);
+    CognitionLabels::setup(config.cognition_labels);
     const auto& layer = graph_->getLayer(config.places_layer);
     graph_updated_ = true;
 
