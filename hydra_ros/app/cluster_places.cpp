@@ -89,11 +89,11 @@ class Clusterer {
       return;
     }
 
-    // If requested, merge nodes in the graph.
-    mergeGraph(config);
-
     // If needed, compute distances for place nodes.
     computeFeatures(config);
+
+    // If requested, merge nodes in the graph.
+    mergeGraph(config);
 
     // Cluster places.
     cluster(config);
@@ -116,13 +116,16 @@ class Clusterer {
   std::unique_ptr<LazyCognitionLabels> labels_;
 
   void mergeGraph(const Config& config) {
-    if (!graph_updated_ && merged_graph_) {
+    const bool config_changed = !isEqual(config.backend, prev_config_.backend);
+    if (!graph_updated_ && merged_graph_ && !config_changed) {
+      LOG(INFO) << "Skipping merging, no changes detected.";
       return;
     }
+
     // Always set the merged graph for downstream processing.
-    if (!config.backend.enable_node_merging ||
-        isEqual(config.backend, prev_config_.backend)) {
+    if (!config.backend.enable_node_merging) {
       merged_graph_ = graph_;
+      LOG(INFO) << "Skipping merging, no node merging is disabled.";
       return;
     }
 
@@ -132,15 +135,15 @@ class Clusterer {
         std::make_shared<hydra::SharedDsgInfo>(hydra::SharedDsgInfo::Config{});
     merged_graph_info->graph = merged_graph_;
     hydra::DsgUpdater updater(config.backend, graph_, merged_graph_info);
-    hydra::UpdateInfo::ConstPtr info(new hydra::UpdateInfo{0});
+    hydra::UpdateInfo::ConstPtr info(new hydra::UpdateInfo{0, nullptr, nullptr, true});
     updater.callUpdateFunctions(0, info);
 
     // Log some stats.
     std::stringstream ss;
-    for (const auto& [layer_id, layer] : merged_graph_->layers()) {
-      const size_t num_prev = graph_->getLayer(layer_id).nodes().size();
-      const size_t num_merged = layer->nodes().size();
-      ss << "\n- Layer " << layer_id << ": Merged " << (num_prev - num_merged)
+    for (const auto& [layer_name, _] : graph_->layer_names()) {
+      const size_t num_prev = graph_->getLayer(layer_name).nodes().size();
+      const size_t num_merged = merged_graph_->getLayer(layer_name).nodes().size();
+      ss << "\n- Layer " << layer_name << ": Merged " << (num_prev - num_merged)
          << " nodes (" << num_prev << "->" << num_merged << ")";
     }
     LOG(INFO) << "Merged graph:" << ss.str();
@@ -150,15 +153,19 @@ class Clusterer {
     // Check for feature changes.
     if (!labels_ || config.cognition_labels.feature_type !=
                         prev_config_.cognition_labels.feature_type) {
-      labels_ = std::make_unique<LazyCognitionLabels>(*merged_graph_);
+      labels_ = std::make_unique<LazyCognitionLabels>(*graph_);
     } else if (config.cognition_labels.distance_metric ==
                prev_config_.cognition_labels.distance_metric) {
       // No feature or metric changes.
+      LOG(INFO)
+          << "Skipping feature computation, no feature or metric changes detected.";
       return;
     }
+    LOG(INFO) << "Updating place features and edge weights..."
 
-    CognitionLabels::setup(config.cognition_labels);
-    const auto& layer = merged_graph_->getLayer(config.places_layer);
+        CognitionLabels::setup(config.cognition_labels);
+    const auto& layer = graph_->getLayer(config.places_layer);
+    graph_updated_ = true;
 
     size_t num_with_id = 0;
     size_t num_with_feature = 0;
@@ -166,7 +173,7 @@ class Clusterer {
     for (const auto& [_, node] : layer.nodes()) {
       auto& attrs = node->attributes<TraversabilityNodeAttributes>();
       attrs.distance = 0.0;
-      attrs.is_active = false;  // Hijack the active flag for valid nodes.
+      attrs.is_predicted = false;  // Hijack the is_predicted flag for valid nodes.
 
       // Check if we have an ID.
       if (attrs.cognition_labels.empty()) {
@@ -186,10 +193,10 @@ class Clusterer {
       num_with_feature++;
       // NOTE(lschmid): Can add PCA or other feature visualization here.
       attrs.color = Color::green();
-      attrs.is_active = true;
+      attrs.is_predicted = true;
     }
-    LOG(INFO) << "Parsed " << layer.nodes().size() << " nodes, of which " << num_with_id
-              << " had a assigned ID and " << num_with_feature
+    LOG(INFO) << "Parsed " << layer.nodes().size() << " place nodes, of which "
+              << num_with_id << " had an assigned ID and " << num_with_feature
               << " had valid features.";
 
     // Compute the edge similarities.
@@ -200,7 +207,7 @@ class Clusterer {
       edge.info->weighted = true;
       auto& source_attrs =
           layer.getNode(edge.source).attributes<TraversabilityNodeAttributes>();
-      if (!source_attrs.is_active) {
+      if (!source_attrs.is_predicted) {
         edge.info->weight = 0.0f;
         num_invalid++;
         continue;
@@ -208,7 +215,7 @@ class Clusterer {
 
       auto& target_attrs =
           layer.getNode(edge.target).attributes<TraversabilityNodeAttributes>();
-      if (!target_attrs.is_active) {
+      if (!target_attrs.is_predicted) {
         edge.info->weight = 0.0f;
         num_invalid++;
         continue;
@@ -241,8 +248,9 @@ class Clusterer {
       stddev = std::sqrt(sum_sq / distances.size() - mean * mean);
     }
 
-    LOG(INFO) << "Computed scores for " << layer.edges().size() << " edges, of which "
-              << num_invalid << " invalid. min: " << min_score << ", max: " << max_score
+    LOG(INFO) << "Computed scores for " << layer.edges().size()
+              << " place edges, of which " << num_invalid
+              << " invalid. min: " << min_score << ", max: " << max_score
               << ", mean: " << mean << ", stddev: " << stddev;
   }
 
@@ -284,16 +292,17 @@ class Clusterer {
     if (config.src_path == prev_config_.src_path && graph_) {
       return true;
     }
+    LOG(INFO) << "Loading graph from '" << config.src_path << "'.";
     graph_ = spark_dsg::DynamicSceneGraph::load(config.src_path);
+    labels_.reset();  // Invalidate labels.
     if (!graph_) {
-      LOG(ERROR) << "Failed to load graph from '" << config.src_path << "'.";
+      LOG(ERROR) << "Failed to load graph";
       return false;
     }
-    LOG(INFO) << "Loaded graph from '" << config.src_path << "'.";
 
     // Mark nodes inactive by default.
-    for (auto& [_, layer] : graph_->layers()) {
-      for (auto& [_, node] : layer->nodes()) {
+    for (const auto& [layer_name, _] : graph_->layer_names()) {
+      for (const auto& [_, node] : graph_->getLayer(layer_name).nodes()) {
         node->attributes().is_active = false;
       }
     }
@@ -304,6 +313,7 @@ class Clusterer {
                  << "', cannot cluster places.";
       return false;
     }
+    LOG(INFO) << "Loaded and parsed new graph.";
     return true;
   }
 
