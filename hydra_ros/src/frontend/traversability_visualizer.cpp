@@ -173,7 +173,7 @@ Color TraversabilityVisualizer::debugColor(float value) const {
   if (value < 0.0f) {
     return Color::black();
   }
-  return spark_dsg::colormaps::rainbowId(static_cast<int>(value), 5);
+  return spark_dsg::colormaps::rainbowId(static_cast<int>(value), 10);
 }
 
 }  // namespace hydra

@@ -51,7 +51,7 @@ class AstroTraversabilityEstimator : public TraversabilityEstimator {
   struct Config {
     //! @brief The height above the robot body to consider for traversability in meters.
     std::string input_topic = "/local_cost_map";
-    unsigned int queue_size = 1;
+    unsigned int queue_size = 2;
   } const config;
 
   using State = spark_dsg::TraversabilityState;

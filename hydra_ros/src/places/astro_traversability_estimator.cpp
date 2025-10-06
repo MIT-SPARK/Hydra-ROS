@@ -108,7 +108,7 @@ void AstroTraversabilityEstimator::callback(
       const State state = occupancyToTraversability(msg->data[idx]);
       // Compute the voxel coordinates.
       const Eigen::Vector3f position =
-          Eigen::Vector3f(x + 0.5f, y + 0.5f, 0.0f) * voxel_size + origin;
+          Eigen::Vector3f(x, y, 0.0f) * voxel_size + origin;
       const auto index = traversability_layer_->globalIndexFromPoint(position);
       // TODO(lschmid): Fix the allocate block interfaces for the traversability layer.
       auto& block = traversability_layer_->allocateBlock(
