@@ -128,15 +128,6 @@ void TraversabilityPlugin::drawBoundaries(const Config& config,
   marker.ns = "boundaries";
   marker.pose.orientation.w = 1.0;
   marker.scale.x = config.line_width;
-
-  // Start and stop indices for the corner points of the boundary along the state
-  // direction.
-  static const std::array<std::pair<size_t, size_t>, 4> state_pairs = {
-      std::make_pair(1, 0),
-      std::make_pair(1, 2),
-      std::make_pair(2, 3),
-      std::make_pair(0, 3)};
-
   for (const auto& [node_id, node] : layer.nodes()) {
     const auto& attrs = node->attributes<TraversabilityNodeAttributes>();
 
@@ -145,57 +136,97 @@ void TraversabilityPlugin::drawBoundaries(const Config& config,
     marker.points.clear();
     marker.colors.clear();
 
-    // Get the world frame positions of the boundary points, adjusted for the line width
-    // for non-overlapping rendering. bot-right, bot-left, top-left, top-right
-    std::vector<Eigen::Vector3d> pts;
-    pts.reserve(4);
-    pts.emplace_back(attrs.boundary.max.x() - config.line_width,
-                     attrs.boundary.min.y() + config.line_width,
-                     0);
-    pts.emplace_back(attrs.boundary.min.x() + config.line_width,
-                     attrs.boundary.min.y() + config.line_width,
-                     0);
-    pts.emplace_back(attrs.boundary.min.x() + config.line_width,
-                     attrs.boundary.max.y() - config.line_width,
-                     0);
-    pts.emplace_back(attrs.boundary.max.x() - config.line_width,
-                     attrs.boundary.max.y() - config.line_width,
-                     0);
-    for (auto& point : pts) {
-      point += attrs.position;
-      point.z() = config.slice_height;
+    if (attrs.boundary.type == spark_dsg::BoundaryType::BLOCK) {
+      drawBlockBoundary(config, attrs, marker);
+    } else if (attrs.boundary.type == spark_dsg::BoundaryType::REGION) {
+      drawRegionBoundary(config, attrs, marker);
     }
 
-    // Draw the boundary points as a line segment, where individual states break up the
-    // line in equal parts if present.
-    for (size_t i = 0; i < 4; ++i) {
-      const auto& states = attrs.boundary.states[i];
-      const size_t start = state_pairs[i].first;
-      const size_t end = state_pairs[i].second;
-      tf2::convert(pts[start], marker.points.emplace_back());  // First point.
-
-      if (states.empty()) {
-        // Single unknown boundary.
-        addBoundaryPoint(config, marker, pts[end], TraversabilityState::UNKNOWN, true);
-        continue;
-      }
-
-      // Add line segments for continuous states.
-      auto current_state = states[0];
-      for (size_t j = 1; j < states.size(); ++j) {
-        if (states[j] != current_state) {
-          const double fraction = static_cast<double>(j) / (states.size() - 1);
-          Eigen::Vector3d segment_point =
-              pts[start] * (1.0 - fraction) + pts[end] * fraction;
-          addBoundaryPoint(config, marker, segment_point, current_state);
-          current_state = states[j];
-        }
-      }
-      addBoundaryPoint(config, marker, pts[end], current_state, true);
-    }
-
-    // Wrap around the last point to the first point.
     tracker_.add(marker, msg);
+  }
+}
+
+void TraversabilityPlugin::drawBlockBoundary(
+    const Config& config,
+    const spark_dsg::TraversabilityNodeAttributes& attrs,
+    visualization_msgs::msg::Marker& marker) const {
+  // Get the world frame positions of the boundary points, adjusted for the line width
+  // for non-overlapping rendering. bot-right, bot-left, top-left, top-right
+  std::vector<Eigen::Vector3d> pts;
+  pts.reserve(4);
+  pts.emplace_back(attrs.boundary.max.x() - config.line_width,
+                   attrs.boundary.min.y() + config.line_width,
+                   0);
+  pts.emplace_back(attrs.boundary.min.x() + config.line_width,
+                   attrs.boundary.min.y() + config.line_width,
+                   0);
+  pts.emplace_back(attrs.boundary.min.x() + config.line_width,
+                   attrs.boundary.max.y() - config.line_width,
+                   0);
+  pts.emplace_back(attrs.boundary.max.x() - config.line_width,
+                   attrs.boundary.max.y() - config.line_width,
+                   0);
+  for (auto& point : pts) {
+    point += attrs.position;
+    point.z() = config.slice_height;
+  }
+
+  // Draw the boundary points as a line segment, where individual states break up the
+  // line in equal parts if present.
+  for (size_t i = 0; i < 4; ++i) {
+    const auto& states = attrs.boundary.states[i];
+    const size_t start = state_pairs_[i].first;
+    const size_t end = state_pairs_[i].second;
+    tf2::convert(pts[start], marker.points.emplace_back());  // First point.
+
+    if (states.empty()) {
+      // Single unknown boundary.
+      addBoundaryPoint(config, marker, pts[end], TraversabilityState::UNKNOWN, true);
+      continue;
+    }
+
+    // Add line segments for continuous states.
+    auto current_state = states[0];
+    for (size_t j = 1; j < states.size(); ++j) {
+      if (states[j] != current_state) {
+        const double fraction = static_cast<double>(j) / (states.size() - 1);
+        Eigen::Vector3d segment_point =
+            pts[start] * (1.0 - fraction) + pts[end] * fraction;
+        addBoundaryPoint(config, marker, segment_point, current_state);
+        current_state = states[j];
+      }
+    }
+    addBoundaryPoint(config, marker, pts[end], current_state, true);
+  }
+}
+
+void TraversabilityPlugin::drawRegionBoundary(
+    const Config& config,
+    const spark_dsg::TraversabilityNodeAttributes& attrs,
+    visualization_msgs::msg::Marker& marker) const {
+  // Draw two circles.
+  constexpr size_t num_segments = 20;
+  std::vector<geometry_msgs::msg::Point> outer_points;
+  for (size_t i = 0; i <= num_segments; ++i) {
+    const double theta = static_cast<double>(i) / num_segments * 2.0 * M_PI;
+    const auto dir = Eigen::Vector3d(sin(theta), cos(theta), 0.0);
+    Eigen::Vector3d point = attrs.position + dir * attrs.boundary.min.x();
+    tf2::convert(point, marker.points.emplace_back());
+    marker.points.emplace_back(marker.points.back());
+    point = attrs.position + dir * attrs.boundary.max.x();
+    tf2::convert(point, outer_points.emplace_back());
+  }
+  for (const auto& point : outer_points) {
+    marker.points.emplace_back(point);
+    marker.points.emplace_back(point);
+  }
+  auto color = visualizer::makeColorMsg(config.colors[1]);
+  for (size_t i = 0; i < num_segments * 2; ++i) {
+    marker.colors.emplace_back(color);
+  }
+  color = visualizer::makeColorMsg(config.colors[0]);
+  for (size_t i = 0; i < num_segments * 2; ++i) {
+    marker.colors.emplace_back(color);
   }
 }
 

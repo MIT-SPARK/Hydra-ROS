@@ -70,7 +70,7 @@ TraversabilityVisualizer::TraversabilityVisualizer(const Config& config)
               config::checkValid(config),
               [this]() { onConfigUpdate(); }),
       nh_(ianvs::NodeHandle::this_node(config.ns)),
-      layer_pub_(nh_.create_publisher<visualization_msgs::msg::Marker>("layer", 10)) {
+      layer_pub_(nh_.create_publisher<visualization_msgs::msg::Marker>("layer", 100)) {
   onConfigUpdate();
 }
 
