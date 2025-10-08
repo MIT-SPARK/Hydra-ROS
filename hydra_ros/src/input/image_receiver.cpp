@@ -56,11 +56,28 @@ ColorSubscriber::Filter& ColorSubscriber::getFilter() const {
 }
 
 void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
-  try {
-    packet.color = cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8)->image;
-  } catch (const cv_bridge::Exception& e) {
-    LOG(ERROR) << "Failed to convert color image: " << e.what();
+  // Allow also mono images to be converted to grayscale.
+  if (sensor_msgs::image_encodings::isColor(img.encoding)) {
+    try {
+      packet.color =
+          cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8)->image;
+      return;
+    } catch (const cv_bridge::Exception& e) {
+      LOG(ERROR) << "Failed to convert mono image as color input: " << e.what();
+      return;
+    }
+  } else if (sensor_msgs::image_encodings::isMono(img.encoding)) {
+    try {
+      cv::Mat mono =
+          cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::MONO8)->image;
+      cv::cvtColor(mono, packet.color, cv::COLOR_GRAY2RGB);
+      return;
+    } catch (const cv_bridge::Exception& e) {
+      LOG(ERROR) << "Failed to convert color image: " << e.what();
+      return;
+    }
   }
+  LOG(ERROR) << "Failed to convert color image: unsupported encoding: " << img.encoding;
 }
 
 DepthSubscriber::DepthSubscriber() = default;
@@ -130,6 +147,38 @@ void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) 
   }
 }
 
+void declare_config(RGBDImageReceiver::Config& config) {
+  using namespace config;
+  name("RGBDImageReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
+
+RGBDImageReceiver::RGBDImageReceiver(const Config& config,
+                                     const std::string& sensor_name)
+    : RosDataReceiver(config, sensor_name) {}
+
+bool RGBDImageReceiver::initImpl() {
+  color_sub_ = ColorSubscriber(ianvs::NodeHandle::this_node(ns_));
+  depth_sub_ = DepthSubscriber(ianvs::NodeHandle::this_node(ns_));
+  sync_.reset(new Synchronizer(
+      Policy(config.queue_size), color_sub_.getFilter(), depth_sub_.getFilter()));
+  sync_->registerCallback(&RGBDImageReceiver::callback, this);
+  return true;
+}
+
+void RGBDImageReceiver::callback(const sensor_msgs::msg::Image::ConstSharedPtr& color,
+                                 const sensor_msgs::msg::Image::ConstSharedPtr& depth) {
+  const auto timestamp_ns = rclcpp::Time(color->header.stamp).nanoseconds();
+  if (!checkInputTimestamp(timestamp_ns)) {
+    return;
+  }
+
+  auto packet = std::make_shared<ImageInputPacket>(timestamp_ns, sensor_name_);
+  color_sub_.fillInput(*color, *packet);
+  depth_sub_.fillInput(*depth, *packet);
+  queue.push(packet);
+}
+
 void declare_config(ClosedSetImageReceiver::Config& config) {
   using namespace config;
   name("ClosedSetImageReceiver::Config");
@@ -151,6 +200,12 @@ OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
     : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
 
 namespace {
+
+static const auto no_semantic_registration =
+    config::RegistrationWithConfig<DataReceiver,
+                                   RGBDImageReceiver,
+                                   RGBDImageReceiver::Config,
+                                   std::string>("RGBDImageReceiver");
 
 static const auto closed_registration =
     config::RegistrationWithConfig<DataReceiver,

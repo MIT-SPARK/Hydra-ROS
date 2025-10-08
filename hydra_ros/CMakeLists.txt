@@ -49,6 +49,7 @@ add_library(
   src/input/ros_data_receiver.cpp
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
+  src/places/external_traversability_estimator.cpp
   src/odometry/ros_pose_graph_tracker.cpp
   src/openset/ros_embedding_group.cpp
   src/utils/bow_subscriber.cpp

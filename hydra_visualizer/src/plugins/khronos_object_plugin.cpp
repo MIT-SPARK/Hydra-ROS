@@ -122,7 +122,7 @@ KhronosObjectPlugin::KhronosObjectPlugin(const Config& config,
                                          ianvs::NodeHandle nh,
                                          const std::string& name)
     : VisualizerPlugin(name),
-      config(config::checkValid(config)),
+      config_("KhronosObjectPlugin", config::checkValid(config)),
       dynamic_pub_(
           nh.create_publisher<MarkerArray>("dynamic_objects", config.queue_size)),
       static_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>("static_objects",
@@ -131,11 +131,12 @@ KhronosObjectPlugin::KhronosObjectPlugin(const Config& config,
 
 void KhronosObjectPlugin::draw(const std_msgs::msg::Header& header,
                                const DynamicSceneGraph& graph) {
+  const auto config = config_.get();
   if (!graph.hasLayer(config.layer)) {
     return;
   }
-  drawDynamicObjects(header, graph);
-  drawStaticObjects(header, graph);
+  drawDynamicObjects(config, header, graph);
+  drawStaticObjects(config, header, graph);
 }
 
 void KhronosObjectPlugin::reset(const std_msgs::msg::Header& header) {
@@ -153,7 +154,8 @@ void KhronosObjectPlugin::reset(const std_msgs::msg::Header& header) {
   previous_objects_.clear();
 }
 
-void KhronosObjectPlugin::drawDynamicObjects(const std_msgs::msg::Header& header,
+void KhronosObjectPlugin::drawDynamicObjects(const Config& config,
+                                             const std_msgs::msg::Header& header,
                                              const DynamicSceneGraph& graph) {
   if (dynamic_pub_->get_subscription_count() == 0) {
     return;
@@ -171,7 +173,7 @@ void KhronosObjectPlugin::drawDynamicObjects(const std_msgs::msg::Header& header
 
     const uint64_t id = spark_dsg::NodeSymbol(node_id).categoryId();
     spark_dsg::BoundingBox bbox = attrs->bounding_box;
-    const auto color = visualizer::makeColorMsg(getDynamicColor(*attrs, id));
+    const auto color = visualizer::makeColorMsg(getDynamicColor(config, *attrs, id));
 
     Marker bbox_template;
     bbox_template.type = Marker::LINE_LIST;
@@ -220,7 +222,8 @@ void KhronosObjectPlugin::drawDynamicObjects(const std_msgs::msg::Header& header
   dynamic_pub_->publish(msg);
 }
 
-void KhronosObjectPlugin::drawStaticObjects(const std_msgs::msg::Header& header,
+void KhronosObjectPlugin::drawStaticObjects(const Config& config,
+                                            const std_msgs::msg::Header& header,
                                             const DynamicSceneGraph& dsg) {
   if (static_pub_->get_subscription_count() == 0) {
     return;
@@ -295,7 +298,8 @@ void KhronosObjectPlugin::publishTransform(const std_msgs::msg::Header& header,
   tf_broadcaster_.sendTransform(msg);
 }
 
-Color KhronosObjectPlugin::getDynamicColor(const KhronosObjectAttributes& attrs,
+Color KhronosObjectPlugin::getDynamicColor(const Config& config,
+                                           const KhronosObjectAttributes& attrs,
                                            const uint64_t id) const {
   switch (config.dynamic_color_mode) {
     case Config::DynamicColorMode::ID:

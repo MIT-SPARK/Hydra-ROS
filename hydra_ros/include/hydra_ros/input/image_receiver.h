@@ -182,6 +182,30 @@ void ImageReceiverImpl<SemanticT>::callback(
   queue.push(packet);
 }
 
+class RGBDImageReceiver : public RosDataReceiver {
+ public:
+  struct Config : RosDataReceiver::Config {};
+  using Policy =
+      message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::Image,
+                                                      sensor_msgs::msg::Image>;
+  using Synchronizer = message_filters::Synchronizer<Policy>;
+
+  RGBDImageReceiver(const Config& config, const std::string& sensor_name);
+  virtual ~RGBDImageReceiver() = default;
+
+ protected:
+  bool initImpl() override;
+
+  void callback(const sensor_msgs::msg::Image::ConstSharedPtr& color,
+                const sensor_msgs::msg::Image::ConstSharedPtr& depth);
+
+  ColorSubscriber color_sub_;
+  DepthSubscriber depth_sub_;
+  std::unique_ptr<Synchronizer> sync_;
+};
+
+void declare_config(RGBDImageReceiver::Config& config);
+
 class ClosedSetImageReceiver : public ImageReceiverImpl<LabelSubscriber> {
  public:
   struct Config : RosDataReceiver::Config {};

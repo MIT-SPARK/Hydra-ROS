@@ -58,10 +58,6 @@ using spark_dsg::DynamicSceneGraph;
 void declare_config(MeshPlugin::Config& config) {
   using namespace config;
   name("MeshPlugin::Config");
-  // TODO(lschmid): Not the most elegant, would be nice to dynamically set different
-  // colorings once config_utilities dynamic config is ready.
-  field(config.use_color_adapter, "use_color_adapter");
-  config.coloring.setOptional();
   field(config.coloring, "coloring");
 }
 
@@ -69,16 +65,9 @@ MeshPlugin::MeshPlugin(const Config& config,
                        ianvs::NodeHandle nh,
                        const std::string& name)
     : VisualizerPlugin(name),
-      config(config::checkValid(config)),
-      use_color_adapter_(config.use_color_adapter),
+      config_("MeshPlugin", config::checkValid(config)),
       mesh_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>(
-          name, rclcpp::QoS(1).transient_local())),
-      mesh_coloring_(config.coloring.create()) {
-  if (mesh_coloring_) {
-    toggle_service_ = (nh / name).create_service<std_srvs::srv::SetBool>(
-        "use_color_adapter", &MeshPlugin::handleService, this);
-  }
-}
+          name, rclcpp::QoS(1).transient_local())) {}
 
 MeshPlugin::~MeshPlugin() {}
 
@@ -89,13 +78,10 @@ void MeshPlugin::draw(const std_msgs::msg::Header& header,
     return;
   }
 
-  if (use_color_adapter_ && !mesh_coloring_) {
-    LOG(WARNING)
-        << "[MeshPlugin] Invalid colormap; defaulting to original vertex color";
-  }
+  const auto config = config_.get();
 
   auto msg = visualizer::makeMeshMsg(
-      header, *mesh, getMsgNamespace(), use_color_adapter_ ? mesh_coloring_ : nullptr);
+      header, *mesh, getMsgNamespace(), config.coloring.create());
   mesh_pub_->publish(msg);
 }
 
@@ -109,13 +95,6 @@ void MeshPlugin::reset(const std_msgs::msg::Header& header) {
 std::string MeshPlugin::getMsgNamespace() const {
   // TODO(lschmid): Hardcoded for now. Eventually read from scene graph or so.
   return "robot0/dsg_mesh";
-}
-
-void MeshPlugin::handleService(const std_srvs::srv::SetBool::Request::SharedPtr& req,
-                               std_srvs::srv::SetBool::Response::SharedPtr res) {
-  use_color_adapter_ = req->data;
-  res->success = true;
-  has_change_ = true;
 }
 
 }  // namespace hydra

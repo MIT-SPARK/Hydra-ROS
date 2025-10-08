@@ -33,44 +33,49 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/dynamic_config.h>
-#include <config_utilities/virtual_config.h>
-#include <ianvs/node_handle.h>
 
-#include <kimera_pgmo_msgs/msg/mesh.hpp>
-#include <rclcpp/publisher.hpp>
+#include <hydra/places/traversability_estimator.h>
 
-#include "hydra_visualizer/adapters/mesh_color.h"
-#include "hydra_visualizer/plugins/visualizer_plugin.h"
+#include <mutex>
 
-namespace hydra {
+#include <nav_msgs/msg/occupancy_grid.hpp>
+#include <rclcpp/rclcpp.hpp>
 
-class MeshPlugin : public VisualizerPlugin {
+namespace hydra::places {
+
+/**
+ * @brief Takes in an external traversability map as occupancy grid to perform
+ * traversability analysis.
+ */
+class ExternalTraversabilityEstimator : public TraversabilityEstimator {
  public:
-  using Labels = std::vector<uint32_t>;
-  using LabelsPtr = std::shared_ptr<Labels>;
-
   struct Config {
-    config::VirtualConfig<MeshColoring, true> coloring;
-  };
+    //! @brief The height above the robot body to consider for traversability in meters.
+    std::string input_topic = "/local_cost_map";
+    unsigned int queue_size = 2;
+  } const config;
 
-  MeshPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
+  using State = spark_dsg::TraversabilityState;
 
-  virtual ~MeshPlugin();
+  ExternalTraversabilityEstimator(const Config& config);
+  ~ExternalTraversabilityEstimator() override = default;
 
-  void draw(const std_msgs::msg::Header& header,
-            const spark_dsg::DynamicSceneGraph& graph) override;
+  void updateTraversability(const ActiveWindowOutput& msg,
+                            const kimera_pgmo::MeshDelta& /* mesh_delta */,
+                            const spark_dsg::DynamicSceneGraph& /* graph */) override;
 
-  void reset(const std_msgs::msg::Header& header) override;
+  void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
+
+  const TraversabilityLayer& getTraversabilityLayer() const override;
 
  protected:
-  config::DynamicConfig<Config> config_;
+  rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr sub_;
+  mutable std::mutex mutex_;
 
-  std::string getMsgNamespace() const;
-
-  rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
+ protected:
+  State occupancyToTraversability(int8_t occupancy) const;
 };
 
-void declare_config(MeshPlugin::Config& config);
+void declare_config(ExternalTraversabilityEstimator::Config& config);
 
-}  // namespace hydra
+}  // namespace hydra::places
