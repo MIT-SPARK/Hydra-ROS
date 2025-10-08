@@ -45,35 +45,35 @@ using spark_dsg::TraversabilityState;
 
 static const auto registration =
     config::RegistrationWithConfig<TraversabilityEstimator,
-                                   AstroTraversabilityEstimator,
-                                   AstroTraversabilityEstimator::Config>(
-        "AstroTraversabilityEstimator");
+                                   ExternalTraversabilityEstimator,
+                                   ExternalTraversabilityEstimator::Config>(
+        "ExternalTraversabilityEstimator");
 
-void declare_config(AstroTraversabilityEstimator::Config& config) {
+void declare_config(ExternalTraversabilityEstimator::Config& config) {
   using namespace config;
-  name("AstroTraversabilityEstimator::Config");
+  name("ExternalTraversabilityEstimator::Config");
   field(config.input_topic, "input_topic");
   field(config.queue_size, "queue_size");
   checkCondition(!config.input_topic.empty(), "'input_topic' must be specified");
 }
 
-AstroTraversabilityEstimator::AstroTraversabilityEstimator(const Config& config)
+ExternalTraversabilityEstimator::ExternalTraversabilityEstimator(const Config& config)
     : config(config::checkValid(config)) {
   auto nh = ianvs::NodeHandle::this_node();
   sub_ = nh.create_subscription<nav_msgs::msg::OccupancyGrid>(
       config.input_topic,
       config.queue_size,
-      &AstroTraversabilityEstimator::callback,
+      &ExternalTraversabilityEstimator::callback,
       this);
 }
 
-const TraversabilityLayer& AstroTraversabilityEstimator::getTraversabilityLayer()
+const TraversabilityLayer& ExternalTraversabilityEstimator::getTraversabilityLayer()
     const {
   std::lock_guard<std::mutex> lock(mutex_);
   return *traversability_layer_;
 }
 
-void AstroTraversabilityEstimator::updateTraversability(
+void ExternalTraversabilityEstimator::updateTraversability(
     const ActiveWindowOutput& msg,
     const kimera_pgmo::MeshDelta&,
     const spark_dsg::DynamicSceneGraph&) {
@@ -84,7 +84,7 @@ void AstroTraversabilityEstimator::updateTraversability(
   }
 }
 
-void AstroTraversabilityEstimator::callback(
+void ExternalTraversabilityEstimator::callback(
     const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
   if (!traversability_layer_) {
     return;
@@ -137,8 +137,8 @@ void AstroTraversabilityEstimator::callback(
   traversability_layer_->removeBlocks(to_remove);
 }
 
-AstroTraversabilityEstimator::State
-AstroTraversabilityEstimator::occupancyToTraversability(int8_t occupancy) const {
+ExternalTraversabilityEstimator::State
+ExternalTraversabilityEstimator::occupancyToTraversability(int8_t occupancy) const {
   if (occupancy < 0) {
     return State::UNKNOWN;
   }

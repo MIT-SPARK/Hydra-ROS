@@ -44,9 +44,10 @@
 namespace hydra::places {
 
 /**
- * @brief Takes in an external traversability map from astro.
+ * @brief Takes in an external traversability map as occupancy grid to perform
+ * traversability analysis.
  */
-class AstroTraversabilityEstimator : public TraversabilityEstimator {
+class ExternalTraversabilityEstimator : public TraversabilityEstimator {
  public:
   struct Config {
     //! @brief The height above the robot body to consider for traversability in meters.
@@ -56,8 +57,8 @@ class AstroTraversabilityEstimator : public TraversabilityEstimator {
 
   using State = spark_dsg::TraversabilityState;
 
-  AstroTraversabilityEstimator(const Config& config);
-  ~AstroTraversabilityEstimator() override = default;
+  ExternalTraversabilityEstimator(const Config& config);
+  ~ExternalTraversabilityEstimator() override = default;
 
   void updateTraversability(const ActiveWindowOutput& msg,
                             const kimera_pgmo::MeshDelta& /* mesh_delta */,
@@ -75,6 +76,6 @@ class AstroTraversabilityEstimator : public TraversabilityEstimator {
   State occupancyToTraversability(int8_t occupancy) const;
 };
 
-void declare_config(AstroTraversabilityEstimator::Config& config);
+void declare_config(ExternalTraversabilityEstimator::Config& config);
 
 }  // namespace hydra::places
