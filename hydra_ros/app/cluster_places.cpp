@@ -319,7 +319,7 @@ class Clusterer {
 
   void save(const Config& config) {
     if (config.dst_path == prev_config_.dst_path) {
-      return;
+      LOG(INFO) << "Overwriting previous output at " << config.dst_path << ".";
     }
     merged_graph_->save(config.dst_path);
     LOG(INFO) << "Saved clustered graph to '" << config.dst_path << "'.";
