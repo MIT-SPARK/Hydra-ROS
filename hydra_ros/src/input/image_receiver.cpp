@@ -147,28 +147,27 @@ void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) 
   }
 }
 
-void declare_config(NoSemanticImageReceiver::Config& config) {
+void declare_config(RGBDImageReceiver::Config& config) {
   using namespace config;
-  name("NoSemanticImageReceiver::Config");
+  name("RGBDImageReceiver::Config");
   base<RosDataReceiver::Config>(config);
 }
 
-NoSemanticImageReceiver::NoSemanticImageReceiver(const Config& config,
-                                                 const std::string& sensor_name)
+RGBDImageReceiver::RGBDImageReceiver(const Config& config,
+                                     const std::string& sensor_name)
     : RosDataReceiver(config, sensor_name) {}
 
-bool NoSemanticImageReceiver::initImpl() {
+bool RGBDImageReceiver::initImpl() {
   color_sub_ = ColorSubscriber(ianvs::NodeHandle::this_node(ns_));
   depth_sub_ = DepthSubscriber(ianvs::NodeHandle::this_node(ns_));
   sync_.reset(new Synchronizer(
       Policy(config.queue_size), color_sub_.getFilter(), depth_sub_.getFilter()));
-  sync_->registerCallback(&NoSemanticImageReceiver::callback, this);
+  sync_->registerCallback(&RGBDImageReceiver::callback, this);
   return true;
 }
 
-void NoSemanticImageReceiver::callback(
-    const sensor_msgs::msg::Image::ConstSharedPtr& color,
-    const sensor_msgs::msg::Image::ConstSharedPtr& depth) {
+void RGBDImageReceiver::callback(const sensor_msgs::msg::Image::ConstSharedPtr& color,
+                                 const sensor_msgs::msg::Image::ConstSharedPtr& depth) {
   const auto timestamp_ns = rclcpp::Time(color->header.stamp).nanoseconds();
   if (!checkInputTimestamp(timestamp_ns)) {
     return;
@@ -204,9 +203,9 @@ namespace {
 
 static const auto no_semantic_registration =
     config::RegistrationWithConfig<DataReceiver,
-                                   NoSemanticImageReceiver,
-                                   NoSemanticImageReceiver::Config,
-                                   std::string>("NoSemanticImageReceiver");
+                                   RGBDImageReceiver,
+                                   RGBDImageReceiver::Config,
+                                   std::string>("RGBDImageReceiver");
 
 static const auto closed_registration =
     config::RegistrationWithConfig<DataReceiver,

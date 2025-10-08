@@ -182,7 +182,7 @@ void ImageReceiverImpl<SemanticT>::callback(
   queue.push(packet);
 }
 
-class NoSemanticImageReceiver : public RosDataReceiver {
+class RGBDImageReceiver : public RosDataReceiver {
  public:
   struct Config : RosDataReceiver::Config {};
   using Policy =
@@ -190,8 +190,8 @@ class NoSemanticImageReceiver : public RosDataReceiver {
                                                       sensor_msgs::msg::Image>;
   using Synchronizer = message_filters::Synchronizer<Policy>;
 
-  NoSemanticImageReceiver(const Config& config, const std::string& sensor_name);
-  virtual ~NoSemanticImageReceiver() = default;
+  RGBDImageReceiver(const Config& config, const std::string& sensor_name);
+  virtual ~RGBDImageReceiver() = default;
 
  protected:
   bool initImpl() override;
@@ -204,7 +204,7 @@ class NoSemanticImageReceiver : public RosDataReceiver {
   std::unique_ptr<Synchronizer> sync_;
 };
 
-void declare_config(NoSemanticImageReceiver::Config& config);
+void declare_config(RGBDImageReceiver::Config& config);
 
 class ClosedSetImageReceiver : public ImageReceiverImpl<LabelSubscriber> {
  public:
