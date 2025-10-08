@@ -32,12 +32,12 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/places/astro_traversability_estimator.h"
-
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/traversability_boundary.h>
+
+#include "hydra_ros/places/external_traversability_estimator.h"
 
 namespace hydra::places {
 
