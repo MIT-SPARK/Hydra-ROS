@@ -74,9 +74,7 @@ const TraversabilityLayer& ExternalTraversabilityEstimator::getTraversabilityLay
 }
 
 void ExternalTraversabilityEstimator::updateTraversability(
-    const ActiveWindowOutput& msg,
-    const kimera_pgmo::MeshDelta&,
-    const spark_dsg::DynamicSceneGraph&) {
+    const ActiveWindowOutput& msg) {
   if (!traversability_layer_) {
     const auto& map_config = msg.map().config;
     traversability_layer_ = std::make_unique<TraversabilityLayer>(
