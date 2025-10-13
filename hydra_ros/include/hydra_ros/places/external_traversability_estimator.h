@@ -60,9 +60,7 @@ class ExternalTraversabilityEstimator : public TraversabilityEstimator {
   ExternalTraversabilityEstimator(const Config& config);
   ~ExternalTraversabilityEstimator() override = default;
 
-  void updateTraversability(const ActiveWindowOutput& msg,
-                            const kimera_pgmo::MeshDelta& /* mesh_delta */,
-                            const spark_dsg::DynamicSceneGraph& /* graph */) override;
+  void updateTraversability(const ActiveWindowOutput& msg) override;
 
   void callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
 
