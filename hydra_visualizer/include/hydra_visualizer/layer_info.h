@@ -74,7 +74,9 @@ struct LayerConfig {
     double scale = 0.03;  //[ 0.001, 1.0]
     //! @brief intralayer edge alpha
     double alpha = 1.0;  //[ 0.0, 1.0]
-    //! @brief show intralayer edge in color
+    //! @brief Color to use for edge
+    NamedColors color = NamedColors::BLACK;
+    //! @brief show intralayer edge using node colors
     bool use_color = true;
     //! @brief draw interlayer edges
     bool draw_interlayer = true;
@@ -84,7 +86,7 @@ struct LayerConfig {
     double interlayer_scale = 0.03;  // [0.001, 1.0]
     //! @brief interlayer edge alpha
     double interlayer_alpha = 1.0;  // [0.0, 1.0]
-    //! @brief show interlayer edge in color
+    //! @brief show interlayer edge using node colors
     bool interlayer_use_color = true;
     //! @brief Number of edges to skip when drawing interlayer edges
     size_t interlayer_insertion_skip = 0;  // [0, 1000]
@@ -161,6 +163,7 @@ class LayerInfo {
 
   bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
   spark_dsg::Color text_color() const;
+  spark_dsg::Color edge_color() const;
 
   const LayerConfig config;
 

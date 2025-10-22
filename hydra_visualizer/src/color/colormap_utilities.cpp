@@ -73,6 +73,37 @@ std::function<Color(size_t)> lookupColormap(DiscretePalette cmap) {
 
 }  // namespace
 
+spark_dsg::Color colorFromName(NamedColors color) {
+  switch (color) {
+    case NamedColors::BLACK:
+      return spark_dsg::Color::black();
+    case NamedColors::WHITE:
+      return spark_dsg::Color::white();
+    case NamedColors::RED:
+      return spark_dsg::Color::red();
+    case NamedColors::GREEN:
+      return spark_dsg::Color::green();
+    case NamedColors::BLUE:
+      return spark_dsg::Color::blue();
+    case NamedColors::YELLOW:
+      return spark_dsg::Color::yellow();
+    case NamedColors::ORANGE:
+      return spark_dsg::Color::orange();
+    case NamedColors::PURPLE:
+      return spark_dsg::Color::purple();
+    case NamedColors::CYAN:
+      return spark_dsg::Color::cyan();
+    case NamedColors::MAGENTA:
+      return spark_dsg::Color::magenta();
+    case NamedColors::PINK:
+      return spark_dsg::Color::pink();
+    case NamedColors::GRAY:
+      return spark_dsg::Color::gray();
+    default:
+      return spark_dsg::Color::black();
+  }
+}
+
 std_msgs::msg::ColorRGBA makeColorMsg(const Color& color, std::optional<double> alpha) {
   std_msgs::msg::ColorRGBA msg;
   msg.r = static_cast<double>(color.r) / 255.0;
