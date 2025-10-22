@@ -195,13 +195,9 @@ LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerId layer) {
   return *this;
 }
 
-Color LayerInfo::text_color() const {
-  return colorFromName(config.text.color);
-}
+Color LayerInfo::text_color() const { return colorFromName(config.text.color); }
 
-Color LayerInfo::edge_color() const {
-  return colorFromName(config.edges.color);
-}
+Color LayerInfo::edge_color() const { return colorFromName(config.edges.color); }
 
 bool LayerInfo::shouldVisualize(const spark_dsg::SceneGraphNode& node) const {
   if (!config.visualize) {
