@@ -436,7 +436,7 @@ MarkerArray makeLayerNodeTextMarkers(const std_msgs::msg::Header& header,
 
     marker.text = name.empty() ? NodeSymbol(node->id).str() : name;
     marker.scale.z = info.config.text.scale;
-    marker.color = makeColorMsg(Color());
+    marker.color = makeColorMsg(info.text_color());
 
     fillPoseWithIdentity(marker.pose);
     tf2::convert(node->attributes().position, marker.pose.position);
@@ -605,7 +605,7 @@ Marker makeLayerTextMarker(const std_msgs::msg::Header& header,
   marker.id = 0;
   marker.action = Marker::ADD;
   marker.scale.z = info.config.text.scale;
-  marker.color = makeColorMsg(Color());
+  marker.color = makeColorMsg(info.text_color());
 
   std::optional<uint64_t> best_stamp;
   Eigen::Vector3d pos = Eigen::Vector3d::Zero();

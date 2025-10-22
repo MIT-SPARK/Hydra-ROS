@@ -35,6 +35,7 @@
 #include "hydra_visualizer/layer_info.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/types/enum.h>
 #include <spark_dsg/node_attributes.h>
 
 namespace hydra::visualizer {
@@ -91,6 +92,22 @@ void declare_config(LayerConfig::Text& config) {
   field(config.scale, "scale");
   field(config.add_jitter, "add_jitter");
   field(config.jitter_scale, "jitter_scale");
+  enum_field(config.color,
+             "color",
+             {
+                 {NamedColors::BLACK, "black"},
+                 {NamedColors::WHITE, "white"},
+                 {NamedColors::RED, "red"},
+                 {NamedColors::GREEN, "green"},
+                 {NamedColors::BLUE, "blue"},
+                 {NamedColors::YELLOW, "yellow"},
+                 {NamedColors::ORANGE, "orange"},
+                 {NamedColors::PURPLE, "purple"},
+                 {NamedColors::CYAN, "cyan"},
+                 {NamedColors::MAGENTA, "magenta"},
+                 {NamedColors::PINK, "pink"},
+                 {NamedColors::GRAY, "gray"},
+             });
 }
 
 void declare_config(LayerConfig::BoundingBoxes& config) {
@@ -160,6 +177,37 @@ LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerId layer) {
   }
 
   return *this;
+}
+
+Color LayerInfo::text_color() const {
+  switch (config.text.color) {
+    case NamedColors::BLACK:
+      return spark_dsg::Color::black();
+    case NamedColors::WHITE:
+      return spark_dsg::Color::white();
+    case NamedColors::RED:
+      return spark_dsg::Color::red();
+    case NamedColors::GREEN:
+      return spark_dsg::Color::green();
+    case NamedColors::BLUE:
+      return spark_dsg::Color::blue();
+    case NamedColors::YELLOW:
+      return spark_dsg::Color::yellow();
+    case NamedColors::ORANGE:
+      return spark_dsg::Color::orange();
+    case NamedColors::PURPLE:
+      return spark_dsg::Color::purple();
+    case NamedColors::CYAN:
+      return spark_dsg::Color::cyan();
+    case NamedColors::MAGENTA:
+      return spark_dsg::Color::magenta();
+    case NamedColors::PINK:
+      return spark_dsg::Color::pink();
+    case NamedColors::GRAY:
+      return spark_dsg::Color::gray();
+    default:
+      return spark_dsg::Color::black();
+  }
 }
 
 bool LayerInfo::shouldVisualize(const spark_dsg::SceneGraphNode& node) const {

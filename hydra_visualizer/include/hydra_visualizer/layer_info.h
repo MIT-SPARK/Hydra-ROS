@@ -108,6 +108,8 @@ struct LayerConfig {
     bool add_jitter = false;
     //! @brief amount of jitter to add
     double jitter_scale = 0.2;  //[ 0.05, 5.0]
+    //! @brief Color to use for text
+    NamedColors color = NamedColors::BLACK;
   } text;
 
   struct BoundingBoxes {
@@ -158,6 +160,7 @@ class LayerInfo {
   LayerInfo& graph(const spark_dsg::DynamicSceneGraph& graph, spark_dsg::LayerId layer);
 
   bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
+  spark_dsg::Color text_color() const;
 
   const LayerConfig config;
 
