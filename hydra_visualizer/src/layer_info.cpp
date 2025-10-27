@@ -72,22 +72,7 @@ void declare_config(LayerConfig::Edges& config) {
   field(config.draw, "draw");
   field(config.scale, "scale");
   field(config.alpha, "alpha");
-  enum_field(config.color,
-             "color",
-             {
-                 {NamedColors::BLACK, "black"},
-                 {NamedColors::WHITE, "white"},
-                 {NamedColors::RED, "red"},
-                 {NamedColors::GREEN, "green"},
-                 {NamedColors::BLUE, "blue"},
-                 {NamedColors::YELLOW, "yellow"},
-                 {NamedColors::ORANGE, "orange"},
-                 {NamedColors::PURPLE, "purple"},
-                 {NamedColors::CYAN, "cyan"},
-                 {NamedColors::MAGENTA, "magenta"},
-                 {NamedColors::PINK, "pink"},
-                 {NamedColors::GRAY, "gray"},
-             });
+  enum_field(config.color, "color");
   field(config.use_color, "use_color");
   field(config.draw_interlayer, "draw_interlayer");
   field(config.interlayer_use_source, "interlayer_use_source");
@@ -108,22 +93,7 @@ void declare_config(LayerConfig::Text& config) {
   field(config.scale, "scale");
   field(config.add_jitter, "add_jitter");
   field(config.jitter_scale, "jitter_scale");
-  enum_field(config.color,
-             "color",
-             {
-                 {NamedColors::BLACK, "black"},
-                 {NamedColors::WHITE, "white"},
-                 {NamedColors::RED, "red"},
-                 {NamedColors::GREEN, "green"},
-                 {NamedColors::BLUE, "blue"},
-                 {NamedColors::YELLOW, "yellow"},
-                 {NamedColors::ORANGE, "orange"},
-                 {NamedColors::PURPLE, "purple"},
-                 {NamedColors::CYAN, "cyan"},
-                 {NamedColors::MAGENTA, "magenta"},
-                 {NamedColors::PINK, "pink"},
-                 {NamedColors::GRAY, "gray"},
-             });
+  enum_field(config.color, "color");
 }
 
 void declare_config(LayerConfig::BoundingBoxes& config) {

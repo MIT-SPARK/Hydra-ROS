@@ -71,6 +71,22 @@ std::function<Color(size_t)> lookupColormap(DiscretePalette cmap) {
   }
 }
 
+static const auto enum_init =
+    config::Enum<NamedColors>::Initializer(std::map<NamedColors, std::string>{
+        {NamedColors::BLACK, "black"},
+        {NamedColors::WHITE, "white"},
+        {NamedColors::RED, "red"},
+        {NamedColors::GREEN, "green"},
+        {NamedColors::BLUE, "blue"},
+        {NamedColors::YELLOW, "yellow"},
+        {NamedColors::ORANGE, "orange"},
+        {NamedColors::PURPLE, "purple"},
+        {NamedColors::CYAN, "cyan"},
+        {NamedColors::MAGENTA, "magenta"},
+        {NamedColors::PINK, "pink"},
+        {NamedColors::GRAY, "gray"},
+    });
+
 }  // namespace
 
 spark_dsg::Color colorFromName(NamedColors color) {
