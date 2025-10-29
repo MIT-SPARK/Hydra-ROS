@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 
   [[maybe_unused]] const auto node = ianvs::init_node(argc, argv, "hydra_ros_node");
   auto nh = ianvs::NodeHandle::this_node();
-  const config::RosDynamicConfigServer config_servier(nh.node());
+  const config::RosDynamicConfigServer config_server(nh.node());
 
   std::shared_ptr<hydra::RosSink> ros_sink;
   if (settings.forward_glog_to_ros) {
