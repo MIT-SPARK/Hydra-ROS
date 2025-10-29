@@ -39,6 +39,7 @@
 #include <config_utilities/parsing/context.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/types/path.h>
+#include <config_utilities_ros/ros_dynamic_config_server.h>
 #include <hydra/common/global_info.h>
 #include <ianvs/node_init.h>
 #include <ianvs/spin_functions.h>
@@ -127,6 +128,7 @@ int main(int argc, char* argv[]) {
 
   [[maybe_unused]] const auto node = ianvs::init_node(argc, argv, "hydra_ros_node");
   auto nh = ianvs::NodeHandle::this_node();
+  const config::RosDynamicConfigServer config_servier(nh.node());
 
   std::shared_ptr<hydra::RosSink> ros_sink;
   if (settings.forward_glog_to_ros) {
