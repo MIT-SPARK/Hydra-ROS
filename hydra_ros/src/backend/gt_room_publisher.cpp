@@ -42,10 +42,6 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   int idx = 0;
   int room_idx = 0;
 
-  const std::vector<double> reds{0, .2, .4, .6, .8, 1};
-  const std::vector<double> greens{1, .8, .6, .4, .2};
-  const std::vector<double> blues{.4, .2, 0, 1};
-
   auto colormap = visualizer::DiscreteColormap(config.colormap);
 
   for (auto room : rf.room_extents.room_bounding_boxes) {
