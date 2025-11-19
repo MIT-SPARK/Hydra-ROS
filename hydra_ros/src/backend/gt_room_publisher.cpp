@@ -12,26 +12,33 @@
 
 namespace hydra {
 
+static const auto registration_ =
+    config::RegistrationWithConfig<UpdateRoomsFunctor::Sink,
+                                   GtRoomPublisher,
+                                   GtRoomPublisher::Config>("GtRoomPublisher");
+
 void declare_config(GtRoomPublisher::Config& config) {
   using namespace config;
   name("GtRoomPublisher::Config");
   field(config.ns, "ns");
+  field(config.colormap, "colormap");
 }
+
+using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 GtRoomPublisher::GtRoomPublisher(const Config& config)
     : config(config), nh_(ianvs::NodeHandle::this_node(config.ns)) {
-  room_publisher_ = nh_.create_publisher<visualization_msgs::msg::MarkerArray>(
-      "gt_room_boundaries", 1);
+  room_publisher_ = nh_.create_publisher<MarkerArray>("gt_room_boundaries", 1);
 }
 
 std::string GtRoomPublisher::printInfo() const { return config::toString(config); }
 
 void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   LOG(WARNING) << "GT Room sink called";
-  visualization_msgs::msg::MarkerArray ma;
-  visualization_msgs::msg::Marker m;
+  MarkerArray ma;
+  auto& m = ma.markers.emplace_back();
   m.action = m.DELETEALL;
-  ma.markers.push_back(m);
   int idx = 0;
   int room_idx = 0;
 
@@ -39,9 +46,11 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   const std::vector<double> greens{1, .8, .6, .4, .2};
   const std::vector<double> blues{.4, .2, 0, 1};
 
+  auto colormap = visualizer::DiscreteColormap(config.colormap);
+
   for (auto room : rf.room_extents.room_bounding_boxes) {
     for (auto box : room) {
-      visualization_msgs::msg::Marker m;
+      auto& m = ma.markers.emplace_back();
       m.header.frame_id = "map";
       m.ns = "gt_rooms";
       m.id = idx++;
@@ -54,11 +63,7 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
       m.scale.x = box.dimensions.x();
       m.scale.y = box.dimensions.y();
       m.scale.z = box.dimensions.z();
-      m.color.a = 0.5;
-      m.color.r = reds.at(room_idx % reds.size());
-      m.color.g = greens.at(room_idx % greens.size());
-      m.color.b = blues.at(room_idx % blues.size());
-      ma.markers.push_back(m);
+      m.color = visualizer::makeColorMsg(colormap.getColor(room_idx), 0.5);
     }
     ++room_idx;
   }

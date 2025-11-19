@@ -1,6 +1,7 @@
 #pragma once
 
 #include <hydra/backend/update_rooms_functor.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
 #include <ianvs/node_handle.h>
 
 #include <memory>
@@ -14,6 +15,7 @@ class GtRoomPublisher : public UpdateRoomsFunctor::Sink {
  public:
   struct Config {
     std::string ns = "~gt_rooms";
+    visualizer::DiscreteColormap::Config colormap;
   } const config;
 
   explicit GtRoomPublisher(const Config&);
@@ -27,10 +29,6 @@ class GtRoomPublisher : public UpdateRoomsFunctor::Sink {
  private:
   ianvs::NodeHandle nh_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr room_publisher_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<UpdateRoomsFunctor::Sink, GtRoomPublisher, Config>(
-          "GtRoomPublisher");
 };
 
 void declare_config(GtRoomPublisher::Config& config);
