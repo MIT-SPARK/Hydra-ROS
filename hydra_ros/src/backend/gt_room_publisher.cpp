@@ -39,7 +39,7 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   const std::vector<double> greens{1, .8, .6, .4, .2};
   const std::vector<double> blues{.4, .2, 0, 1};
 
-  for (auto room : rf.room_extents_.room_bounding_boxes) {
+  for (auto room : rf.room_extents.room_bounding_boxes) {
     for (auto box : room) {
       visualization_msgs::msg::Marker m;
       m.header.frame_id = "map";
