@@ -7,8 +7,6 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
-#include <memory>
-
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -22,8 +20,8 @@ void declare_config(GtRoomPublisher::Config& config) {
 
 GtRoomPublisher::GtRoomPublisher(const Config& config)
     : config(config), nh_(ianvs::NodeHandle::this_node(config.ns)) {
-  room_publisher_ =
-      nh_.create_publisher<visualization_msgs::msg::MarkerArray>("topic_name", 1);
+  room_publisher_ = nh_.create_publisher<visualization_msgs::msg::MarkerArray>(
+      "gt_room_boundaries", 1);
 }
 
 std::string GtRoomPublisher::printInfo() const { return config::toString(config); }
