@@ -206,6 +206,7 @@ struct FrontierColorAdapter : GraphColorAdapter {
     spark_dsg::Color predicted{0, 0, 255};
     spark_dsg::Color active{0, 255, 0};
     spark_dsg::Color archived{255, 0, 0};
+    spark_dsg::Color anti_frontier{0, 255, 255};
   } const config;
 
   explicit FrontierColorAdapter(const Config& config);

@@ -200,6 +200,10 @@ Color FrontierColorAdapter::getColor(const DynamicSceneGraph&,
       return config.predicted;
     }
 
+    if (attrs.anti_frontier) {
+      return config.anti_frontier;
+    }
+
     return attrs.active_frontier ? config.active : config.archived;
   } catch (const std::bad_cast&) {
     return Color();
