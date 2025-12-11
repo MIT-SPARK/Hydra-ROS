@@ -213,6 +213,53 @@ struct SplitMeshColoring : public MeshColoring {
 void declare_config(SplitMeshColoring::Config& config);
 
 /**
+ * @brief Functor to color a mesh based on the fusion count of each vertex.
+ * - Grey: never fused (count == 0)
+ * - Green: fused once (count == 1)
+ * - Rainbow (red to violet): multiple fusions, scaled to min/max range
+ */
+struct FusionCountMeshColoring : public MeshColoring {
+  struct Config {};
+  FusionCountMeshColoring();
+  explicit FusionCountMeshColoring(const Config&);
+  virtual ~FusionCountMeshColoring() = default;
+
+  void setMesh(const spark_dsg::Mesh& mesh) override;
+  spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
+
+ private:
+  uint32_t min_count_ = 0;
+  uint32_t max_count_ = 1;
+
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<MeshColoring, FusionCountMeshColoring, Config>(
+          "FusionCountMeshColoring");
+};
+
+void declare_config(FusionCountMeshColoring::Config& config);
+
+/**
+ * @brief Functor to color a mesh based on temporal island IDs.
+ * Each unique island ID gets a deterministic color based on the distinct150 palette.
+ * Vertices with no island assignment (ID = 0) are colored gray.
+ */
+struct TemporalIslandMeshColoring : public MeshColoring {
+  struct Config {};
+  TemporalIslandMeshColoring();
+  explicit TemporalIslandMeshColoring(const Config&);
+  virtual ~TemporalIslandMeshColoring() = default;
+
+  spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<MeshColoring, TemporalIslandMeshColoring, Config>(
+          "TemporalIslandMeshColoring");
+};
+
+void declare_config(TemporalIslandMeshColoring::Config& config);
+
+/**
  * @brief Utility class to color a mesh based on a mesh coloring for visualization.
  */
 struct MeshColorAdapter {
