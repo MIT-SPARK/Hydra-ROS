@@ -648,12 +648,11 @@ kimera_pgmo_msgs::msg::Mesh makeMeshMsg(const std_msgs::msg::Header& header,
 
   MeshColorAdapter adapter(mesh, coloring);
   msg.vertices.resize(mesh.points.size());
-  msg.vertex_colors.resize(mesh.points.size());
   for (size_t i = 0; i < mesh.points.size(); ++i) {
     auto& vertex = msg.vertices[i];
-    tf2::convert(mesh.points[i].cast<double>().eval(), vertex);
-    auto& color = msg.vertex_colors[i];
-    color = visualizer::makeColorMsg(adapter.getVertexColor(i));
+    tf2::convert(mesh.points[i].cast<double>().eval(), vertex.pos);
+    vertex.has_color = true;
+    vertex.color = visualizer::makeColorMsg(adapter.getVertexColor(i));
   }
 
   msg.triangles.resize(mesh.faces.size());
