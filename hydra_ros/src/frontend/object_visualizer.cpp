@@ -61,7 +61,6 @@ std::string ObjectVisualizer::printInfo() const { return config::toString(config
 
 void ObjectVisualizer::call(uint64_t timestamp_ns,
                             const kimera_pgmo::MeshDelta& delta,
-                            const std::vector<size_t>& active,
                             const LabelIndices& label_indices) const {
   pubs_.publish("active_vertices", [&]() {
     auto msg = std::make_unique<Marker>();
@@ -69,6 +68,8 @@ void ObjectVisualizer::call(uint64_t timestamp_ns,
     msg->header.frame_id = GlobalInfo::instance().getFrames().odom;
     msg->ns = "active_vertices";
     msg->id = 0;
+    std::vector<size_t> active(delta.getNumActiveVertices());
+    std::iota(active.begin(), active.end(), delta.getNumArchivedVertices());
     fillMarkerFromCloud(delta, active, *msg);
     return msg;
   });
@@ -101,15 +102,15 @@ void ObjectVisualizer::fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
   msg.points.reserve(indices.size());
   msg.colors.reserve(indices.size());
   for (const auto idx : indices) {
-    const auto& p = delta.vertex_updates->at(idx);
+    const auto& p = delta.getVertex(idx);
     auto& point = msg.points.emplace_back();
-    point.x = p.x;
-    point.y = p.y;
-    point.z = p.z;
+    point.x = p.pos.x();
+    point.y = p.pos.y();
+    point.z = p.pos.z();
     auto& color = msg.colors.emplace_back();
-    color.r = p.r / 255.0f;
-    color.g = p.g / 255.0f;
-    color.b = p.b / 255.0f;
+    color.r = p.traits.color[0] / 255.0f;
+    color.g = p.traits.color[1] / 255.0f;
+    color.b = p.traits.color[2] / 255.0f;
     color.a = config.point_alpha;
   }
 }

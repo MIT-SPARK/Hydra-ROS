@@ -58,7 +58,6 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
 
   void call(uint64_t timestamp_ns,
             const kimera_pgmo::MeshDelta& delta,
-            const std::vector<size_t>& active,
             const LabelIndices& label_indices) const override;
 
  protected:
