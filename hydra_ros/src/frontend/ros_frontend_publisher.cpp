@@ -39,10 +39,10 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
+#include <kimera_pgmo_ros/conversion/mesh_delta.h>
 
 namespace hydra {
 
-using kimera_pgmo::MeshDeltaTypeAdapter;
 using pose_graph_tools::PoseGraphTypeAdapter;
 using BaseInterface = rclcpp::node_interfaces::NodeBaseInterface;
 using rclcpp::CallbackGroupType;
@@ -66,7 +66,8 @@ void declare_config(RosFrontendPublisher::Config& config) {
 }
 
 RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
-    : config(config::checkValid(get_config())) {
+    : config(config::checkValid(get_config())),
+      dsg_sender_(new DsgSender(config.dsg_sender, nh)) {
   auto group = nh.as<BaseInterface>()->create_callback_group(
       CallbackGroupType::MutuallyExclusive);
   mesh_delta_server_ =
@@ -75,11 +76,11 @@ RosFrontendPublisher::RosFrontendPublisher(ianvs::NodeHandle nh)
                                       this,
                                       rclcpp::ServicesQoS(),
                                       group);
-  dsg_sender_ = std::make_unique<DsgSender>(config.dsg_sender, nh);
-  mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>(
-      "mesh_graph_incremental", rclcpp::QoS(100).transient_local());
-  mesh_update_pub_ = nh.create_publisher<MeshDeltaTypeAdapter>(
-      "full_mesh_update", rclcpp::QoS(100).transient_local());
+
+  const auto qos = rclcpp::QoS(100).transient_local();
+  mesh_graph_pub_ =
+      nh.create_publisher<PoseGraphTypeAdapter>("mesh_graph_incremental", qos);
+  mesh_update_pub_ = nh.create_publisher<MeshDeltaMsg>("full_mesh_update", qos);
 }
 
 void RosFrontendPublisher::call(uint64_t timestamp_ns,
@@ -87,13 +88,16 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
                                 const BackendInput& backend_input) const {
   // TODO(nathan) make sure pgmo stamps the deformation graph
   mesh_graph_pub_->publish(backend_input.deformation_graph);
+
   if (backend_input.mesh_update) {
     backend_input.mesh_update->timestamp_ns = timestamp_ns;
-    mesh_update_pub_->publish(*backend_input.mesh_update);
-    stored_delta_.insert(
-        {backend_input.mesh_update->sequence_number, backend_input.mesh_update});
-    if (config.mesh_delta_queue_size > 0 &&
-        stored_delta_.size() > static_cast<size_t>(config.mesh_delta_queue_size)) {
+    auto delta_msg = std::make_shared<MeshDeltaMsg>();
+    kimera_pgmo::conversions::to_ros(*backend_input.mesh_update, *delta_msg);
+    mesh_update_pub_->publish(*delta_msg);
+
+    stored_delta_.insert({backend_input.mesh_update->info.sequence_number, delta_msg});
+    if (config.mesh_delta_queue_size &&
+        stored_delta_.size() > config.mesh_delta_queue_size) {
       stored_delta_.erase(stored_delta_.begin());
     }
   }
@@ -101,20 +105,19 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
   dsg_sender_->sendGraph(graph, rclcpp::Time(timestamp_ns));
 }
 
-void RosFrontendPublisher::processMeshDeltaQuery(
-    const MeshDeltaSrv::Request::SharedPtr req,
-    MeshDeltaSrv::Response::SharedPtr resp) {
-  LOG(INFO) << "Received request for " << req->sequence_numbers.size()
-            << " mesh deltas...";
+void RosFrontendPublisher::processMeshDeltaQuery(const MeshDeltaRequest req,
+                                                 MeshDeltaResponse resp) {
+  LOG(INFO) << "Received request for " << req->sequence_numbers.size() << " deltas...";
   for (const auto& seq : req->sequence_numbers) {
     auto& msg = resp->deltas.emplace_back();
-    // Check TypeAdater documentation TODO(Yun)
     if (!stored_delta_.count(seq)) {
       LOG(ERROR) << "Mesh delta sequence " << seq << " not found";
       continue;
     }
-    mesh_delta_converter_.convert_to_ros_message(*stored_delta_.at(seq), msg);
+
+    msg = *stored_delta_.at(seq);
   }
+
   LOG(INFO) << "Responding with " << resp->deltas.size() << " deltas...";
 }
 
