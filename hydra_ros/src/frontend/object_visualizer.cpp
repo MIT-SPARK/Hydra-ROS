@@ -38,6 +38,7 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
+#include <kimera_pgmo/mesh_delta.h>
 
 namespace hydra {
 

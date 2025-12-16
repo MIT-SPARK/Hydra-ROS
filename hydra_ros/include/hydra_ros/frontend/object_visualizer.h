@@ -35,7 +35,6 @@
 #pragma once
 #include <hydra/frontend/mesh_segmenter.h>
 #include <ianvs/lazy_publisher_group.h>
-#include <kimera_pgmo/mesh_delta.h>
 
 #include <visualization_msgs/msg/marker.hpp>
 
