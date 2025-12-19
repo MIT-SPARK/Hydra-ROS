@@ -38,9 +38,18 @@
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <hydra/common/global_info.h>
+#include <hydra_visualizer/drawing.h>
 #include <kimera_pgmo/mesh_delta.h>
 
 namespace hydra {
+namespace {
+
+static const auto registration =
+    config::RegistrationWithConfig<MeshSegmenter::Sink,
+                                   ObjectVisualizer,
+                                   ObjectVisualizer::Config>("ObjectVisualizer");
+
+}
 
 using visualization_msgs::msg::Marker;
 
@@ -51,18 +60,36 @@ void declare_config(ObjectVisualizer::Config& config) {
   field(config.point_scale, "point_scale");
   field(config.point_alpha, "point_alpha");
   field(config.use_spheres, "use_spheres");
+  field(config.bounding_box_scale, "bounding_box_scale");
+  field(config.colormap, "colormap");
 }
 
 ObjectVisualizer::ObjectVisualizer(const Config& config)
     : config(config::checkValid(config)),
       nh_(ianvs::NodeHandle::this_node(config.module_ns)),
-      pubs_(nh_) {}
+      pubs_(nh_),
+      colormap_(config.colormap) {}
 
 std::string ObjectVisualizer::printInfo() const { return config::toString(config); }
 
+struct DeltaPointAdaptor : spark_dsg::BoundingBox::PointAdaptor {
+  DeltaPointAdaptor(const kimera_pgmo::MeshDelta& delta,
+                    const std::vector<size_t>& indices)
+      : delta(delta), indices(indices) {}
+
+  size_t size() const override { return indices.size(); }
+
+  Eigen::Vector3f get(size_t index) const override {
+    return delta.getVertex(indices.at(index)).pos;
+  }
+  const kimera_pgmo::MeshDelta& delta;
+  const std::vector<size_t>& indices;
+};
+
 void ObjectVisualizer::call(uint64_t timestamp_ns,
                             const kimera_pgmo::MeshDelta& delta,
-                            const LabelIndices& label_indices) const {
+                            const LabelIndices& label_indices,
+                            const MeshSegmenter::LabelClusters& clusters) const {
   pubs_.publish("active_vertices", [&]() {
     auto msg = std::make_unique<Marker>();
     msg->header.stamp = rclcpp::Time(timestamp_ns);
@@ -87,6 +114,27 @@ void ObjectVisualizer::call(uint64_t timestamp_ns,
       return msg;
     });
   }
+
+  pubs_.publish("object_clusters", [&]() {
+    auto msg = std::make_unique<Marker>();
+    msg->header.stamp = rclcpp::Time(timestamp_ns);
+    msg->header.frame_id = GlobalInfo::instance().getFrames().odom;
+    msg->type = Marker::LINE_LIST;
+    msg->action = Marker::ADD;
+    msg->ns = "object_clusters";
+    msg->id = 0;
+    msg->scale.x = config.bounding_box_scale;
+    for (const auto& [label, label_clusters] : clusters) {
+      const auto color = visualizer::makeColorMsg(colormap_(label));
+      for (const auto& cluster : label_clusters) {
+        const DeltaPointAdaptor adaptor(delta, cluster.indices);
+        const spark_dsg::BoundingBox bbox(adaptor);
+        visualizer::drawBoundingBox(bbox, color, *msg);
+      }
+    }
+
+    return msg;
+  });
 }
 
 void ObjectVisualizer::fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
