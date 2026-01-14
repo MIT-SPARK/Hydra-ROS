@@ -8,9 +8,9 @@ Panels:
         - /Status1
         - /Mesh1/Topic1
         - /Scene Graph1
-        - /Scene Graph1/Topic1
         - /Trav_Layer1
         - /Trav_Layer1/Namespaces1
+        - /Traversability Places1/Namespaces1
       Splitter Ratio: 0.5
     Tree Height: 1068
   - Class: rviz_common/Selection
@@ -55,7 +55,7 @@ Visualization Manager:
     - Class: kimera_pgmo_rviz/MeshDisplay
       Cull Backfaces: true
       Enable Lighting: false
-      Enabled: true
+      Enabled: false
       Name: Mesh
       Toggle Visibility All: true
       Topic:
@@ -65,22 +65,18 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /hydra_visualizer/mesh
-      Value: true
-      Visible:
-        Value: true
-        robot0:
-          Value: true
-          dsg_mesh: true
+      Value: false
+      Visible: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: Scene Graph
       Namespaces:
-        layer_2_bounding_boxes: true
-        layer_2_nodes: true
-        layer_2_text: true
+        layer_2_bounding_boxes: false
+        layer_2_nodes: false
+        layer_2_text: false
         layer_2p97_edges: true
         layer_2p97_nodes: true
-        layer_2p97_text: true
+        layer_2p97_text: false
         layer_3p2_edges: true
         layer_3p2_nodes: true
       Topic:
@@ -90,34 +86,13 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /hydra_visualizer/graph
       Value: true
-    - Alpha: 1
-      Arrow Length: 0.30000001192092896
-      Axes Length: 0.30000001192092896
-      Axes Radius: 0.009999999776482582
-      Class: rviz_default_plugins/PoseArray
-      Color: 255; 25; 0
-      Enabled: true
-      Head Length: 0.07000000029802322
-      Head Radius: 0.029999999329447746
-      Name: PoseArray
-      Shaft Length: 0.23000000417232513
-      Shaft Radius: 0.009999999776482582
-      Shape: Arrow (Flat)
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /hydra_visualizer/agent_poses
-      Value: true
     - Class: rviz_default_plugins/Marker
       Enabled: true
       Name: Trav_Layer
       Namespaces:
         confidence: false
-        debug: false
-        state: true
+        debug: true
+        state: false
         traversability: false
       Topic:
         Depth: 5
@@ -126,6 +101,18 @@ Visualization Manager:
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /hydra/traversability/layer
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: Traversability Places
+      Namespaces:
+        boundaries: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /hydra_visualizer/places_traversability
       Value: true
   Enabled: true
   Global Options:
@@ -172,26 +159,21 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Class: rviz_default_plugins/Orbit
-      Distance: 49.575233459472656
+      Angle: -1.5899993181228638
+      Class: rviz_default_plugins/TopDownOrtho
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
-      Focal Point:
-        X: 7.709876537322998
-        Y: 6.940362930297852
-        Z: -7.00478458404541
-      Focal Shape Fixed Size: false
-      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9703980684280396
+      Scale: 26.944629669189453
       Target Frame: <Fixed Frame>
-      Value: Orbit (rviz)
-      Yaw: 3.125398635864258
+      Value: TopDownOrtho (rviz_default_plugins)
+      X: 0.5297571420669556
+      Y: 23.26730728149414
     Saved: ~
 Window Geometry:
   Displays:
@@ -209,5 +191,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 2548
-  X: 4480
-  Y: 0
+  X: -32
+  Y: -32

@@ -1,5 +1,6 @@
 ---
 launch:
+  - arg: { name: start_visualizer, default: "true" }
   - arg: { name: scene, default: office, description: uhumans2 scene name }
   - arg: { name: use_gt_semantics, default: "true" }
   - arg: { name: use_openset_places, default: "false" }
@@ -51,3 +52,9 @@ launch:
         - { name: bag_file, value: /home/lukas/data/khronos/tesse_cd_office.bag }
         - { name: use_gt_frame, value: "true" }
         - { name: play_rate, value: "1.0" }
+
+  - node:
+      pkg: tf2_ros
+      name: tf_world_to_map
+      exec: static_transform_publisher
+      args: --frame-id world --child-frame-id map

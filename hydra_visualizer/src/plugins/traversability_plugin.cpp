@@ -206,28 +206,32 @@ void TraversabilityPlugin::drawRegionBoundary(
     visualization_msgs::msg::Marker& marker) const {
   // Draw two circles.
   constexpr size_t num_segments = 20;
-  std::vector<geometry_msgs::msg::Point> outer_points;
+  // std::vector<geometry_msgs::msg::Point> outer_points;
   for (size_t i = 0; i <= num_segments; ++i) {
     const double theta = static_cast<double>(i) / num_segments * 2.0 * M_PI;
     const auto dir = Eigen::Vector3d(sin(theta), cos(theta), 0.0);
     Eigen::Vector3d point = attrs.position + dir * attrs.boundary.min.x();
     tf2::convert(point, marker.points.emplace_back());
-    marker.points.emplace_back(marker.points.back());
+    if (i > 0) {
+      marker.points.emplace_back(marker.points.back());
+    }
     point = attrs.position + dir * attrs.boundary.max.x();
-    tf2::convert(point, outer_points.emplace_back());
+    // tf2::convert(point, outer_points.emplace_back());
   }
-  for (const auto& point : outer_points) {
-    marker.points.emplace_back(point);
-    marker.points.emplace_back(point);
-  }
+  marker.points.emplace_back(marker.points.front());
+  // for (const auto& point : outer_points) {
+  //   marker.points.emplace_back(point);
+  //   marker.points.emplace_back(point);
+  // }
   auto color = visualizer::makeColorMsg(config.colors[1]);
-  for (size_t i = 0; i < num_segments * 2; ++i) {
-    marker.colors.emplace_back(color);
-  }
-  color = visualizer::makeColorMsg(config.colors[0]);
-  for (size_t i = 0; i < num_segments * 2; ++i) {
-    marker.colors.emplace_back(color);
-  }
+  // for (size_t i = 0; i < num_segments * 2; ++i) {
+  //   marker.colors.emplace_back(color);
+  // }
+  marker.color = color;
+  // color = visualizer::makeColorMsg(config.colors[0]);
+  // for (size_t i = 0; i < num_segments * 2; ++i) {
+  //   marker.colors.emplace_back(color);
+  // }
 }
 
 void TraversabilityPlugin::addBoundaryPoint(const Config& config,
