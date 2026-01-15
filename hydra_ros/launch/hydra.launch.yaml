@@ -52,7 +52,8 @@ launch:
         --config-utilities-yaml {enable_zmq: $(var enable_zmq), backend: {zmq_sink: {url: $(var zmq_url), send_mesh: $(var zmq_send_mesh)}}}
         --config-utilities-yaml $(var extra_yaml)
   # hydra visualizer
-  - set_remap: {from: hydra_visualizer/dsg, to: hydra/backend/dsg}
+  - arg: {name: graph_to_visualize, default: backend}
+  - set_remap: {from: hydra_visualizer/dsg, to: hydra/$(var graph_to_visualize)/dsg}
   - arg: {name: start_visualizer, default: 'true', description: run hydra visualizer}
   - include:
       file: $(find-pkg-share hydra_visualizer)/launch/streaming_visualizer.launch.yaml

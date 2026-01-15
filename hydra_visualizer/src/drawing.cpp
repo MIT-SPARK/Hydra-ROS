@@ -551,7 +551,7 @@ Marker makeMeshEdgesMarker(const std_msgs::msg::Header& header,
 
   for (const auto& [node_id, node] : layer.nodes()) {
     const auto& attrs = node->attributes<Place2dNodeAttributes>();
-    const auto& mesh_edge_indices = attrs.pcl_mesh_connections;
+    const auto& mesh_edge_indices = attrs.mesh_connections;
     if (mesh_edge_indices.empty()) {
       continue;
     }

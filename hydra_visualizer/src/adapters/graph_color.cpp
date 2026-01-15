@@ -137,11 +137,6 @@ bool IsActiveFunctor::eval(const DynamicSceneGraph&, const SceneGraphNode& node)
   return node.attributes().is_active;
 }
 
-bool NeedsCleanupFunctor::eval(const DynamicSceneGraph&,
-                               const SceneGraphNode& node) const {
-  return node.attributes<Place2dNodeAttributes>().need_cleanup_splitting;
-}
-
 bool HasActiveMeshFunctor::eval(const DynamicSceneGraph&,
                                 const SceneGraphNode& node) const {
   return node.attributes<Place2dNodeAttributes>().has_active_mesh_indices;

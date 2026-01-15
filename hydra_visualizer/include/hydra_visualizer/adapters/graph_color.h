@@ -168,13 +168,6 @@ struct IsActiveFunctor : StatusFunctor {
       config::Registration<StatusFunctor, IsActiveFunctor>("is_active");
 };
 
-struct NeedsCleanupFunctor : StatusFunctor {
-  virtual bool eval(const spark_dsg::DynamicSceneGraph& graph,
-                    const spark_dsg::SceneGraphNode& node) const override;
-  inline static const auto registration =
-      config::Registration<StatusFunctor, NeedsCleanupFunctor>("needs_cleanup");
-};
-
 struct HasActiveMeshFunctor : StatusFunctor {
   virtual bool eval(const spark_dsg::DynamicSceneGraph& graph,
                     const spark_dsg::SceneGraphNode& node) const override;
