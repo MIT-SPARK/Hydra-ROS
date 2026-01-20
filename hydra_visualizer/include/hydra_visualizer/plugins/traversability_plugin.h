@@ -87,7 +87,7 @@ class TraversabilityPlugin : public VisualizerPlugin {
                          visualization_msgs::msg::Marker& marker) const;
 
   void drawRegionBoundary(const Config& config,
-                          const spark_dsg::TraversabilityNodeAttributes& attrs,
+                          const spark_dsg::TravNodeAttributes& attrs,
                           visualization_msgs::msg::Marker& marker) const;
 
   void addBoundaryPoint(const Config& config,
