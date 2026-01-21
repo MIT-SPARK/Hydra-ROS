@@ -137,16 +137,13 @@ void TraversabilityPlugin::drawBoundaries(const Config& config,
     marker.points.clear();
     marker.colors.clear();
 
-    {  // Block Attributes.
-      auto attrs = node->tryAttributes<TraversabilityNodeAttributes>();
-      if (attrs) {
-        drawBlockBoundary(config, *attrs, marker);
-      }
-    }
-    {  // Region Attributes.
-      auto attrs = node->tryAttributes<TravNodeAttributes>();
-      if (attrs) {
-        drawRegionBoundary(config, *attrs, marker);
+    auto block_attrs = node->tryAttributes<TraversabilityNodeAttributes>();
+    if (block_attrs) {
+      drawBlockBoundary(config, *block_attrs, marker);
+    } else {
+      auto region_attrs = node->tryAttributes<TravNodeAttributes>();
+      if (region_attrs) {
+        drawRegionBoundary(config, *region_attrs, marker);
       }
     }
 
@@ -213,7 +210,7 @@ void TraversabilityPlugin::drawRegionBoundary(
     const TravNodeAttributes& attrs,
     visualization_msgs::msg::Marker& marker) const {
   // TMP: Just draw the boundary voxels.
-  // marker.type = Marker::POINTS;
+  // marker.type = Msarker::POINTS;
 
   // for (size_t i = 0; i < attrs.points.size(); ++i) {
   //   const Eigen::Vector3d p =
@@ -227,29 +224,21 @@ void TraversabilityPlugin::drawRegionBoundary(
   // return;
 
   // Draw two circles.
+  std::stringstream ss;
   marker.type = Marker::LINE_STRIP;
-  constexpr size_t num_segments = 20;
-  // std::vector<geometry_msgs::msg::Point> outer_points;
-  for (size_t i = 0; i <= num_segments; ++i) {
-    const double theta = static_cast<double>(i) / num_segments * 2.0 * M_PI;
-    const auto dir = Eigen::Vector3d(sin(theta), cos(theta), 0.0);
-    Eigen::Vector3d point = attrs.position + dir * attrs.min_radius;
+  for (size_t i = 0; i < attrs.radii.size(); ++i) {
+    const double theta = static_cast<double>(i) / attrs.radii.size() * 2.0 * M_PI;
+    const auto dir = Eigen::Vector3d(cos(theta), sin(theta), 0.0);
+    Eigen::Vector3d point = attrs.position + dir * attrs.radii[i];
     tf2::convert(point, marker.points.emplace_back());
-    if (i > 0) {
-      marker.points.emplace_back(marker.points.back());
-    }
+    marker.colors.emplace_back(
+        visualizer::makeColorMsg(config.colors[static_cast<size_t>(attrs.states[i])]));
   }
-  marker.points.emplace_back(marker.points.front());
-  auto color = visualizer::makeColorMsg(config.colors[1]);
-  marker.color = color;
-  // for (size_t i = 0; i < num_segments; ++i) {
-  //   marker.colors.emplace_back(color);
-  // }
-  // marker.color = color;
-  // color = visualizer::makeColorMsg(config.colors[0]);
-  // for (size_t i = 0; i < num_segments * 2; ++i) {
-  //   marker.colors.emplace_back(color);
-  // }
+  // Close the circle.
+  if (!attrs.radii.empty()) {
+    marker.points.emplace_back(marker.points.front());
+    marker.colors.emplace_back(marker.colors.front());
+  }
 }
 
 void TraversabilityPlugin::addBoundaryPoint(const Config& config,

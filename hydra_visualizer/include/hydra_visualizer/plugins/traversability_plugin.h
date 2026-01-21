@@ -58,7 +58,7 @@ class TraversabilityPlugin : public VisualizerPlugin {
     float slice_height = 2.0f;
 
     //! line width of the boundary markers
-    float line_width = 0.05f;
+    float line_width = 0.07f;
   };
 
   TraversabilityPlugin(const Config& config,
