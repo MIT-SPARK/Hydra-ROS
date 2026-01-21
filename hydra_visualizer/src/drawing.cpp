@@ -526,12 +526,11 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
     target.z += info.z_offset;
     marker.points.push_back(target);
 
-    const auto c_source =
-        info.config.edges.use_color ? info.node_color(source_node) : info.edge_color();
-    const auto c_target =
-        info.config.edges.use_color ? info.node_color(target_node) : info.edge_color();
-    marker.colors.push_back(makeColorMsg(c_source, info.config.edges.alpha));
-    marker.colors.push_back(makeColorMsg(c_target, info.config.edges.alpha));
+    const auto color_source_target = info.edge_color(edge);
+    marker.colors.push_back(
+        makeColorMsg(color_source_target.first, info.config.edges.alpha));
+    marker.colors.push_back(
+        makeColorMsg(color_source_target.second, info.config.edges.alpha));
   }
 
   return marker;

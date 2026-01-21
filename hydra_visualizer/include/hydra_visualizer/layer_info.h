@@ -37,6 +37,7 @@
 #include <spark_dsg/color.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 
+#include "hydra_visualizer/adapters/edge_color.h"
 #include "hydra_visualizer/adapters/graph_color.h"
 #include "hydra_visualizer/adapters/text.h"
 
@@ -74,10 +75,9 @@ struct LayerConfig {
     double scale = 0.03;  //[ 0.001, 1.0]
     //! @brief intralayer edge alpha
     double alpha = 1.0;  //[ 0.0, 1.0]
-    //! @brief Color to use for edge
-    NamedColors color = NamedColors::BLACK;
-    //! @brief show intralayer edge using node colors
-    bool use_color = true;
+    //! @brief Color to use for edge. Unspecified uses node colors.
+    config::VirtualConfig<EdgeColorAdapter, true> color{
+        UniformEdgeColorAdapter::Config()};
     //! @brief draw interlayer edges
     bool draw_interlayer = true;
     //! @brief use edge source layer for config
@@ -86,8 +86,8 @@ struct LayerConfig {
     double interlayer_scale = 0.03;  // [0.001, 1.0]
     //! @brief interlayer edge alpha
     double interlayer_alpha = 1.0;  // [0.0, 1.0]
-    //! @brief show interlayer edge using node colors
-    bool interlayer_use_color = true;
+    //! @brief If true color mesh edges
+    bool interlayer_use_color;
     //! @brief Number of edges to skip when drawing interlayer edges
     size_t interlayer_insertion_skip = 0;  // [0, 1000]
   } edges;
@@ -155,6 +155,8 @@ class LayerInfo {
   using FilterFunction = std::function<bool(const spark_dsg::SceneGraphNode&)>;
   using ColorFunction =
       std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
+  using EdgeColorFunction = std::function<std::pair<spark_dsg::Color, spark_dsg::Color>(
+      const spark_dsg::SceneGraphEdge&)>;
   using TextFunction = std::function<std::string(const spark_dsg::SceneGraphNode&)>;
 
   LayerInfo(const LayerConfig config);
@@ -163,17 +165,18 @@ class LayerInfo {
 
   bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
   spark_dsg::Color text_color() const;
-  spark_dsg::Color edge_color() const;
 
   const LayerConfig config;
 
   double z_offset;
   ColorFunction node_color;
+  EdgeColorFunction edge_color;
   TextFunction node_text;
   mutable FilterFunction filter;
 
  private:
-  std::unique_ptr<GraphColorAdapter> color_adapter_;
+  std::unique_ptr<GraphColorAdapter> node_color_adapter_;
+  std::unique_ptr<EdgeColorAdapter> edge_color_adapter_;
   std::unique_ptr<GraphTextAdapter> text_adapter_;
 };
 

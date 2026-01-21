@@ -72,8 +72,7 @@ void declare_config(LayerConfig::Edges& config) {
   field(config.draw, "draw");
   field(config.scale, "scale");
   field(config.alpha, "alpha");
-  enum_field(config.color, "color");
-  field(config.use_color, "use_color");
+  field(config.color, "color");
   field(config.draw_interlayer, "draw_interlayer");
   field(config.interlayer_use_source, "interlayer_use_source");
   field(config.interlayer_scale, "interlayer_scale");
@@ -147,11 +146,27 @@ LayerInfo& LayerInfo::offset(double offset_size, bool collapse) {
 }
 
 LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerId layer) {
-  color_adapter_ = config.nodes.color.create();
-  if (color_adapter_) {
-    color_adapter_->setGraph(graph, layer);
+  node_color_adapter_ = config.nodes.color.create();
+  if (node_color_adapter_) {
+    node_color_adapter_->setGraph(graph, layer);
     node_color = [this, &graph](const SceneGraphNode& node) {
-      return color_adapter_->getColor(graph, node);
+      return node_color_adapter_->getColor(graph, node);
+    };
+  }
+
+  edge_color_adapter_ = config.edges.color.create();
+  if (edge_color_adapter_) {
+    edge_color_adapter_->setGraph(graph, layer);
+    edge_color = [this, &graph](const SceneGraphEdge& edge) {
+      return edge_color_adapter_->getColor(graph, edge);
+    };
+  } else {
+    // If not specified, use node colors.
+    // TODO(lschmid): This is not the prettiest, but e.g. handing the layerinfo to the
+    // adapters or so also didn't seem right.
+    edge_color = [this, &graph](const SceneGraphEdge& edge) {
+      return std::make_pair(node_color(graph.getNode(edge.source)),
+                            node_color(graph.getNode(edge.target)));
     };
   }
 
@@ -166,8 +181,6 @@ LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerId layer) {
 }
 
 Color LayerInfo::text_color() const { return colorFromName(config.text.color); }
-
-Color LayerInfo::edge_color() const { return colorFromName(config.edges.color); }
 
 bool LayerInfo::shouldVisualize(const spark_dsg::SceneGraphNode& node) const {
   if (!config.visualize) {

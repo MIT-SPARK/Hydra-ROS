@@ -30,6 +30,7 @@ find_package(visualization_msgs REQUIRED)
 add_library(
   ${PROJECT_NAME}
   src/plugins/traversability_plugin.cpp
+  src/adapters/edge_color.cpp
   src/adapters/graph_color.cpp
   src/adapters/mesh_color.cpp
   src/adapters/text.cpp
