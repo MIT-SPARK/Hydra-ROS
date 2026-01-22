@@ -126,6 +126,30 @@ struct ValueEdgeColorAdapter : EdgeColorAdapter {
 
 void declare_config(ValueEdgeColorAdapter::Config& config);
 
+struct TraversabilityEdgeColorAdapter : EdgeColorAdapter {
+  struct Config {
+    visualizer::RangeColormap::Config colormap{
+        config::VirtualConfig<visualizer::ContinuousPalette>{
+            visualizer::QualityPalette::Config()}};
+    spark_dsg::Color active_color = spark_dsg::Color::pink();
+    spark_dsg::Color backend_color = spark_dsg::Color::blue();
+  } const config;
+
+  explicit TraversabilityEdgeColorAdapter(const Config& config);
+  void setGraph(const spark_dsg::DynamicSceneGraph& graph,
+                spark_dsg::LayerId layer) override;
+  EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
+                     const spark_dsg::SceneGraphEdge& edge) const override;
+
+ private:
+  double min_value_;
+  double max_value_;
+  const visualizer::RangeColormap colormap_;
+  REGISTER_COLOR_ADAPTER(TraversabilityEdgeColorAdapter);
+};
+
+void declare_config(TraversabilityEdgeColorAdapter::Config& config);
+
 #undef REGISTER_COLOR_ADAPTER
 
 }  // namespace hydra

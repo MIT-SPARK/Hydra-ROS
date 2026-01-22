@@ -115,4 +115,51 @@ void declare_config(ValueEdgeColorAdapter::Config& config) {
   field(config.value_functor, "value_functor");
 }
 
+TraversabilityEdgeColorAdapter::TraversabilityEdgeColorAdapter(const Config& config)
+    : config(config), min_value_(0.0), max_value_(1.0), colormap_(config.colormap) {}
+
+void TraversabilityEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph,
+                                              LayerId layer) {
+  if (!graph.hasLayer(layer)) {
+    return;
+  }
+  bool is_first = true;
+  for (const auto& [key, edge] : graph.getLayer(layer).edges()) {
+    const auto value = edge.attributes().weight;
+    if (value < 0.0) {
+      continue;
+    }
+    if (is_first) {
+      min_value_ = value;
+      max_value_ = value;
+      is_first = false;
+      w
+    } else {
+      min_value_ = std::min(value, min_value_);
+      max_value_ = std::max(value, max_value_);
+    }
+  }
+}
+
+EdgeColor TraversabilityEdgeColorAdapter::getColor(const DynamicSceneGraph&,
+                                                   const SceneGraphEdge& edge) const {
+  const double weight = edge.attributes().weight;
+  if (weight == -1.0) {
+    return {config.active_color, config.active_color};
+  }
+  if (weight < 0.0) {
+    return {config.backend_color, config.backend_color};
+  }
+  const auto color = colormap_.getColor(weight, min_value_, max_value_);
+  return {color, color};
+}
+
+void declare_config(TraversabilityEdgeColorAdapter::Config& config) {
+  using namespace config;
+  name("TraversabilityEdgeColorAdapter::Config");
+  field(config.colormap, "colormap");
+  field(config.active_color, "active_color");
+  field(config.backend_color, "backend_color");
+}
+
 }  // namespace hydra

@@ -60,9 +60,9 @@ renderer:
       nodes: { scale: 0.2, color: { type: LabelColorAdapter }, alpha: 0.9, use_sphere: true }
       boundaries: { draw: true, collapse: false, wireframe_scale: 0.1, use_node_color: true, alpha: 1.0 }
       edges:
-        scale: 0.05
+        scale: 0.08
         alpha: 0.5
-        color: { type: UniformEdgeColorAdapter }
+        color: { type: TraversabilityEdgeColorAdapter }
         interlayer_use_source: false
         interlayer_scale: 0.08
         interlayer_alpha: 0.4
