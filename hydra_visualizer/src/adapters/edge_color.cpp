@@ -45,7 +45,7 @@
 namespace hydra {
 
 using namespace spark_dsg;
-using Colors = std::pair<Color, Color>;
+using EdgeColor = EdgeColorAdapter::EdgeColor;
 
 void declare_config(UniformEdgeColorAdapter::Config& config) {
   using namespace config;
@@ -56,8 +56,8 @@ void declare_config(UniformEdgeColorAdapter::Config& config) {
 UniformEdgeColorAdapter::UniformEdgeColorAdapter(const Config& config)
     : config(config) {}
 
-Colors UniformEdgeColorAdapter::getColor(const DynamicSceneGraph&,
-                                         const SceneGraphEdge&) const {
+EdgeColor UniformEdgeColorAdapter::getColor(const DynamicSceneGraph&,
+                                            const SceneGraphEdge&) const {
   return {config.color, config.color};
 }
 
@@ -98,8 +98,8 @@ void ValueEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerId lay
   }
 }
 
-Colors ValueEdgeColorAdapter::getColor(const DynamicSceneGraph& graph,
-                                       const SceneGraphEdge& edge) const {
+EdgeColor ValueEdgeColorAdapter::getColor(const DynamicSceneGraph& graph,
+                                          const SceneGraphEdge& edge) const {
   try {
     const auto color =
         colormap_.getColor(functor_->eval(graph, edge), min_value_, max_value_);

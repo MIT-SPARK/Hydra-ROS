@@ -49,6 +49,7 @@ namespace hydra {
 
 struct EdgeColorAdapter {
   using Ptr = std::shared_ptr<EdgeColorAdapter>;
+  using EdgeColor = std::pair<spark_dsg::Color, spark_dsg::Color>;
 
   virtual ~EdgeColorAdapter() = default;
 
@@ -58,9 +59,8 @@ struct EdgeColorAdapter {
    * @param edge Edge to get color for
    * @returns Visualizer color for source and target ends of the edge.
    */
-  virtual std::pair<spark_dsg::Color, spark_dsg::Color> getColor(
-      const spark_dsg::DynamicSceneGraph& graph,
-      const spark_dsg::SceneGraphEdge& edge) const = 0;
+  virtual EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
+                             const spark_dsg::SceneGraphEdge& edge) const = 0;
 
   /**
    * @brief Set any pre-draw information
@@ -81,9 +81,8 @@ struct UniformEdgeColorAdapter : EdgeColorAdapter {
   } const config;
 
   explicit UniformEdgeColorAdapter(const Config& config);
-  std::pair<spark_dsg::Color, spark_dsg::Color> getColor(
-      const spark_dsg::DynamicSceneGraph& graph,
-      const spark_dsg::SceneGraphEdge& edge) const override;
+  EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
+                     const spark_dsg::SceneGraphEdge& edge) const override;
 
  private:
   REGISTER_COLOR_ADAPTER(UniformEdgeColorAdapter);
@@ -114,9 +113,8 @@ struct ValueEdgeColorAdapter : EdgeColorAdapter {
   explicit ValueEdgeColorAdapter(const Config& config);
   void setGraph(const spark_dsg::DynamicSceneGraph& graph,
                 spark_dsg::LayerId layer) override;
-  std::pair<spark_dsg::Color, spark_dsg::Color> getColor(
-      const spark_dsg::DynamicSceneGraph& graph,
-      const spark_dsg::SceneGraphEdge& edge) const override;
+  EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
+                     const spark_dsg::SceneGraphEdge& edge) const override;
 
  private:
   double min_value_;
