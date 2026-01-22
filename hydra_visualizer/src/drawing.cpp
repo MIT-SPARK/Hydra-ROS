@@ -526,7 +526,7 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
     target.z += info.z_offset;
     marker.points.push_back(target);
 
-    const auto [[color_source, color_target]] = info.edge_color(edge);
+    const auto [color_source, color_target] = info.edge_color(edge);
     marker.colors.push_back(makeColorMsg(color_source, info.config.edges.alpha));
     marker.colors.push_back(makeColorMsg(color_target, info.config.edges.alpha));
   }
