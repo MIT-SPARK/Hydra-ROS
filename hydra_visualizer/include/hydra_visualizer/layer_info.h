@@ -86,8 +86,8 @@ struct LayerConfig {
     double interlayer_scale = 0.03;  // [0.001, 1.0]
     //! @brief interlayer edge alpha
     double interlayer_alpha = 1.0;  // [0.0, 1.0]
-    //! @brief If true color mesh edges
-    bool interlayer_use_color;
+    //! @brief If true color dsg-mesh edges
+    bool interlayer_use_color = true;
     //! @brief Number of edges to skip when drawing interlayer edges
     size_t interlayer_insertion_skip = 0;  // [0, 1000]
   } edges;

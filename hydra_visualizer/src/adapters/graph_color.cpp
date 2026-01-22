@@ -234,9 +234,7 @@ ValueColorAdapter::ValueColorAdapter(const Config& config)
       min_value_(0.0),
       max_value_(1.0),
       functor_(config::create<ValueFunctor>(config.value_functor)),
-      colormap_(config.colormap) {
-  CHECK(functor_) << "invalid functor type: " << config.value_functor;
-}
+      colormap_(config.colormap) {}
 
 void ValueColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerId layer) {
   if (!functor_) {
