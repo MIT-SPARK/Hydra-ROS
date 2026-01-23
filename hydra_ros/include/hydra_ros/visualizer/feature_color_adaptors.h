@@ -1,6 +1,6 @@
 #pragma once
 #include <hydra/openset/embedding_distances.h>
-#include <hydra_visualizer/adapters/graph_color.h>
+#include <hydra_visualizer/adapters/node_color.h>
 #include <hydra_visualizer/adapters/text.h>
 
 #include <rclcpp/subscription.hpp>
@@ -10,7 +10,7 @@
 
 namespace hydra {
 
-class FeatureScoreColor : public GraphColorAdapter {
+class FeatureScoreColor : public NodeColorAdapter {
  public:
   struct Config {
     std::string ns = "~";
@@ -23,7 +23,7 @@ class FeatureScoreColor : public GraphColorAdapter {
   explicit FeatureScoreColor(const Config& config);
   ~FeatureScoreColor();
   void setGraph(const spark_dsg::DynamicSceneGraph& graph,
-                spark_dsg::LayerId layer) override;
+                spark_dsg::LayerKey layer) override;
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
 
@@ -46,15 +46,11 @@ class FeatureScoreColor : public GraphColorAdapter {
   Eigen::VectorXf feature_;
   std::unordered_map<spark_dsg::NodeId, float> values_;
   std::unique_ptr<EmbeddingDistance> metric_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphColorAdapter, FeatureScoreColor, Config>(
-          "FeatureScoreColor");
 };
 
 void declare_config(FeatureScoreColor::Config& config);
 
-class NearestFeatureColor : public GraphColorAdapter {
+class NearestFeatureColor : public NodeColorAdapter {
  public:
   struct Config {
     config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
@@ -70,15 +66,11 @@ class NearestFeatureColor : public GraphColorAdapter {
   std::unique_ptr<EmbeddingDistance> metric_;
   std::unique_ptr<EmbeddingGroup> features_;
   const visualizer::DiscreteColormap colormap_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphColorAdapter, NearestFeatureColor, Config>(
-          "NearestFeatureColor");
 };
 
 void declare_config(NearestFeatureColor::Config& config);
 
-class NearestFeatureLabel : public visualizer::GraphTextAdapter {
+class NearestFeatureLabel : public visualizer::NodeTextAdapter {
  public:
   struct Config {
     config::VirtualConfig<EmbeddingDistance> metric{CosineDistance::Config()};
@@ -94,10 +86,6 @@ class NearestFeatureLabel : public visualizer::GraphTextAdapter {
  private:
   std::unique_ptr<EmbeddingDistance> metric_;
   std::unique_ptr<EmbeddingGroup> features_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GraphTextAdapter, NearestFeatureLabel, Config>(
-          "NearestFeatureLabel");
 };
 
 }  // namespace hydra

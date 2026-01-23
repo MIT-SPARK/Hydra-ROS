@@ -70,7 +70,7 @@ struct EdgeColorAdapter {
    * any edge colors when drawing the scene graph
    */
   virtual void setGraph(const spark_dsg::DynamicSceneGraph& /* graph */,
-                        spark_dsg::LayerId /* layer */) {}
+                        spark_dsg::LayerKey /* layer */) {}
 };
 
 struct UniformEdgeColorAdapter : EdgeColorAdapter {
@@ -112,7 +112,7 @@ struct ValueEdgeColorAdapter : EdgeColorAdapter {
 
   explicit ValueEdgeColorAdapter(const Config& config);
   void setGraph(const spark_dsg::DynamicSceneGraph& graph,
-                spark_dsg::LayerId layer) override;
+                spark_dsg::LayerKey layer) override;
   EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
                      const spark_dsg::SceneGraphEdge& edge) const override;
 

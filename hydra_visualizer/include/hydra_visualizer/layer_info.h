@@ -38,7 +38,7 @@
 #include <spark_dsg/dynamic_scene_graph.h>
 
 #include "hydra_visualizer/adapters/edge_color.h"
-#include "hydra_visualizer/adapters/graph_color.h"
+#include "hydra_visualizer/adapters/node_color.h"
 #include "hydra_visualizer/adapters/text.h"
 
 namespace hydra::visualizer {
@@ -60,7 +60,7 @@ struct LayerConfig {
     //! @brief size of the centroid marker
     double scale = 0.1;
     //! @brief Color adapter
-    config::VirtualConfig<GraphColorAdapter> color{NodeColorAdapter::Config()};
+    config::VirtualConfig<NodeColorAdapter> color{AttributeColorAdapter::Config()};
     //! @brief alpha of the centroid marker
     double alpha = 1.0;
     //! @brief use sphere markers (instead of cubes)
@@ -76,8 +76,7 @@ struct LayerConfig {
     //! @brief intralayer edge alpha
     double alpha = 1.0;  //[ 0.0, 1.0]
     //! @brief Color to use for edge. Unspecified uses node colors.
-    config::VirtualConfig<EdgeColorAdapter, true> color{
-        UniformEdgeColorAdapter::Config()};
+    config::VirtualConfig<EdgeColorAdapter> color{UniformEdgeColorAdapter::Config()};
     //! @brief draw interlayer edges
     bool draw_interlayer = true;
     //! @brief use edge source layer for config
@@ -101,7 +100,7 @@ struct LayerConfig {
     //! @brief draw text without z offset
     bool collapse = false;
     //! @brief text adapter type
-    config::VirtualConfig<GraphTextAdapter> adapter{IdTextAdapter::Config()};
+    config::VirtualConfig<NodeTextAdapter> adapter{IdTextAdapter::Config()};
     //! @brief height of text above node
     double height = 1.0;  //[ 0.0, 5.0]
     //! @brief scale of text above node
@@ -152,19 +151,21 @@ void declare_config(LayerConfig& config);
 
 class LayerInfo {
  public:
-  using FilterFunction = std::function<bool(const spark_dsg::SceneGraphNode&)>;
-  using ColorFunction =
-      std::function<spark_dsg::Color(const spark_dsg::SceneGraphNode&)>;
-  using EdgeColorFunction = std::function<std::pair<spark_dsg::Color, spark_dsg::Color>(
-      const spark_dsg::SceneGraphEdge&)>;
-  using TextFunction = std::function<std::string(const spark_dsg::SceneGraphNode&)>;
+  using Color = spark_dsg::Color;
+  using Node = spark_dsg::SceneGraphNode;
+  using Edge = spark_dsg::SceneGraphEdge;
+  using FilterFunction = std::function<bool(const Node&)>;
+  using ColorFunction = std::function<Color(const Node&)>;
+  using EdgeColorFunction = std::function<std::pair<Color, Color>(const Edge&)>;
+  using TextFunction = std::function<std::string(const Node&)>;
 
-  LayerInfo(const LayerConfig config);
+  LayerInfo(const LayerConfig& config);
   LayerInfo& offset(double offset_size = 1.0, bool collapse = true);
-  LayerInfo& graph(const spark_dsg::DynamicSceneGraph& graph, spark_dsg::LayerId layer);
+  LayerInfo& graph(const spark_dsg::DynamicSceneGraph& graph,
+                   spark_dsg::LayerKey layer);
 
-  bool shouldVisualize(const spark_dsg::SceneGraphNode& node) const;
-  spark_dsg::Color text_color() const;
+  bool shouldVisualize(const Node& node) const;
+  Color text_color() const;
 
   const LayerConfig config;
 
@@ -175,9 +176,9 @@ class LayerInfo {
   mutable FilterFunction filter;
 
  private:
-  std::unique_ptr<GraphColorAdapter> node_color_adapter_;
+  std::unique_ptr<NodeColorAdapter> node_color_adapter_;
   std::unique_ptr<EdgeColorAdapter> edge_color_adapter_;
-  std::unique_ptr<GraphTextAdapter> text_adapter_;
+  std::unique_ptr<NodeTextAdapter> text_adapter_;
 };
 
 }  // namespace hydra::visualizer

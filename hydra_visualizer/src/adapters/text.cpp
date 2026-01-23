@@ -49,32 +49,32 @@ using namespace spark_dsg;
 namespace {
 
 static const auto id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    IdTextAdapter,
                                    IdTextAdapter::Config>("IdTextAdapter");
 
 static const auto label_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    LabelTextAdapter,
                                    LabelTextAdapter::Config>("LabelTextAdapter");
 
 static const auto label_id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    LabelIdTextAdapter,
                                    LabelIdTextAdapter::Config>("LabelIdTextAdapter");
 
 static const auto name_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    NameTextAdapter,
                                    NameTextAdapter::Config>("NameTextAdapter");
 
 static const auto name_id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    NameIdTextAdapter,
                                    NameIdTextAdapter::Config>("NameIdTextAdapter");
 
 static const auto attributes_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    AttributesTextAdaptor,
                                    AttributesTextAdaptor::Config>(
         "AttributesTextAdaptor");

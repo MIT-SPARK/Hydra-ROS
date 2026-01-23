@@ -51,13 +51,12 @@ inline Color getNodeColor(const SceneGraphNode& node) {
 
 }  // namespace
 
-// TODO(nathan) validity checks
-
 void declare_config(LayerConfig::Nodes& config) {
   using namespace config;
   name("LayerConfig::Nodes");
   field(config.draw, "draw");
   field(config.scale, "scale");
+  config.color.setOptional();
   field(config.color, "color");
   field(config.alpha, "alpha");
   field(config.use_sphere, "use_sphere");
@@ -72,6 +71,7 @@ void declare_config(LayerConfig::Edges& config) {
   field(config.draw, "draw");
   field(config.scale, "scale");
   field(config.alpha, "alpha");
+  config.color.setOptional();
   field(config.color, "color");
   field(config.draw_interlayer, "draw_interlayer");
   field(config.interlayer_use_source, "interlayer_use_source");
@@ -79,6 +79,9 @@ void declare_config(LayerConfig::Edges& config) {
   field(config.interlayer_alpha, "interlayer_alpha");
   field(config.interlayer_use_color, "interlayer_use_color");
   field(config.interlayer_insertion_skip, "interlayer_insertion_skip");
+
+  check(config.scale, GT, 0.0, "scale");
+  checkInRange(config.alpha, 0.0, 1.0, "alpha");
 }
 
 void declare_config(LayerConfig::Text& config) {
@@ -87,12 +90,16 @@ void declare_config(LayerConfig::Text& config) {
   field(config.draw, "draw");
   field(config.draw_layer, "draw_layer");
   field(config.collapse, "collapse");
+  config.adapter.setOptional();
   field(config.adapter, "adapter");
   field(config.height, "height");
   field(config.scale, "scale");
   field(config.add_jitter, "add_jitter");
   field(config.jitter_scale, "jitter_scale");
   enum_field(config.color, "color");
+
+  check(config.scale, GT, 0.0, "scale");
+  check(config.jitter_scale, GE, 0.0, "jitter_scale");
 }
 
 void declare_config(LayerConfig::BoundingBoxes& config) {
@@ -104,6 +111,11 @@ void declare_config(LayerConfig::BoundingBoxes& config) {
   field(config.edge_scale, "edge_scale");
   field(config.alpha, "alpha");
   field(config.edge_break_ratio, "edge_break_ratio");
+
+  check(config.scale, GT, 0.0, "scale");
+  check(config.edge_scale, GT, 0.0, "edge_scale");
+  checkInRange(config.alpha, 0.0, 1.0, "alpha");
+  checkInRange(config.edge_break_ratio, 0.0, 1.0, "edge_break_ratio");
 }
 
 void declare_config(LayerConfig::Boundaries& config) {
@@ -116,6 +128,10 @@ void declare_config(LayerConfig::Boundaries& config) {
   field(config.alpha, "alpha");
   field(config.draw_ellipse, "draw_ellipse");
   field(config.ellipse_alpha, "ellipse_alpha");
+
+  check(config.wireframe_scale, GT, 0.0, "wireframe_scale");
+  checkInRange(config.alpha, 0.0, 1.0, "alpha");
+  checkInRange(config.ellipse_alpha, 0.0, 1.0, "ellipse_alpha");
 }
 
 void declare_config(LayerConfig& config) {
@@ -134,7 +150,7 @@ void declare_config(LayerConfig& config) {
   field(config.boundaries, "boundaries");
 }
 
-LayerInfo::LayerInfo(const LayerConfig config)
+LayerInfo::LayerInfo(const LayerConfig& config)
     : config(config),
       z_offset(0.0),
       node_color(&getNodeColor),
@@ -145,7 +161,7 @@ LayerInfo& LayerInfo::offset(double offset_size, bool collapse) {
   return *this;
 }
 
-LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerId layer) {
+LayerInfo& LayerInfo::graph(const DynamicSceneGraph& graph, LayerKey layer) {
   node_color_adapter_ = config.nodes.color.create();
   if (node_color_adapter_) {
     node_color_adapter_->setGraph(graph, layer);

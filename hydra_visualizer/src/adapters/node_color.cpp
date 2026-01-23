@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_visualizer/adapters/graph_color.h"
+#include "hydra_visualizer/adapters/node_color.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
@@ -46,16 +46,16 @@ namespace hydra {
 
 using namespace spark_dsg;
 
-void declare_config(NodeColorAdapter::Config& config) {
+void declare_config(AttributeColorAdapter::Config& config) {
   using namespace config;
-  name("NodeColorAdapter::Config");
+  name("AttributeColorAdapter::Config");
   field(config.default_color, "default_color");
 }
 
-NodeColorAdapter::NodeColorAdapter(const Config& config) : config(config) {}
+AttributeColorAdapter::AttributeColorAdapter(const Config& config) : config(config) {}
 
-Color NodeColorAdapter::getColor(const DynamicSceneGraph&,
-                                 const SceneGraphNode& node) const {
+Color AttributeColorAdapter::getColor(const DynamicSceneGraph&,
+                                     const SceneGraphNode& node) const {
   try {
     return node.attributes<SemanticNodeAttributes>().color;
   } catch (const std::bad_cast&) {
@@ -231,14 +231,15 @@ ValueColorAdapter::ValueColorAdapter(const Config& config)
       functor_(config::create<ValueFunctor>(config.value_functor)),
       colormap_(config.colormap) {}
 
-void ValueColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerId layer) {
+void ValueColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerKey layer_key) {
   if (!functor_) {
     return;
   }
 
   bool is_first = true;
   try {
-    for (const auto& [node_id, node] : graph.getLayer(layer).nodes()) {
+    const auto& layer = graph.getLayer(layer_key.layer, layer_key.partition);
+    for (const auto& [node_id, node] : layer.nodes()) {
       const auto value = functor_->eval(graph, *node);
       if (is_first) {
         min_value_ = value;

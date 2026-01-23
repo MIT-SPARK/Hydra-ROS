@@ -45,12 +45,12 @@ namespace hydra {
 
 #define REGISTER_COLOR_ADAPTER(adapter)    \
   inline static const auto registration_ = \
-      config::RegistrationWithConfig<GraphColorAdapter, adapter, Config>(#adapter)
+      config::RegistrationWithConfig<NodeColorAdapter, adapter, Config>(#adapter)
 
-struct GraphColorAdapter {
-  using Ptr = std::shared_ptr<GraphColorAdapter>;
+struct NodeColorAdapter {
+  using Ptr = std::shared_ptr<NodeColorAdapter>;
 
-  virtual ~GraphColorAdapter() = default;
+  virtual ~NodeColorAdapter() = default;
 
   /**
    * @brief Get color for a single node
@@ -64,30 +64,31 @@ struct GraphColorAdapter {
   /**
    * @brief Set any pre-draw information
    * @param graph Graph to get information for
+   * @param layer Layer to get information for
    *
    * Allows color adapters to gather statistics about the scene graph before generating
    * any node colors when drawing the scene graph
    */
   virtual void setGraph(const spark_dsg::DynamicSceneGraph& /* graph */,
-                        spark_dsg::LayerId /* layer */) {}
+                        spark_dsg::LayerKey /* layer */) {}
 };
 
-struct NodeColorAdapter : GraphColorAdapter {
+struct AttributeColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color default_color;
   } const config;
 
-  explicit NodeColorAdapter(const Config& config);
+  explicit AttributeColorAdapter(const Config& config);
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
 
  private:
-  REGISTER_COLOR_ADAPTER(NodeColorAdapter);
+  REGISTER_COLOR_ADAPTER(AttributeColorAdapter);
 };
 
-void declare_config(NodeColorAdapter::Config& config);
+void declare_config(AttributeColorAdapter::Config& config);
 
-struct UniformColorAdapter : GraphColorAdapter {
+struct UniformColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color color;
   } const config;
@@ -102,7 +103,7 @@ struct UniformColorAdapter : GraphColorAdapter {
 
 void declare_config(UniformColorAdapter::Config& config);
 
-struct LabelColorAdapter : GraphColorAdapter {
+struct LabelColorAdapter : NodeColorAdapter {
   struct Config {
     visualizer::CategoricalColormap::Config colormap;
   } const config;
@@ -119,7 +120,7 @@ struct LabelColorAdapter : GraphColorAdapter {
 
 void declare_config(LabelColorAdapter::Config& config);
 
-struct IdColorAdapter : GraphColorAdapter {
+struct IdColorAdapter : NodeColorAdapter {
   struct Config {
     visualizer::DiscreteColormap::Config colormap;
   } const config;
@@ -136,10 +137,10 @@ struct IdColorAdapter : GraphColorAdapter {
 
 void declare_config(IdColorAdapter::Config& config);
 
-struct ParentColorAdapter : GraphColorAdapter {
+struct ParentColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color default_color;
-    config::VirtualConfig<GraphColorAdapter> parent_adapter{
+    config::VirtualConfig<NodeColorAdapter> parent_adapter{
         IdColorAdapter::Config{visualizer::DiscretePalette::COLORBREWER}};
   } const config;
 
@@ -148,7 +149,7 @@ struct ParentColorAdapter : GraphColorAdapter {
                             const spark_dsg::SceneGraphNode& node) const override;
 
  private:
-  const GraphColorAdapter::Ptr parent_adapter_;
+  const NodeColorAdapter::Ptr parent_adapter_;
 
   REGISTER_COLOR_ADAPTER(ParentColorAdapter);
 };
@@ -175,7 +176,7 @@ struct HasActiveMeshFunctor : StatusFunctor {
       config::Registration<StatusFunctor, HasActiveMeshFunctor>("has_active_mesh");
 };
 
-struct StatusColorAdapter : GraphColorAdapter {
+struct StatusColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color true_color{0, 255, 0};
     spark_dsg::Color false_color;
@@ -193,7 +194,7 @@ struct StatusColorAdapter : GraphColorAdapter {
 
 void declare_config(StatusColorAdapter::Config& config);
 
-struct FrontierColorAdapter : GraphColorAdapter {
+struct FrontierColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color real;
     spark_dsg::Color predicted{0, 0, 255};
@@ -212,7 +213,7 @@ struct FrontierColorAdapter : GraphColorAdapter {
 
 void declare_config(FrontierColorAdapter::Config& config);
 
-struct PartitionColorAdapter : GraphColorAdapter {
+struct PartitionColorAdapter : NodeColorAdapter {
   struct Config {
     visualizer::DiscreteColormap::Config colormap;
   } const config;
@@ -251,7 +252,7 @@ struct LastUpdatedFunctor : ValueFunctor {
       config::Registration<ValueFunctor, LastUpdatedFunctor>("last_updated");
 };
 
-struct ValueColorAdapter : GraphColorAdapter {
+struct ValueColorAdapter : NodeColorAdapter {
   struct Config {
     visualizer::RangeColormap::Config colormap;
     std::string value_functor{"place_distance"};
@@ -259,7 +260,7 @@ struct ValueColorAdapter : GraphColorAdapter {
 
   explicit ValueColorAdapter(const Config& config);
   void setGraph(const spark_dsg::DynamicSceneGraph& graph,
-                spark_dsg::LayerId layer) override;
+                spark_dsg::LayerKey layer) override;
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
 
@@ -273,7 +274,7 @@ struct ValueColorAdapter : GraphColorAdapter {
 
 void declare_config(ValueColorAdapter::Config& config);
 
-struct LabelDistributionAdapter : GraphColorAdapter {
+struct LabelDistributionAdapter : NodeColorAdapter {
   struct Config {
     visualizer::CategoricalColormap::Config colormap;
   } const config;

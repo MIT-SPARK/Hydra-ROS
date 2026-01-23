@@ -73,14 +73,15 @@ ValueEdgeColorAdapter::ValueEdgeColorAdapter(const Config& config)
       functor_(config::create<EdgeValueFunctor>(config.value_functor)),
       colormap_(config.colormap) {}
 
-void ValueEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerId layer) {
+void ValueEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerKey layer_key) {
   if (!functor_) {
     return;
   }
 
   bool is_first = true;
   try {
-    for (const auto& [key, edge] : graph.getLayer(layer).edges()) {
+    const auto& layer = graph.getLayer(layer_key.layer, layer_key.partition);
+    for (const auto& [key, edge] : layer.edges()) {
       const auto value = functor_->eval(graph, edge);
       if (is_first) {
         min_value_ = value;
