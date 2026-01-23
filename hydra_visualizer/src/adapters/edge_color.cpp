@@ -42,6 +42,9 @@
 
 #include "hydra_visualizer/color/color_parsing.h"
 
+// TMP
+#include <rclcpp/rclcpp.hpp>
+
 namespace hydra {
 
 using namespace spark_dsg;
@@ -133,7 +136,6 @@ void TraversabilityEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph,
       min_value_ = value;
       max_value_ = value;
       is_first = false;
-      w
     } else {
       min_value_ = std::min(value, min_value_);
       max_value_ = std::max(value, max_value_);
@@ -147,8 +149,11 @@ EdgeColor TraversabilityEdgeColorAdapter::getColor(const DynamicSceneGraph&,
   if (weight == -1.0) {
     return {config.active_color, config.active_color};
   }
-  if (weight < 0.0) {
+  if (weight == -2.0) {
     return {config.backend_color, config.backend_color};
+  }
+  if (weight < 0.0) {
+    return {Color::gray(), Color::gray()};
   }
   const auto color = colormap_.getColor(weight, min_value_, max_value_);
   return {color, color};

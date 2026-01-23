@@ -209,28 +209,9 @@ void TraversabilityPlugin::drawRegionBoundary(
     const Config& config,
     const TravNodeAttributes& attrs,
     visualization_msgs::msg::Marker& marker) const {
-  // TMP: Just draw the boundary voxels.
-  // marker.type = Msarker::POINTS;
-
-  // for (size_t i = 0; i < attrs.points.size(); ++i) {
-  //   const Eigen::Vector3d p =
-  //       attrs.position + attrs.points[i] * (1 - 0.1 / attrs.points[i].norm());
-  //   tf2::convert(p, marker.points.emplace_back());
-  //   auto color =
-  //       visualizer::makeColorMsg(config.colors[static_cast<size_t>(attrs.states[i])]);
-  //   marker.colors.emplace_back(color);
-  // }
-
-  // return;
-
-  // Draw two circles.
-  std::stringstream ss;
   marker.type = Marker::LINE_STRIP;
   for (size_t i = 0; i < attrs.radii.size(); ++i) {
-    const double theta = static_cast<double>(i) / attrs.radii.size() * 2.0 * M_PI;
-    const auto dir = Eigen::Vector3d(cos(theta), sin(theta), 0.0);
-    Eigen::Vector3d point = attrs.position + dir * attrs.radii[i];
-    tf2::convert(point, marker.points.emplace_back());
+    tf2::convert(attrs.getBoundaryPoint(i), marker.points.emplace_back());
     marker.colors.emplace_back(
         visualizer::makeColorMsg(config.colors[static_cast<size_t>(attrs.states[i])]));
   }
