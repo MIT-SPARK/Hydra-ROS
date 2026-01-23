@@ -37,9 +37,6 @@
 #include <ianvs/node_handle.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 
-#include <string>
-#include <vector>
-
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/layer_info.h"
@@ -66,9 +63,7 @@ class SceneGraphRenderer {
     //! @brief Overall graph config
     GraphRenderConfig graph;
     //! @brief Configuration for each layer
-    std::map<spark_dsg::LayerId, visualizer::LayerConfig> layers;
-    //! @brief Configuration for non-primary partitions by layer
-    std::map<spark_dsg::LayerId, visualizer::LayerConfig> partitions;
+    std::map<std::string, visualizer::LayerConfig> layers;
   };
 
   explicit SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh);
@@ -104,13 +99,10 @@ class SceneGraphRenderer {
   config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
 
-  mutable std::atomic<bool> has_change_;
-  mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> layers_;
-  mutable std::map<spark_dsg::LayerId, std::unique_ptr<LayerConfigWrapper>> partitions_;
-
   mutable MarkerTracker tracker_;
-  mutable std::map<spark_dsg::LayerId, visualizer::LayerInfo> layer_infos_;
-  mutable std::map<spark_dsg::LayerId, visualizer::LayerInfo> partition_infos_;
+  mutable std::atomic<bool> has_change_;
+  mutable std::map<spark_dsg::LayerKey, visualizer::LayerInfo> layer_infos_;
+  mutable std::map<spark_dsg::LayerKey, std::unique_ptr<LayerConfigWrapper>> layers_;
 };
 
 void declare_config(SceneGraphRenderer::Config& config);

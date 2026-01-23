@@ -130,29 +130,13 @@ void declare_config(SceneGraphRenderer::Config& config) {
   name("SceneGraphRenderer::Config");
   field(config.graph, "graph");
   field(config.layers, "layers");
-  field(config.partitions, "partitions");
 }
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
     : nh_(nh),
       graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
-      has_change_(false) {
-  // init wrappers from parsed initial config
-  for (const auto& [layer_id, layer_config] : config.layers) {
-    const auto ns = "renderer/config/layer" + std::to_string(layer_id);
-    layers_.emplace(layer_id,
-                    std::make_unique<LayerConfigWrapper>(
-                        ns, layer_config, [this]() { has_change_ = true; }));
-  }
-
-  for (const auto& [layer_id, layer_config] : config.partitions) {
-    const auto ns = "renderer/config/partitions/layer" + std::to_string(layer_id);
-    partitions_.emplace(layer_id,
-                        std::make_unique<LayerConfigWrapper>(
-                            ns, layer_config, [this]() { has_change_ = true; }));
-  }
-}
+      has_change_(false) {}
 
 void SceneGraphRenderer::reset(const std_msgs::msg::Header& header) {
   MarkerArray msg;
@@ -171,13 +155,14 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   setConfigs(graph);
 
   MarkerArray msg;
-  for (const auto& [layer_id, layer] : graph.layers()) {
-    drawLayer(header, layer_infos_.at(layer_id), *layer, graph.mesh().get(), msg);
+  for (const auto& [_, layer] : graph.layers()) {
+    drawLayer(header, layer_infos_.at(layer->id), *layer, graph.mesh().get(), msg);
   }
 
-  for (const auto& [l_id, partitions] : graph.layer_partitions()) {
-    for (const auto& [partition_id, partition] : partitions) {
-      drawLayer(header, partition_infos_.at(l_id), *partition, graph.mesh().get(), msg);
+  for (const auto& [_, partitions] : graph.layer_partitions()) {
+    for (const auto& [_, partition] : partitions) {
+      const auto& partition_info = layer_infos_.at(partition->id);
+      drawLayer(header, partition_info, *partition, graph.mesh().get(), msg);
     }
   }
 
@@ -315,46 +300,43 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
 
 void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
   layer_infos_.clear();
-  partition_infos_.clear();
 
-  const auto& graph_config = graph_config_.get();
-  for (const auto& [layer_id, layer] : graph.layers()) {
-    auto iter = layers_.find(layer_id);
+  const auto graph_config = graph_config_.get();
+  const auto z_step = graph_config.layer_z_step;
+  const auto collapse = graph_config.collapse_layers;
+  for (const auto& [_, layer] : graph.layers()) {
+    const auto key = layer->id;
+    auto iter = layers_.find(key);
     if (iter == layers_.end()) {
-      // TODO(nathan) think about logging
-      const auto ns = "renderer/config/layer" + std::to_string(layer_id);
-      iter = layers_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(ns)).first;
+      const auto ns = "renderer/config/layer" + keyToLayerName(key);
+      iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns)).first;
       iter->second->setCallback([this]() { has_change_ = true; });
     }
 
-    // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
-    layer_infos_.emplace(layer_id, LayerInfo(iter->second->get()))
-        .first->second.offset(graph_config.layer_z_step, graph_config.collapse_layers)
-        .graph(graph, layer_id);
+    // TODO(nathan) double check this doesn't break callbacks
+    LayerInfo info(iter->second->get());
+    layer_infos_.emplace(key, info.offset(z_step, collapse).graph(graph, key));
   }
 
-  for (const auto& [l_id, partitions] : graph.layer_partitions()) {
-    auto iter = partitions_.find(l_id);
-    if (iter == partitions_.end()) {
-      // TODO(nathan) think about logging
-      const auto ns = "renderer/config/partitions/layer" + std::to_string(l_id);
-      iter = partitions_.emplace(l_id, std::make_unique<LayerConfigWrapper>(ns)).first;
-      iter->second->setCallback([this]() { has_change_ = true; });
-    }
+  for (const auto& [_, partitions] : graph.layer_partitions()) {
+    for (const auto& [_, partition] : partitions) {
+      const auto key = partition->id;
+      auto iter = layers_.find(key);
+      if (iter == layers_.end()) {
+        const auto ns = "renderer/config/layer" + keyToLayerName(key);
+        iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns)).first;
+        iter->second->setCallback([this]() { has_change_ = true; });
+      }
 
-    // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
-    partition_infos_.emplace(l_id, LayerInfo(iter->second->get()))
-        .first->second.offset(graph_config.layer_z_step, graph_config.collapse_layers)
-        .graph(graph, l_id);
+      // TODO(nathan) double check this doesn't break callbacks
+      LayerInfo info(iter->second->get());
+      layer_infos_.emplace(key, info.offset(z_step, collapse).graph(graph, key));
+    }
   }
 }
 
 const LayerInfo& SceneGraphRenderer::getLayerInfo(LayerKey layer) const {
-  if (!layer.partition) {
-    return layer_infos_.at(layer.layer);
-  } else {
-    return partition_infos_.at(layer.layer);
-  }
+  return layer_infos_.at(layer.layer);
 }
 
 }  // namespace hydra
