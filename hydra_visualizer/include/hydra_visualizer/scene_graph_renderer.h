@@ -60,10 +60,17 @@ class SceneGraphRenderer {
   using LayerConfigWrapper = config::DynamicConfig<visualizer::LayerConfig>;
 
   struct Config {
+    struct InterlayerEdges : visualizer::LayerConfig::Edges {
+      std::string from;
+      std::string to;
+    };
+
     //! @brief Overall graph config
     GraphRenderConfig graph;
     //! @brief Configuration for each layer
     std::map<std::string, visualizer::LayerConfig> layers;
+    //! @brief Configuration for interlayer edges
+    std::vector<InterlayerEdges> interlayer_edges;
   };
 
   explicit SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh);

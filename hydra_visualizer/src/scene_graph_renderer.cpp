@@ -151,6 +151,17 @@ struct MarkerNamespaces {
   }
 };
 
+void declare_config(SceneGraphRenderer::Config::InterlayerEdges& config) {
+  using namespace config;
+  name("SceneGraphRenderer::Config::InterlayerEdges");
+  base<LayerConfig::Edges>(config);
+  field(config.from, "from");
+  field(config.to, "to");
+
+  checkCondition(!config.from.empty(), "from: nonempty");
+  checkCondition(!config.to.empty(), "to: nonempty");
+}
+
 void declare_config(GraphRenderConfig& config) {
   using namespace config;
   name("GraphRenderConfig");
@@ -163,6 +174,7 @@ void declare_config(SceneGraphRenderer::Config& config) {
   name("SceneGraphRenderer::Config");
   field(config.graph, "graph");
   field(config.layers, "layers");
+  field(config.interlayer_edges, "interlayer_edges");
 }
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
