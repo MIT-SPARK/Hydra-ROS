@@ -40,6 +40,8 @@
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/printing.h>
 
+#include <regex>
+
 #include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
@@ -64,6 +66,37 @@ inline std::string keyToLayerName(LayerKey key) {
   }
 
   return ss.str();
+}
+
+struct ParsedKey {
+  bool valid = false;
+  bool partition_default = false;
+  LayerId layer;
+  PartitionId partition = 0;
+};
+
+ParsedKey parseKey(const std::string& name) {
+  ParsedKey to_return;
+  std::regex layer_re(R"((\d+)p\*$|(\d+)p(\d+)$|(\d+)$)");
+  std::smatch match;
+  if (!std::regex_match(name, match, layer_re)) {
+    LOG(WARNING) << "Invalid layer name '" << name << "'";
+    return to_return;
+  }
+
+  to_return.valid = true;
+  CHECK_EQ(match.size(), 5);
+  if (!match.str(1).empty()) {
+    to_return.partition_default = true;
+    to_return.layer = std::stoull(match.str(1));
+  } else if (!match.str(2).empty()) {
+    to_return.layer = std::stoull(match.str(2));
+    to_return.partition = std::stoi(match.str(3));
+  } else {
+    to_return.layer = std::stoull(match.str(4));
+  }
+
+  return to_return;
 }
 
 inline Marker makeNewEdgeList(const std_msgs::msg::Header& header,
@@ -134,6 +167,7 @@ void declare_config(SceneGraphRenderer::Config& config) {
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
     : nh_(nh),
+      layer_defaults_(config.layers),
       graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
       has_change_(false) {}
@@ -298,37 +332,53 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
   }
 }
 
+LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
+  auto iter = layers_.find(key);
+  if (iter == layers_.end()) {
+    // TODO(nathan) actually allow layer names when looking up configs
+    LayerConfig init_config;
+    for (const auto& [config_key, config] : layer_defaults_) {
+      const auto parsed = parseKey(config_key);
+      if (!parsed.valid || parsed.layer != key.layer) {
+        continue;  // layers don't match, don't do anything
+      }
+
+      if (parsed.partition_default && key.partition) {
+        init_config = config;  // wildcard match, but keep looking for exact
+        continue;
+      }
+
+      if (key.partition == parsed.partition) {
+        init_config = config;  // exact match, stop matching
+        break;
+      };
+    }
+
+    const auto ns = "renderer/config/layer" + keyToLayerName(key);
+    iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns, init_config))
+               .first;
+    iter->second->setCallback([this]() { has_change_ = true; });
+  }
+
+  return iter->second->get();
+}
+
 void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
   layer_infos_.clear();
-
   const auto graph_config = graph_config_.get();
   const auto z_step = graph_config.layer_z_step;
   const auto collapse = graph_config.collapse_layers;
   for (const auto& [_, layer] : graph.layers()) {
-    const auto key = layer->id;
-    auto iter = layers_.find(key);
-    if (iter == layers_.end()) {
-      const auto ns = "renderer/config/layer" + keyToLayerName(key);
-      iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns)).first;
-      iter->second->setCallback([this]() { has_change_ = true; });
-    }
-
-    auto& [_key, info] = *layer_infos_.emplace(key, iter->second->get()).first;
-    info.offset(z_step, collapse).graph(graph, key);
+    const auto layer_config = getLayerConfig(layer->id);
+    auto& [_key, info] = *layer_infos_.emplace(layer->id, layer_config).first;
+    info.offset(z_step, collapse).graph(graph, layer->id);
   }
 
   for (const auto& [_, partitions] : graph.layer_partitions()) {
-    for (const auto& [_, partition] : partitions) {
-      const auto key = partition->id;
-      auto iter = layers_.find(key);
-      if (iter == layers_.end()) {
-        const auto ns = "renderer/config/layer" + keyToLayerName(key);
-        iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns)).first;
-        iter->second->setCallback([this]() { has_change_ = true; });
-      }
-
-      auto& [_key, info] = *layer_infos_.emplace(key, iter->second->get()).first;
-      info.offset(z_step, collapse).graph(graph, key);
+    for (const auto& [_, layer] : partitions) {
+      const auto layer_config = getLayerConfig(layer->id);
+      auto& [_key, info] = *layer_infos_.emplace(layer->id, layer_config).first;
+      info.offset(z_step, collapse).graph(graph, layer->id);
     }
   }
 }

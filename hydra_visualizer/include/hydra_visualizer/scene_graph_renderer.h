@@ -94,8 +94,11 @@ class SceneGraphRenderer {
 
   const visualizer::LayerInfo& getLayerInfo(spark_dsg::LayerKey layer) const;
 
+  visualizer::LayerConfig getLayerConfig(spark_dsg::LayerKey key) const;
+
  protected:
   ianvs::NodeHandle nh_;
+  std::map<std::string, visualizer::LayerConfig> layer_defaults_;
   config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
 
