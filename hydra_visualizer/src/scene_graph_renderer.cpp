@@ -313,9 +313,8 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
       iter->second->setCallback([this]() { has_change_ = true; });
     }
 
-    // TODO(nathan) double check this doesn't break callbacks
-    LayerInfo info(iter->second->get());
-    layer_infos_.emplace(key, info.offset(z_step, collapse).graph(graph, key));
+    auto& [_key, info] = *layer_infos_.emplace(key, iter->second->get()).first;
+    info.offset(z_step, collapse).graph(graph, key);
   }
 
   for (const auto& [_, partitions] : graph.layer_partitions()) {
@@ -328,9 +327,8 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
         iter->second->setCallback([this]() { has_change_ = true; });
       }
 
-      // TODO(nathan) double check this doesn't break callbacks
-      LayerInfo info(iter->second->get());
-      layer_infos_.emplace(key, info.offset(z_step, collapse).graph(graph, key));
+      auto& [_key, info] = *layer_infos_.emplace(key, iter->second->get()).first;
+      info.offset(z_step, collapse).graph(graph, key);
     }
   }
 }
