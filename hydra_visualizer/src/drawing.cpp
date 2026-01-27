@@ -534,61 +534,6 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
   return marker;
 }
 
-Marker makeMeshEdgesMarker(const std_msgs::msg::Header& header,
-                           const LayerInfo& info,
-                           const SceneGraphLayer& layer,
-                           const Mesh& mesh,
-                           const std::string& ns) {
-  Marker marker;
-  marker.header = header;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-
-  marker.scale.x = info.config.edges.interlayer_scale;
-  fillPoseWithIdentity(marker.pose);
-
-  for (const auto& [node_id, node] : layer.nodes()) {
-    const auto& attrs = node->attributes<Place2dNodeAttributes>();
-    const auto& mesh_edge_indices = attrs.mesh_connections;
-    if (mesh_edge_indices.empty()) {
-      continue;
-    }
-
-    const auto alpha = info.config.edges.interlayer_alpha;
-    const auto color =
-        info.config.edges.interlayer_use_color ? info.node_color(*node) : Color();
-
-    geometry_msgs::msg::Point centroid_location;
-    tf2::convert(attrs.position, centroid_location);
-    centroid_location.z += info.z_offset;
-
-    size_t i = 0;
-    for (const auto midx : mesh_edge_indices) {
-      ++i;
-      if ((i - 1) % (info.config.edges.interlayer_insertion_skip + 1) != 0) {
-        continue;
-      }
-
-      if (midx >= mesh.numVertices()) {
-        continue;
-      }
-
-      Eigen::Vector3d vertex_pos = mesh.pos(midx).cast<double>();
-      geometry_msgs::msg::Point vertex;
-      tf2::convert(vertex_pos, vertex);
-
-      marker.points.push_back(centroid_location);
-      marker.points.push_back(vertex);
-      marker.colors.push_back(makeColorMsg(color, alpha));
-      marker.colors.push_back(makeColorMsg(color, alpha));
-    }
-  }
-
-  return marker;
-}
-
 // NOTE(nathan) this reuses the normal node text infrastructure, which is mostly fine
 // because the two are mutually exclusive
 Marker makeLayerTextMarker(const std_msgs::msg::Header& header,

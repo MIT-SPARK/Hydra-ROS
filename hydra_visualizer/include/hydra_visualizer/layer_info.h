@@ -47,11 +47,9 @@ struct LayerConfig {
   //! @brief show layer
   bool visualize = false;
   //! @brief number of steps of offset to apply
-  double z_offset_scale = 0.0;  // [-5.0, 10.0]
+  double z_offset_scale = 0.0;
   //! @brief Draw current frontiers as ellipses
   bool draw_frontier_ellipse = false;
-  //! @brief whether or not to draw mesh edges
-  bool draw_mesh_edges = false;
 
   //! @brief Node settings
   struct Nodes {
@@ -69,26 +67,16 @@ struct LayerConfig {
 
   //! @brief Edge configuration
   struct Edges {
-    //! @brief draw intralayer edges
+    //! @brief Draw edges
     bool draw = true;
-    //! @brief intralayer edge size
-    double scale = 0.03;  //[ 0.001, 1.0]
-    //! @brief intralayer edge alpha
-    double alpha = 1.0;  //[ 0.0, 1.0]
-    //! @brief Color to use for edge. Unspecified uses node colors.
+    //! @brief Edge size
+    double scale = 0.03;
+    //! @brief Edge alpha
+    double alpha = 1.0;
+    //! @brief Color to use for edge (unspecified uses node colors).
     config::VirtualConfig<EdgeColorAdapter> color{UniformEdgeColorAdapter::Config()};
-    //! @brief draw interlayer edges
-    bool draw_interlayer = true;
-    //! @brief use edge source layer for config
-    bool interlayer_use_source = true;
-    //! @brief interlayer edge size
-    double interlayer_scale = 0.03;  // [0.001, 1.0]
-    //! @brief interlayer edge alpha
-    double interlayer_alpha = 1.0;  // [0.0, 1.0]
-    //! @brief If true color dsg-mesh edges
-    bool interlayer_use_color = true;
-    //! @brief Number of edges to skip when drawing interlayer edges
-    size_t interlayer_insertion_skip = 0;  // [0, 1000]
+    //! @brief Number of edges to skip when drawing edges
+    size_t insertion_skip = 0;
   } edges;
 
   //! @brief Text settings
@@ -102,13 +90,13 @@ struct LayerConfig {
     //! @brief text adapter type
     config::VirtualConfig<NodeTextAdapter> adapter{IdTextAdapter::Config()};
     //! @brief height of text above node
-    double height = 1.0;  //[ 0.0, 5.0]
+    double height = 1.0;
     //! @brief scale of text above node
-    double scale = 0.5;  //[ 0.05, 5.0]
+    double scale = 0.5;
     //! @brief add random noise to text z offset
     bool add_jitter = false;
     //! @brief amount of jitter to add
-    double jitter_scale = 0.2;  //[ 0.05, 5.0]
+    double jitter_scale = 0.2;
     //! @brief Color to use for text
     NamedColors color = NamedColors::BLACK;
   } text;
@@ -119,13 +107,13 @@ struct LayerConfig {
     //! @brief draw bounding box at ground level
     bool collapse = false;
     //! @brief scale of bounding box wireframe
-    double scale = 0.1;  // [0.001, 1.0]
+    double scale = 0.1;
     //! @brief scale of edges drawn to bbox corners
-    double edge_scale = 0.01;  // [ 0.001, 1.0]
+    double edge_scale = 0.01;
     //! @brief alpha of bounding boxes
-    double alpha = 0.5;  // [0.0, 1.0]
+    double alpha = 0.5;
     //! @brief point at which to break the edge into many edges
-    double edge_break_ratio = 0.5;  //[0.0, 1.0]
+    double edge_break_ratio = 0.5;
   } bounding_boxes;
 
   //! @brief configuration for polygon boundaries
@@ -135,18 +123,23 @@ struct LayerConfig {
     //! @brief draw polygons at mesh level
     bool collapse = false;
     //! @brief scale of boundary wireframe
-    double wireframe_scale = 0.1;  //[ 0.001, 1.0]
+    double wireframe_scale = 0.1;
     //! @brief draw polygons using node semantic color
     bool use_node_color = true;
     //! @brief alpha of boundary
-    double alpha = 0.5;  //[0.0, 1.0]
+    double alpha = 0.5;
     //! @brief display minimum bounding ellipse
     bool draw_ellipse = false;
     //! @brief alpha of bounding ellipse
-    double ellipse_alpha = 0.5;  //[ 0.0, 1.0]
+    double ellipse_alpha = 0.5;
   } boundaries;
 };
 
+void declare_config(LayerConfig::Nodes& config);
+void declare_config(LayerConfig::Edges& config);
+void declare_config(LayerConfig::Text& config);
+void declare_config(LayerConfig::BoundingBoxes& config);
+void declare_config(LayerConfig::Boundaries& config);
 void declare_config(LayerConfig& config);
 
 class LayerInfo {

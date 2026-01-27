@@ -230,32 +230,29 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
   std::map<LayerKey, size_t> num_since_last;
   for (const auto& [key, edge] : graph.interlayer_edges()) {
     const auto& source = graph.getNode(edge.source);
-    const auto& source_info = getLayerInfo(source.layer);
     const auto& target = graph.getNode(edge.target);
+    const auto& source_info = getLayerInfo(source.layer);
     const auto& target_info = getLayerInfo(target.layer);
     if (!source_info.shouldVisualize(source) || !target_info.shouldVisualize(target)) {
       continue;
     }
 
-    if (!source_info.config.edges.draw_interlayer ||
-        !target_info.config.edges.draw_interlayer) {
+    Config::InterlayerEdges edge_config;
+    if (!edge_config.draw) {
       continue;
     }
-
-    const auto use_source = source_info.config.edges.interlayer_use_source;
-    const auto& info = use_source ? source_info : target_info;
 
     auto iter = marker_indices.find(source.layer);
     if (iter == marker_indices.end()) {
       iter = marker_indices.emplace(source.layer, msg.markers.size()).first;
       msg.markers.push_back(
           makeNewEdgeList(header, ns_prefix, source.layer, target.layer));
-      msg.markers.back().scale.x = info.config.edges.interlayer_scale;
+      msg.markers.back().scale.x = edge_config.scale;
       // make sure we always draw at least one edge
-      num_since_last[source.layer] = info.config.edges.interlayer_insertion_skip;
+      num_since_last[source.layer] = edge_config.insertion_skip;
     }
 
-    if (num_since_last[source.layer] >= info.config.edges.interlayer_insertion_skip) {
+    if (num_since_last[source.layer] >= edge_config.insertion_skip) {
       num_since_last[source.layer] = 0;
     } else {
       num_since_last[source.layer]++;
@@ -263,18 +260,15 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
     }
 
     auto& marker = msg.markers.at(iter->second);
-    geometry_msgs::msg::Point source_point;
+    auto& source_point = marker.points.emplace_back();
     tf2::convert(source.attributes().position, source_point);
     source_point.z += source_info.z_offset;
-    marker.points.push_back(source_point);
 
-    geometry_msgs::msg::Point target_point;
+    auto& target_point = marker.points.emplace_back();
     tf2::convert(target.attributes().position, target_point);
     target_point.z += target_info.z_offset;
-    marker.points.push_back(target_point);
 
-    const auto color = makeColorMsg(info.node_color(use_source ? source : target),
-                                    info.config.edges.interlayer_alpha);
+    const auto color = makeColorMsg(Color(), edge_config.alpha);
     marker.colors.push_back(color);
     marker.colors.push_back(color);
   }
@@ -283,7 +277,7 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
 void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
                                    const LayerInfo& info,
                                    const SceneGraphLayer& layer,
-                                   const Mesh* mesh,
+                                   const Mesh* /* mesh */,
                                    MarkerArray& msg) const {
   if (!info.config.visualize) {
     return;
@@ -337,11 +331,6 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
 
   const auto edge_ns = MarkerNamespaces::layerEdgeNamespace(layer.id);
   tracker_.add(makeLayerEdgeMarkers(header, info, layer, edge_ns), msg);
-
-  if (mesh && info.config.draw_mesh_edges) {
-    const std::string ns = MarkerNamespaces::meshEdgeNamespace(layer.id);
-    tracker_.add(makeMeshEdgesMarker(header, info, layer, *mesh, ns), msg);
-  }
 }
 
 LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
@@ -396,7 +385,7 @@ void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
 }
 
 const LayerInfo& SceneGraphRenderer::getLayerInfo(LayerKey layer) const {
-  return layer_infos_.at(layer.layer);
+  return layer_infos_.at(layer);
 }
 
 }  // namespace hydra

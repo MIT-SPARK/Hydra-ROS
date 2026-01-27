@@ -73,12 +73,7 @@ void declare_config(LayerConfig::Edges& config) {
   field(config.alpha, "alpha");
   config.color.setOptional();
   field(config.color, "color");
-  field(config.draw_interlayer, "draw_interlayer");
-  field(config.interlayer_use_source, "interlayer_use_source");
-  field(config.interlayer_scale, "interlayer_scale");
-  field(config.interlayer_alpha, "interlayer_alpha");
-  field(config.interlayer_use_color, "interlayer_use_color");
-  field(config.interlayer_insertion_skip, "interlayer_insertion_skip");
+  field(config.insertion_skip, "insertion_skip");
 
   check(config.scale, GT, 0.0, "scale");
   checkInRange(config.alpha, 0.0, 1.0, "alpha");
@@ -140,7 +135,6 @@ void declare_config(LayerConfig& config) {
   field(config.visualize, "visualize");
   field(config.z_offset_scale, "z_offset_scale");
   field(config.draw_frontier_ellipse, "draw_frontier_ellipse");
-  field(config.draw_mesh_edges, "draw_mesh_edges");
 
   // subconfigs
   field(config.nodes, "nodes");
