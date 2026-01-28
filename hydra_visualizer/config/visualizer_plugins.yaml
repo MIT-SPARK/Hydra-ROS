@@ -12,7 +12,7 @@ plugins:
     places_node_scale: 0.1
   khronos_objects:
     type: KhronosObjectPlugin
-    dynamic_color_mode: CONSTANT # ID, SEMANTIC, CONSTANT
+    dynamic_color_mode: CONSTANT  # ID, SEMANTIC, CONSTANT
   places_traversability:
     type: TraversabilityPlugin
   agent_poses:

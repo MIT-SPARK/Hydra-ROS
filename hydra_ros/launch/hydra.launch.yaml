@@ -26,7 +26,7 @@ launch:
   - arg: {name: log_path, default: $(env HOME)/.hydra/$(var log_name), description: Directory to output to}
   - arg: {name: exit_after_clock, default: 'false', description: Shutdown hydra node after a rosbag finishes playing}
   - arg: {name: enable_zmq, default: 'false', description: Turn on zmq-based publishing for scene graph}
-  - arg: {name: zmq_url, default: 'tcp://127.0.0.1:8001', description: ZMQ publish url}
+  - arg: {name: zmq_url, default: tcp://127.0.0.1:8001, description: ZMQ publish url}
   - arg: {name: zmq_send_mesh, default: 'false', description: Whether or not to serialize mesh when using ZMQ}
   # hydra node
   - node:
