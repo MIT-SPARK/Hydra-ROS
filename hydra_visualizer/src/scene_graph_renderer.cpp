@@ -35,6 +35,7 @@
 #include "hydra_visualizer/scene_graph_renderer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/types/collections.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
@@ -164,6 +165,18 @@ bool LayerKeySelector::matches(LayerKey to_match) const {
   return true;
 }
 
+bool LayerKeySelector::operator<(const LayerKeySelector& other) const {
+  if (key < other.key) {
+    return true;
+  }
+
+  if (key == other.key) {
+    return wildcard < other.wildcard;
+  } else {
+    return false;
+  }
+}
+
 struct SelectorConversion {
   static std::string toIntermediate(const LayerKeySelector& value, std::string&) {
     return value.str();
@@ -203,7 +216,7 @@ void declare_config(SceneGraphRenderer::Config& config) {
   using namespace config;
   name("SceneGraphRenderer::Config");
   field(config.graph, "graph");
-  field(config.layers, "layers");
+  field<MapKeyConverter<SelectorConversion>>(config.layers, "layers");
   field(config.interlayer_edges, "interlayer_edges");
 }
 
@@ -369,20 +382,16 @@ LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
     // TODO(nathan) actually allow layer names when looking up configs
     LayerConfig init_config;
     for (const auto& [config_key, config] : init_config_.layers) {
-      const auto parsed = parseKey(config_key);
-      if (!parsed.valid || parsed.layer != key.layer) {
-        continue;  // layers don't match, don't do anything
-      }
-
-      if (parsed.partition_default && key.partition) {
-        init_config = config;  // wildcard match, but keep looking for exact
+      if (!config_key.matches(key)) {
         continue;
       }
 
-      if (key.partition == parsed.partition) {
-        init_config = config;  // exact match, stop matching
+      init_config = config;
+      if (config_key.wildcard) {
+        continue;  // allow more specific keys to take precedence
+      } else {
         break;
-      };
+      }
     }
 
     const auto ns = "renderer/config/layer" + keyToLayerName(key);

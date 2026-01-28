@@ -62,6 +62,7 @@ struct LayerKeySelector {
 
   std::string str() const;
   bool matches(spark_dsg::LayerKey to_match) const;
+  bool operator<(const LayerKeySelector& other) const;
 };
 
 class SceneGraphRenderer {
