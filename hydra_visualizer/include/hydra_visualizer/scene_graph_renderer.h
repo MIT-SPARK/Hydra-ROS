@@ -54,6 +54,16 @@ struct GraphRenderConfig {
 
 void declare_config(GraphRenderConfig& config);
 
+struct LayerKeySelector {
+  spark_dsg::LayerKey key;
+  bool wildcard = false;
+
+  static std::optional<LayerKeySelector> parse(const std::string& selector_str);
+
+  std::string str() const;
+  bool matches(spark_dsg::LayerKey to_match) const;
+};
+
 class SceneGraphRenderer {
  public:
   using Ptr = std::shared_ptr<SceneGraphRenderer>;
@@ -61,14 +71,14 @@ class SceneGraphRenderer {
 
   struct Config {
     struct InterlayerEdges : visualizer::LayerConfig::Edges {
-      std::string from;
-      std::string to;
+      LayerKeySelector from;
+      LayerKeySelector to;
     };
 
     //! @brief Overall graph config
     GraphRenderConfig graph;
     //! @brief Configuration for each layer
-    std::map<std::string, visualizer::LayerConfig> layers;
+    std::map<LayerKeySelector, visualizer::LayerConfig> layers;
     //! @brief Configuration for interlayer edges
     std::vector<InterlayerEdges> interlayer_edges;
   };
@@ -104,8 +114,9 @@ class SceneGraphRenderer {
   visualizer::LayerConfig getLayerConfig(spark_dsg::LayerKey key) const;
 
  protected:
+  const Config init_config_;
+
   ianvs::NodeHandle nh_;
-  std::map<std::string, visualizer::LayerConfig> layer_defaults_;
   config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
 

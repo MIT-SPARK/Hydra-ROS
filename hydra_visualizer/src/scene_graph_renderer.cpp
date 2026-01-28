@@ -68,37 +68,6 @@ inline std::string keyToLayerName(LayerKey key) {
   return ss.str();
 }
 
-struct ParsedKey {
-  bool valid = false;
-  bool partition_default = false;
-  LayerId layer;
-  PartitionId partition = 0;
-};
-
-ParsedKey parseKey(const std::string& name) {
-  ParsedKey to_return;
-  std::regex layer_re(R"((\d+)p\*$|(\d+)p(\d+)$|(\d+)$)");
-  std::smatch match;
-  if (!std::regex_match(name, match, layer_re)) {
-    LOG(WARNING) << "Invalid layer name '" << name << "'";
-    return to_return;
-  }
-
-  to_return.valid = true;
-  CHECK_EQ(match.size(), 5);
-  if (!match.str(1).empty()) {
-    to_return.partition_default = true;
-    to_return.layer = std::stoull(match.str(1));
-  } else if (!match.str(2).empty()) {
-    to_return.layer = std::stoull(match.str(2));
-    to_return.partition = std::stoi(match.str(3));
-  } else {
-    to_return.layer = std::stoull(match.str(4));
-  }
-
-  return to_return;
-}
-
 inline Marker makeNewEdgeList(const std_msgs::msg::Header& header,
                               const std::string& ns_prefix,
                               LayerKey source,
@@ -114,8 +83,6 @@ inline Marker makeNewEdgeList(const std_msgs::msg::Header& header,
   marker.ns = ss.str();
   return marker;
 }
-
-}  // namespace
 
 struct MarkerNamespaces {
   static std::string layerNodeNamespace(LayerKey key) {
@@ -151,15 +118,78 @@ struct MarkerNamespaces {
   }
 };
 
+}  // namespace
+
+std::optional<LayerKeySelector> LayerKeySelector::parse(
+    const std::string& selector_str) {
+  std::regex re(R"((\d+)p\*$|(\d+)p(\d+)$|(\d+)$)");
+  std::smatch match;
+  if (!std::regex_match(selector_str, match, re)) {
+    return std::nullopt;
+  }
+
+  CHECK_EQ(match.size(), 5);
+  if (!match.str(1).empty()) {
+    return LayerKeySelector{LayerKey{std::stol(match.str(1))}, true};
+  } else if (!match.str(2).empty()) {
+    return LayerKeySelector{LayerKey{
+        std::stol(match.str(2)), static_cast<PartitionId>(std::stoi(match.str(3)))}};
+  } else {
+    return LayerKeySelector{LayerKey{std::stol(match.str(4))}};
+  }
+}
+
+std::string LayerKeySelector::str() const {
+  const auto layer_str = std::to_string(key.layer);
+  if (wildcard) {
+    return layer_str + "p*";
+  }
+
+  if (key.partition) {
+    return layer_str + "p" + std::to_string(key.partition);
+  }
+
+  return layer_str;
+}
+
+bool LayerKeySelector::matches(LayerKey to_match) const {
+  if (key.layer != to_match.layer) {
+    return false;
+  }
+
+  if (!wildcard && key.partition != to_match.partition) {
+    return false;
+  }
+
+  return true;
+}
+
+struct SelectorConversion {
+  static std::string toIntermediate(const LayerKeySelector& value, std::string&) {
+    return value.str();
+  }
+
+  static void fromIntermediate(const std::string& intermediate,
+                               LayerKeySelector& value,
+                               std::string& error) {
+    const auto parsed = LayerKeySelector::parse(intermediate);
+    if (!parsed) {
+      error = "Invalid layer selector '" + intermediate + "', must be of form " +
+              "integer layer (e.g., '3')" + ", layer and partition (e.g., '2p1')" +
+              ", or layer and wildcard (e.g., '4p*')";
+      return;
+    }
+
+    value = *parsed;
+  }
+};
+
 void declare_config(SceneGraphRenderer::Config::InterlayerEdges& config) {
   using namespace config;
   name("SceneGraphRenderer::Config::InterlayerEdges");
   base<LayerConfig::Edges>(config);
-  field(config.from, "from");
-  field(config.to, "to");
-
-  checkCondition(!config.from.empty(), "from: nonempty");
-  checkCondition(!config.to.empty(), "to: nonempty");
+  field<SelectorConversion>(config.from, "from");
+  field<SelectorConversion>(config.to, "to");
 }
 
 void declare_config(GraphRenderConfig& config) {
@@ -178,8 +208,8 @@ void declare_config(SceneGraphRenderer::Config& config) {
 }
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
-    : nh_(nh),
-      layer_defaults_(config.layers),
+    : init_config_(config),
+      nh_(nh),
       graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
       has_change_(false) {}
@@ -338,7 +368,7 @@ LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
   if (iter == layers_.end()) {
     // TODO(nathan) actually allow layer names when looking up configs
     LayerConfig init_config;
-    for (const auto& [config_key, config] : layer_defaults_) {
+    for (const auto& [config_key, config] : init_config_.layers) {
       const auto parsed = parseKey(config_key);
       if (!parsed.valid || parsed.layer != key.layer) {
         continue;  // layers don't match, don't do anything
