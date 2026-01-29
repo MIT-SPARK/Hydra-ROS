@@ -122,7 +122,7 @@ KhronosObjectPlugin::KhronosObjectPlugin(const Config& config,
                                          ianvs::NodeHandle nh,
                                          const std::string& name)
     : VisualizerPlugin(name),
-      config_("KhronosObjectPlugin", config::checkValid(config)),
+      config_("khronos_object_plugin", config::checkValid(config)),
       dynamic_pub_(
           nh.create_publisher<MarkerArray>("dynamic_objects", config.queue_size)),
       static_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>("static_objects",

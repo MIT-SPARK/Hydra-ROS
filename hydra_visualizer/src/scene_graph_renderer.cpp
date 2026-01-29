@@ -59,7 +59,7 @@ namespace {
 
 inline std::string keyToLayerName(LayerKey key) {
   std::stringstream ss;
-  ss << "layer_" << key.layer;
+  ss << "layer" << key.layer;
   if (key.partition) {
     ss << "p" << key.partition;
   }
@@ -147,7 +147,7 @@ void declare_config(SceneGraphRenderer::Config& config) {
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
     : init_config_(config),
       nh_(nh),
-      graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
+      graph_config_("scene_graph", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
       has_change_(false) {}
 
@@ -210,7 +210,7 @@ InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent
       }
     }
 
-    const auto ns = "renderer/config/interlayer_edge_" + name;
+    const auto ns = "scene_graph_interlayer_" + name;
     auto wrapper = std::make_unique<EdgeConfigWrapper>(ns, config);
     wrapper->setCallback([this]() { has_change_ = true; });
     iter = interlayer_edges_.emplace(name, std::move(wrapper)).first;
@@ -371,7 +371,7 @@ LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
       }
     }
 
-    const auto ns = "renderer/config/layer" + keyToLayerName(key);
+    const auto ns = "scene_graph_" + keyToLayerName(key);
     iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns, init_config))
                .first;
     iter->second->setCallback([this]() { has_change_ = true; });
