@@ -55,7 +55,7 @@ void declare_config(AttributeColorAdapter::Config& config) {
 AttributeColorAdapter::AttributeColorAdapter(const Config& config) : config(config) {}
 
 Color AttributeColorAdapter::getColor(const DynamicSceneGraph&,
-                                     const SceneGraphNode& node) const {
+                                      const SceneGraphNode& node) const {
   try {
     return node.attributes<SemanticNodeAttributes>().color;
   } catch (const std::bad_cast&) {

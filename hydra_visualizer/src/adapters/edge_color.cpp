@@ -73,7 +73,8 @@ ValueEdgeColorAdapter::ValueEdgeColorAdapter(const Config& config)
       functor_(config::create<EdgeValueFunctor>(config.value_functor)),
       colormap_(config.colormap) {}
 
-void ValueEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerKey layer_key) {
+void ValueEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph,
+                                     LayerKey layer_key) {
   if (!functor_) {
     return;
   }
