@@ -509,10 +509,17 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
     return marker;
   }
 
+  size_t num_seen = 0;
   for (const auto& [key, edge] : layer.edges()) {
     const auto& source_node = layer.getNode(edge.source);
     const auto& target_node = layer.getNode(edge.target);
     if (info.filter && (!info.filter(source_node) || !info.filter(target_node))) {
+      continue;
+    }
+
+    bool should_skip = num_seen % (info.config.edges.insertion_skip + 1);
+    ++num_seen;
+    if (should_skip) {
       continue;
     }
 

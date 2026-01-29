@@ -243,6 +243,7 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
       const auto new_conf = getInterlayerEdgeConfig(keys.first, keys.second);
 
       InterlayerInfo new_info{new_conf, msg.markers.size(), new_conf.color.create()};
+      new_info.num_since_last = new_conf.insertion_skip;
       if (new_info.adapter) {
         // TODO(nathan) this is awkard because it only supports intralayer edges
         new_info.adapter->setGraph(graph, keys.first);
