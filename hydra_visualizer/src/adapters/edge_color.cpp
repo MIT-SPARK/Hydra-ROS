@@ -42,9 +42,6 @@
 
 #include "hydra_visualizer/color/color_parsing.h"
 
-// TMP
-#include <rclcpp/rclcpp.hpp>
-
 namespace hydra {
 
 using namespace spark_dsg;
