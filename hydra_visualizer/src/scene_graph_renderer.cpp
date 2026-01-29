@@ -41,8 +41,6 @@
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/printing.h>
 
-#include <regex>
-
 #include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
@@ -119,88 +117,30 @@ struct MarkerNamespaces {
   }
 };
 
+struct InterlayerInfo {
+  using EdgeColor = EdgeColorAdapter::EdgeColor;
+  using ColorFunc = std::function<EdgeColor(const SceneGraphEdge& edge)>;
+  InterlayerEdgeConfig config;
+  size_t marker_idx;
+  std::unique_ptr<EdgeColorAdapter> adapter;
+  size_t num_since_last = 0;
+};
+
 }  // namespace
 
-std::optional<LayerKeySelector> LayerKeySelector::parse(
-    const std::string& selector_str) {
-  std::regex re(R"((\d+)p\*$|(\d+)p(\d+)$|(\d+)$)");
-  std::smatch match;
-  if (!std::regex_match(selector_str, match, re)) {
-    return std::nullopt;
-  }
+InterlayerEdgeConfig::InterlayerEdgeConfig() { color = {}; }
 
-  CHECK_EQ(match.size(), 5);
-  if (!match.str(1).empty()) {
-    return LayerKeySelector{LayerKey{std::stol(match.str(1))}, true};
-  } else if (!match.str(2).empty()) {
-    return LayerKeySelector{LayerKey{
-        std::stol(match.str(2)), static_cast<PartitionId>(std::stoi(match.str(3)))}};
-  } else {
-    return LayerKeySelector{LayerKey{std::stol(match.str(4))}};
-  }
+void declare_config(InterlayerEdgeConfig& config) {
+  using namespace config;
+  name("InterlayerEdgeConfig");
+  base<visualizer::LayerConfig::Edges>(config);
+  field(config.use_child_color, "use_child_color");
 }
-
-std::string LayerKeySelector::str() const {
-  const auto layer_str = std::to_string(key.layer);
-  if (wildcard) {
-    return layer_str + "p*";
-  }
-
-  if (key.partition) {
-    return layer_str + "p" + std::to_string(key.partition);
-  }
-
-  return layer_str;
-}
-
-bool LayerKeySelector::matches(LayerKey to_match) const {
-  if (key.layer != to_match.layer) {
-    return false;
-  }
-
-  if (!wildcard && key.partition != to_match.partition) {
-    return false;
-  }
-
-  return true;
-}
-
-bool LayerKeySelector::operator<(const LayerKeySelector& other) const {
-  if (key < other.key) {
-    return true;
-  }
-
-  if (key == other.key) {
-    return wildcard < other.wildcard;
-  } else {
-    return false;
-  }
-}
-
-struct SelectorConversion {
-  static std::string toIntermediate(const LayerKeySelector& value, std::string&) {
-    return value.str();
-  }
-
-  static void fromIntermediate(const std::string& intermediate,
-                               LayerKeySelector& value,
-                               std::string& error) {
-    const auto parsed = LayerKeySelector::parse(intermediate);
-    if (!parsed) {
-      error = "Invalid layer selector '" + intermediate + "', must be of form " +
-              "integer layer (e.g., '3')" + ", layer and partition (e.g., '2p1')" +
-              ", or layer and wildcard (e.g., '4p*')";
-      return;
-    }
-
-    value = *parsed;
-  }
-};
 
 void declare_config(SceneGraphRenderer::Config::InterlayerEdges& config) {
   using namespace config;
   name("SceneGraphRenderer::Config::InterlayerEdges");
-  base<LayerConfig::Edges>(config);
+  field(config.config, "");
   field<SelectorConversion>(config.from, "from");
   field<SelectorConversion>(config.to, "to");
 }

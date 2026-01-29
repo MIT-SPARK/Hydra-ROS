@@ -40,6 +40,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/layer_info.h"
+#include "hydra_visualizer/utils/layer_key_selector.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
 
 namespace hydra {
