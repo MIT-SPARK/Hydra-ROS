@@ -265,12 +265,41 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   }
 }
 
+LayerConfig::Edges SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent, LayerKey child) const {
+  const auto name = keyToLayerName(parent) + "_to_" + keyToLayerName(child);
+  auto iter = interlayer_edges_.find(name);
+  if (iter == interlayer_edges_.end()) {
+    LayerConfig::Edges init_config;
+    for (const auto& edge_config : init_config_.interlayer_edges) {
+      if (!edge_config.from.matches(parent) && !edge_config.from.matches(child)) {
+        continue;
+      }
+
+      init_config = config;
+      if (config_key.wildcard) {
+        continue;  // allow more specific keys to take precedence
+      } else {
+        break;
+      }
+    }
+
+    const auto ns = "renderer/config/layer" + keyToLayerName(key);
+    iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns, init_config))
+               .first;
+    iter->second->setCallback([this]() { has_change_ = true; });
+
+  }
+
+  return iter->second->get();
+}
+
 void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header,
                                              const DynamicSceneGraph& graph,
                                              MarkerArray& msg) const {
   const std::string ns_prefix = "interlayer_edges_";
   std::map<LayerKey, size_t> marker_indices;
   std::map<LayerKey, size_t> num_since_last;
+  std::map<std::pair<LayerKey, LayerKey>, LayerConfig::Edges> edge_configs;
   for (const auto& [key, edge] : graph.interlayer_edges()) {
     const auto& source = graph.getNode(edge.source);
     const auto& target = graph.getNode(edge.target);
@@ -280,7 +309,17 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
       continue;
     }
 
-    Config::InterlayerEdges edge_config;
+    auto keys = source.layer < target.layer
+                    ? std::make_pair(target.layer, source.layer)
+                    : std::make_pair(source.layer, target.layer);
+    auto edge_config_iter = edge_configs.find(keys);
+    if (edge_config_iter == edge_configs.end()) {
+      edge_config_iter =
+          edge_configs.emplace(keys, getInterlayerEdgeConfig(keys.first, keys.second))
+              .first;
+    }
+
+    const auto& edge_config = edge_config_iter->second;
     if (!edge_config.draw) {
       continue;
     }

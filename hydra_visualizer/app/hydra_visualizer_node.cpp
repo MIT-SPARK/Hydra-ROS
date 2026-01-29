@@ -40,8 +40,6 @@
 #include <glog/logging.h>
 #include <ianvs/node_init.h>
 
-#include <filesystem>
-
 #include <rclcpp/rclcpp.hpp>
 
 #include "hydra_visualizer/visualizer_node.h"

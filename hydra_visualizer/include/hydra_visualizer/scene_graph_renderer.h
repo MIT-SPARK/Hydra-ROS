@@ -69,6 +69,7 @@ class SceneGraphRenderer {
  public:
   using Ptr = std::shared_ptr<SceneGraphRenderer>;
   using LayerConfigWrapper = config::DynamicConfig<visualizer::LayerConfig>;
+  using EdgeConfigWrapper = config::DynamicConfig<visualizer::LayerConfig::Edges>;
 
   struct Config {
     struct InterlayerEdges : visualizer::LayerConfig::Edges {
@@ -114,6 +115,9 @@ class SceneGraphRenderer {
 
   visualizer::LayerConfig getLayerConfig(spark_dsg::LayerKey key) const;
 
+  visualizer::LayerConfig::Edges getInterlayerEdgeConfig(spark_dsg::LayerKey l1,
+                                                         spark_dsg::LayerKey l2) const;
+
  protected:
   const Config init_config_;
 
@@ -125,6 +129,7 @@ class SceneGraphRenderer {
   mutable std::atomic<bool> has_change_;
   mutable std::map<spark_dsg::LayerKey, visualizer::LayerInfo> layer_infos_;
   mutable std::map<spark_dsg::LayerKey, std::unique_ptr<LayerConfigWrapper>> layers_;
+  mutable std::map<std::string, std::unique_ptr<EdgeConfigWrapper>> interlayer_edges_;
 };
 
 void declare_config(SceneGraphRenderer::Config& config);
