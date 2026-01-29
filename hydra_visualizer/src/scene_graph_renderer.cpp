@@ -67,22 +67,6 @@ inline std::string keyToLayerName(LayerKey key) {
   return ss.str();
 }
 
-inline Marker makeNewEdgeList(const std_msgs::msg::Header& header,
-                              const std::string& ns_prefix,
-                              LayerKey source,
-                              LayerKey target) {
-  Marker marker;
-  marker.header = header;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-
-  std::stringstream ss;
-  ss << ns_prefix << source << "_" << target;
-  marker.ns = ss.str();
-  return marker;
-}
-
 struct MarkerNamespaces {
   static std::string layerNodeNamespace(LayerKey key) {
     return keyToLayerName(key) + "_nodes";
@@ -205,29 +189,31 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   }
 }
 
-LayerConfig::Edges SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent, LayerKey child) const {
+InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent,
+                                                                 LayerKey child) const {
   const auto name = keyToLayerName(parent) + "_to_" + keyToLayerName(child);
   auto iter = interlayer_edges_.find(name);
   if (iter == interlayer_edges_.end()) {
-    LayerConfig::Edges init_config;
-    for (const auto& edge_config : init_config_.interlayer_edges) {
-      if (!edge_config.from.matches(parent) && !edge_config.from.matches(child)) {
+    InterlayerEdgeConfig config;
+    for (const auto& info : init_config_.interlayer_edges) {
+      bool from_parent = info.from.matches(parent) && info.to.matches(child);
+      bool to_parent = info.to.matches(parent) && info.from.matches(child);
+      if (!from_parent && !to_parent) {
         continue;
       }
 
-      init_config = config;
-      if (config_key.wildcard) {
+      config = info.config;
+      if (info.from.wildcard || info.to.wildcard) {
         continue;  // allow more specific keys to take precedence
       } else {
         break;
       }
     }
 
-    const auto ns = "renderer/config/layer" + keyToLayerName(key);
-    iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns, init_config))
-               .first;
-    iter->second->setCallback([this]() { has_change_ = true; });
-
+    const auto ns = "renderer/config/interlayer_edge_" + name;
+    auto wrapper = std::make_unique<EdgeConfigWrapper>(ns, config);
+    wrapper->setCallback([this]() { has_change_ = true; });
+    iter = interlayer_edges_.emplace(name, std::move(wrapper)).first;
   }
 
   return iter->second->get();
@@ -237,9 +223,7 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
                                              const DynamicSceneGraph& graph,
                                              MarkerArray& msg) const {
   const std::string ns_prefix = "interlayer_edges_";
-  std::map<LayerKey, size_t> marker_indices;
-  std::map<LayerKey, size_t> num_since_last;
-  std::map<std::pair<LayerKey, LayerKey>, LayerConfig::Edges> edge_configs;
+  std::map<std::pair<LayerKey, LayerKey>, InterlayerInfo> edge_info;
   for (const auto& [key, edge] : graph.interlayer_edges()) {
     const auto& source = graph.getNode(edge.source);
     const auto& target = graph.getNode(edge.target);
@@ -249,39 +233,44 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
       continue;
     }
 
-    auto keys = source.layer < target.layer
-                    ? std::make_pair(target.layer, source.layer)
-                    : std::make_pair(source.layer, target.layer);
-    auto edge_config_iter = edge_configs.find(keys);
-    if (edge_config_iter == edge_configs.end()) {
-      edge_config_iter =
-          edge_configs.emplace(keys, getInterlayerEdgeConfig(keys.first, keys.second))
-              .first;
+    const auto target_is_parent = source.layer < target.layer;
+    auto keys = target_is_parent ? std::make_pair(target.layer, source.layer)
+                                 : std::make_pair(source.layer, target.layer);
+    auto iter = edge_info.find(keys);
+    if (iter == edge_info.end()) {
+      std::stringstream ss;
+      ss << ns_prefix << source.layer << "_" << target.layer;
+      const auto new_conf = getInterlayerEdgeConfig(keys.first, keys.second);
+
+      InterlayerInfo new_info{new_conf, msg.markers.size(), new_conf.color.create()};
+      if (new_info.adapter) {
+        // TODO(nathan) this is awkard because it only supports intralayer edges
+        new_info.adapter->setGraph(graph, keys.first);
+      }
+
+      iter = edge_info.emplace(keys, std::move(new_info)).first;
+      auto& marker = msg.markers.emplace_back();
+      marker.header = header;
+      marker.type = Marker::LINE_LIST;
+      marker.action = Marker::ADD;
+      marker.id = 0;
+      marker.ns = ss.str();
+      marker.scale.x = new_conf.scale;
     }
 
-    const auto& edge_config = edge_config_iter->second;
-    if (!edge_config.draw) {
+    auto& info = iter->second;
+    if (!info.config.draw) {
       continue;
     }
 
-    auto iter = marker_indices.find(source.layer);
-    if (iter == marker_indices.end()) {
-      iter = marker_indices.emplace(source.layer, msg.markers.size()).first;
-      msg.markers.push_back(
-          makeNewEdgeList(header, ns_prefix, source.layer, target.layer));
-      msg.markers.back().scale.x = edge_config.scale;
-      // make sure we always draw at least one edge
-      num_since_last[source.layer] = edge_config.insertion_skip;
-    }
-
-    if (num_since_last[source.layer] >= edge_config.insertion_skip) {
-      num_since_last[source.layer] = 0;
+    if (info.num_since_last >= info.config.insertion_skip) {
+      info.num_since_last = 0;
     } else {
-      num_since_last[source.layer]++;
+      ++info.num_since_last;
       continue;
     }
 
-    auto& marker = msg.markers.at(iter->second);
+    auto& marker = msg.markers.at(info.marker_idx);
     auto& source_point = marker.points.emplace_back();
     tf2::convert(source.attributes().position, source_point);
     source_point.z += source_info.z_offset;
@@ -290,9 +279,17 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
     tf2::convert(target.attributes().position, target_point);
     target_point.z += target_info.z_offset;
 
-    const auto color = makeColorMsg(Color(), edge_config.alpha);
-    marker.colors.push_back(color);
-    marker.colors.push_back(color);
+    if (info.adapter) {
+      const auto [c_s, c_t] = info.adapter->getColor(graph, edge);
+      marker.colors.push_back(makeColorMsg(c_s, info.config.alpha));
+      marker.colors.push_back(makeColorMsg(c_t, info.config.alpha));
+    } else {
+      bool use_source = !target_is_parent ^ info.config.use_child_color;
+      const auto color =
+          use_source ? source_info.node_color(source) : target_info.node_color(target);
+      marker.colors.push_back(makeColorMsg(color, info.config.alpha));
+      marker.colors.push_back(makeColorMsg(color, info.config.alpha));
+    }
   }
 }
 

@@ -48,40 +48,39 @@ namespace hydra {
 // NOTE(nathan) separate to make config wrapper easier to use
 struct GraphRenderConfig {
   //! @brief Unit amount of distance between layers
-  double layer_z_step = 5.0;  // [0, 50.0]
+  double layer_z_step = 5.0;
   //! @brief Whether or not to separate layers by adding z offsets
   bool collapse_layers = false;
 };
 
-void declare_config(GraphRenderConfig& config);
-
-struct LayerKeySelector {
-  spark_dsg::LayerKey key;
-  bool wildcard = false;
-
-  static std::optional<LayerKeySelector> parse(const std::string& selector_str);
-
-  std::string str() const;
-  bool matches(spark_dsg::LayerKey to_match) const;
-  bool operator<(const LayerKeySelector& other) const;
+struct InterlayerEdgeConfig : visualizer::LayerConfig::Edges {
+  InterlayerEdgeConfig();
+  //! Use the child node to select the edge color instead of the parent
+  bool use_child_color = false;
 };
+
+void declare_config(GraphRenderConfig& config);
+void declare_config(InterlayerEdgeConfig& config);
 
 class SceneGraphRenderer {
  public:
   using Ptr = std::shared_ptr<SceneGraphRenderer>;
   using LayerConfigWrapper = config::DynamicConfig<visualizer::LayerConfig>;
-  using EdgeConfigWrapper = config::DynamicConfig<visualizer::LayerConfig::Edges>;
+  using EdgeConfigWrapper = config::DynamicConfig<InterlayerEdgeConfig>;
 
   struct Config {
-    struct InterlayerEdges : visualizer::LayerConfig::Edges {
-      LayerKeySelector from;
-      LayerKeySelector to;
-    };
-
     //! @brief Overall graph config
     GraphRenderConfig graph;
     //! @brief Configuration for each layer
     std::map<LayerKeySelector, visualizer::LayerConfig> layers;
+
+    struct InterlayerEdges {
+      LayerKeySelector from;
+      LayerKeySelector to;
+      // NOTE(nathan) this is awkward, but we don't want the key selectors to be
+      // visibile in the dynamic config so we need to split the structs
+      InterlayerEdgeConfig config;
+    };
     //! @brief Configuration for interlayer edges
     std::vector<InterlayerEdges> interlayer_edges;
   };
@@ -116,8 +115,8 @@ class SceneGraphRenderer {
 
   visualizer::LayerConfig getLayerConfig(spark_dsg::LayerKey key) const;
 
-  visualizer::LayerConfig::Edges getInterlayerEdgeConfig(spark_dsg::LayerKey l1,
-                                                         spark_dsg::LayerKey l2) const;
+  InterlayerEdgeConfig getInterlayerEdgeConfig(spark_dsg::LayerKey l1,
+                                               spark_dsg::LayerKey l2) const;
 
  protected:
   const Config init_config_;
