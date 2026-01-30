@@ -6,7 +6,7 @@ renderer:
     2:
       z_offset_scale: 2.0
       visualize: true
-      nodes: {scale: 0.40, color: {type: LabelColorAdapter}, alpha: 0.8, use_sphere: false}
+      nodes: {draw: false, scale: 0.40, color: {type: LabelColorAdapter}, alpha: 0.8, use_sphere: false}
       text: {draw: true, collapse: true, adapter: {type: LabelTextAdapter}, height: 0.5, scale: 0.45}
       bounding_boxes: {draw: true, collapse: true, scale: 0.05, edge_scale: 0.05, alpha: 0.9, edge_break_ratio: 0.5}
     3:
@@ -46,4 +46,4 @@ renderer:
   layer_plugins:
     - layer: 2
       plugins:
-        - {type: MeshPointPlugin, alpha: 1.0}
+        - {type: MeshPointPlugin, alpha: 1.0, point_size: 0.1}
