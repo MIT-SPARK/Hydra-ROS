@@ -126,4 +126,28 @@ void SelectorConversion::fromIntermediate(const std::string& intermediate,
   value = *parsed;
 }
 
+std::string LayerKeyConversion::toIntermediate(const LayerKey& value, std::string&) {
+  return LayerKeySelector{value}.str();
+}
+
+void LayerKeyConversion::fromIntermediate(const std::string& intermediate,
+                                          LayerKey& value,
+                                          std::string& error) {
+  std::regex re(R"((\d+)p(\d+)$|(\d+)$)");
+  std::smatch match;
+  if (!std::regex_match(intermediate, match, re)) {
+    error = "Invalid layer key '" + intermediate + "'!";
+    return;
+  }
+
+  CHECK_EQ(match.size(), 4);
+  if (!match.str(1).empty()) {
+    // layer and partition
+    const auto part_id = static_cast<PartitionId>(std::stoi(match.str(2)));
+    value = LayerKey{std::stol(match.str(1)), part_id};
+  } else {
+    value = LayerKey{std::stol(match.str(3))};
+  }
+}
+
 }  // namespace hydra

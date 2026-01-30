@@ -28,7 +28,7 @@ renderer:
       text: {draw_layer: true, height: 0.9, scale: 0.8}
     3p1:
       z_offset_scale: 3.0
-      visualize: true
+      visualize: false
       nodes: {scale: 0.2, color: {type: LabelColorAdapter}, alpha: 0.9, use_sphere: true}
       boundaries: {draw: true, collapse: false, wireframe_scale: 0.1, use_node_color: true, alpha: 1.0}
       edges: {scale: 0.01, alpha: 0.5, color: {type: UniformEdgeColorAdapter}}
@@ -43,3 +43,7 @@ renderer:
     - {from: 3*, to: 2p*, draw: false}
     - {from: 3*, to: 2, use_child_color: true, scale: 0.08, alpha: 0.5}
     - {from: 4, to: 3*, scale: 0.08, alpha: 0.4}
+  layer_plugins:
+    - layer: 2
+      plugins:
+        - {type: MeshPointPlugin, alpha: 1.0}

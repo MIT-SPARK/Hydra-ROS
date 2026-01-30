@@ -57,6 +57,8 @@ enum class NamedColors {
 
 spark_dsg::Color colorFromName(NamedColors color);
 
+void fillColorMsg(const spark_dsg::Color& color, std_msgs::msg::ColorRGBA& msg);
+
 std_msgs::msg::ColorRGBA makeColorMsg(const spark_dsg::Color& color,
                                       std::optional<double> alpha = std::nullopt);
 

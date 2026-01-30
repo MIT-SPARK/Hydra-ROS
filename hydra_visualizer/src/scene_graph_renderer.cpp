@@ -136,12 +136,20 @@ void declare_config(GraphRenderConfig& config) {
   field(config.collapse_layers, "collapse_layers");
 }
 
+void declare_config(SceneGraphRenderer::LayerPluginsConfig& config) {
+  using namespace config;
+  name("SceneGraphRenderer::LayerPluginsConfig");
+  field<LayerKeyConversion>(config.layer, "layer");
+  field(config.plugins, "plugins");
+}
+
 void declare_config(SceneGraphRenderer::Config& config) {
   using namespace config;
   name("SceneGraphRenderer::Config");
   field(config.graph, "graph");
   field<MapKeyConverter<SelectorConversion>>(config.layers, "layers");
   field(config.interlayer_edges, "interlayer_edges");
+  field(config.layer_plugins, "layer_plugins");
 }
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
@@ -149,7 +157,15 @@ SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle n
       nh_(nh),
       graph_config_("scene_graph", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
-      has_change_(false) {}
+      has_change_(false) {
+  for (const auto& plugin_config : config.layer_plugins) {
+    const auto key = plugin_config.layer;
+    auto& plugin_list = layer_plugins_[key];
+    for (const auto& plugin : plugin_config.plugins) {
+      plugin_list.emplace_back(plugin.create(keyToLayerName(key)));
+    }
+  }
+}
 
 void SceneGraphRenderer::reset(const std_msgs::msg::Header& header) {
   MarkerArray msg;
@@ -182,7 +198,6 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   MarkerArray edges;
   drawInterlayerEdges(header, graph, edges);
   tracker_.add(edges, msg);
-
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
     pub_->publish(msg);
@@ -297,7 +312,7 @@ void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header
 void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
                                    const LayerInfo& info,
                                    const SceneGraphLayer& layer,
-                                   const Mesh* /* mesh */,
+                                   const Mesh* mesh,
                                    MarkerArray& msg) const {
   if (!info.config.visualize) {
     return;
@@ -351,6 +366,18 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
 
   const auto edge_ns = MarkerNamespaces::layerEdgeNamespace(layer.id);
   tracker_.add(makeLayerEdgeMarkers(header, info, layer, edge_ns), msg);
+
+  // dispatch drawing to layer plugins
+  auto plugins = layer_plugins_.find(layer.id);
+  if (plugins != layer_plugins_.end()) {
+    for (const auto& plugin : plugins->second) {
+      if (!plugin) {
+        continue;
+      }
+
+      plugin->draw(header, info, layer, mesh, msg, tracker_);
+    }
+  }
 }
 
 LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {

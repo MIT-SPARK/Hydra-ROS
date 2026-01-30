@@ -40,6 +40,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_visualizer/layer_info.h"
+#include "hydra_visualizer/plugins/layer_plugin.h"
 #include "hydra_visualizer/utils/layer_key_selector.h"
 #include "hydra_visualizer/utils/marker_tracker.h"
 
@@ -68,6 +69,11 @@ class SceneGraphRenderer {
   using LayerConfigWrapper = config::DynamicConfig<visualizer::LayerConfig>;
   using EdgeConfigWrapper = config::DynamicConfig<InterlayerEdgeConfig>;
 
+  struct LayerPluginsConfig {
+    spark_dsg::LayerKey layer;
+    std::vector<config::VirtualConfig<LayerPlugin, true>> plugins;
+  };
+
   struct Config {
     //! @brief Overall graph config
     GraphRenderConfig graph;
@@ -83,6 +89,8 @@ class SceneGraphRenderer {
     };
     //! @brief Configuration for interlayer edges
     std::vector<InterlayerEdges> interlayer_edges;
+    //! @brief Extra per-layer plugins
+    std::vector<LayerPluginsConfig> layer_plugins;
   };
 
   explicit SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh);
@@ -124,6 +132,7 @@ class SceneGraphRenderer {
   ianvs::NodeHandle nh_;
   config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
+  std::map<spark_dsg::LayerKey, std::list<LayerPlugin::Ptr>> layer_plugins_;
 
   mutable MarkerTracker tracker_;
   mutable std::atomic<bool> has_change_;
@@ -132,6 +141,7 @@ class SceneGraphRenderer {
   mutable std::map<std::string, std::unique_ptr<EdgeConfigWrapper>> interlayer_edges_;
 };
 
+void declare_config(SceneGraphRenderer::LayerPluginsConfig& config);
 void declare_config(SceneGraphRenderer::Config& config);
 
 }  // namespace hydra

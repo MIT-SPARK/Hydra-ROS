@@ -38,7 +38,6 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
-#include "hydra_visualizer/color/colormap_utilities.h"
 #include "hydra_visualizer/drawing.h"
 
 namespace hydra {

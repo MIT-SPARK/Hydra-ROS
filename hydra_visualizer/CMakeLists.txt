@@ -29,7 +29,6 @@ find_package(visualization_msgs REQUIRED)
 
 add_library(
   ${PROJECT_NAME}
-  src/plugins/traversability_plugin.cpp
   src/adapters/edge_color.cpp
   src/adapters/mesh_color.cpp
   src/adapters/node_color.cpp
@@ -46,8 +45,10 @@ add_library(
   src/plugins/footprint_plugin.cpp
   src/plugins/khronos_object_plugin.cpp
   src/plugins/mesh_plugin.cpp
+  src/plugins/mesh_point_plugin.cpp
   src/plugins/places_freespace_plugin.cpp
   src/plugins/pose_plugin.cpp
+  src/plugins/traversability_plugin.cpp
   src/scene_graph_renderer.cpp
   src/utils/ear_clipping.cpp
   src/utils/layer_key_selector.cpp

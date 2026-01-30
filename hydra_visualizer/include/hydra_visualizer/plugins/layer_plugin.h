@@ -33,49 +33,34 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <spark_dsg/scene_graph_types.h>
+#include <spark_dsg/dynamic_scene_graph.h>
+
+#include <visualization_msgs/msg/marker_array.hpp>
+
+#include "hydra_visualizer/layer_info.h"
+#include "hydra_visualizer/utils/marker_tracker.h"
 
 namespace hydra {
 
-/*
- * @brief Type representing a specification for a layer and set of partitions
- *
- * Can be of the form
- *   - [LayerId] (e.g., '2'), which selects Layer 2, Partition 0
- *   - [LayerId]p[PartitionId] (e.g., '2p1'), which selects Layer 2, Partition 1
- *   - [LayerId]p* (e.g., '2p*'), which selects Layer 2, Partitions >= 1
- *   - [LayerId]* (e.g., '2*'), which selects Layer 2, Partitions >= 0
- */
-struct LayerKeySelector {
-  //! Layer and partition the selector references
-  spark_dsg::LayerKey key;
-  //! @brief whether or not the selector covers all partitions >= 1
-  bool wildcard = false;
-  //! @brief whether or not wildcard includes default partition (partition 0)
-  bool include_default = false;
+struct LayerPlugin {
+ public:
+  using Ptr = std::unique_ptr<LayerPlugin>;
 
-  static std::optional<LayerKeySelector> parse(const std::string& selector_str);
+  virtual ~LayerPlugin() = default;
 
-  std::string str() const;
-  bool matches(spark_dsg::LayerKey to_match) const;
-  bool operator<(const LayerKeySelector& other) const;
-  bool operator==(const LayerKeySelector& other) const;
-  bool operator!=(const LayerKeySelector& other) const;
-};
+  virtual void draw(const std_msgs::msg::Header& header,
+                    const visualizer::LayerInfo& info,
+                    const spark_dsg::SceneGraphLayer& layer,
+                    const spark_dsg::Mesh* mesh,
+                    visualization_msgs::msg::MarkerArray& msg,
+                    MarkerTracker& tracker) = 0;
 
-struct SelectorConversion {
-  static std::string toIntermediate(const LayerKeySelector& value, std::string& error);
-  static void fromIntermediate(const std::string& intermediate,
-                               LayerKeySelector& value,
-                               std::string& error);
-};
+  virtual bool hasChange() const { return has_change_; }
 
-struct LayerKeyConversion {
-  static std::string toIntermediate(const spark_dsg::LayerKey& value,
-                                    std::string& error);
-  static void fromIntermediate(const std::string& intermediate,
-                               spark_dsg::LayerKey& value,
-                               std::string& error);
+  virtual void clearChangeFlag() { has_change_ = false; }
+
+ protected:
+  bool has_change_ = false;
 };
 
 }  // namespace hydra
