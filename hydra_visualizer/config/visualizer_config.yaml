@@ -37,7 +37,7 @@ renderer:
       visualize: true
       nodes: {scale: 0.2, color: {type: LabelColorAdapter}, alpha: 0.9, use_sphere: true}
       boundaries: {draw: true, collapse: false, wireframe_scale: 0.1, use_node_color: true, alpha: 1.0}
-      text: {draw: true, collapse: true, adapter: {type: IdTextAdapter}, height: 0.5, scale: 0.45}
+      text: {draw: false, collapse: true, adapter: {type: IdTextAdapter}, height: 0.5, scale: 0.45}
       edges: {scale: 0.1, alpha: 0.8, color: {type: TraversabilityEdgeColorAdapter}}
   interlayer_edges:
     - {from: 3*, to: 2p*, draw: false}
