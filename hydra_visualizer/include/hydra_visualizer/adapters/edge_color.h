@@ -137,7 +137,7 @@ struct TraversabilityEdgeColorAdapter : EdgeColorAdapter {
 
   explicit TraversabilityEdgeColorAdapter(const Config& config);
   void setGraph(const spark_dsg::DynamicSceneGraph& graph,
-                spark_dsg::LayerId layer) override;
+                spark_dsg::LayerKey layer) override;
   EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
                      const spark_dsg::SceneGraphEdge& edge) const override;
 

@@ -121,12 +121,14 @@ TraversabilityEdgeColorAdapter::TraversabilityEdgeColorAdapter(const Config& con
     : config(config), min_value_(0.0), max_value_(1.0), colormap_(config.colormap) {}
 
 void TraversabilityEdgeColorAdapter::setGraph(const DynamicSceneGraph& graph,
-                                              LayerId layer) {
-  if (!graph.hasLayer(layer)) {
+                                              LayerKey key) {
+  const auto layer = graph.findLayer(key.layer, key.partition);
+  if (!layer) {
     return;
   }
+
   bool is_first = true;
-  for (const auto& [key, edge] : graph.getLayer(layer).edges()) {
+  for (const auto& [key, edge] : layer->edges()) {
     const auto value = edge.attributes().weight;
     if (value < 0.0) {
       continue;
