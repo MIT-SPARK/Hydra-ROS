@@ -115,6 +115,7 @@ install(
 install(TARGETS hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(
   PROGRAMS app/csv_to_tf
+           app/dsg_file_publisher
            app/dsg_republisher
            app/odom_to_tf
            app/noisy_tf_publisher
