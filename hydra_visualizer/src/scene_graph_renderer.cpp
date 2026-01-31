@@ -326,7 +326,9 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
   }
 
   const auto node_ns = MarkerNamespaces::layerNodeNamespace(layer.id);
-  tracker_.add(makeLayerNodeMarkers(header, info, layer, node_ns), msg);
+  if (info.config.nodes.draw) {
+    tracker_.add(makeLayerNodeMarkers(header, info, layer, node_ns), msg);
+  }
 
   if (info.config.text.draw) {
     if (info.config.text.draw_layer) {
