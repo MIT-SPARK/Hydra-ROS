@@ -19,14 +19,36 @@ static const auto registration =
                                    MeshPointPlugin::Config,
                                    std::string>("MeshPointPlugin");
 
-template <typename ConnectionsT>
 void fillMarker(const MeshPointPlugin::Config& config,
                 const visualizer::LayerInfo& info,
-                const ConnectionsT& connections,
+                const Place2dNodeAttributes& attrs,
                 const spark_dsg::Mesh& mesh,
                 const spark_dsg::Color& node_color,
                 Marker& marker) {
-  for (const auto idx : connections) {
+  for (const auto idx : attrs.mesh_connections) {
+    const auto& pos = mesh.pos(idx);
+    auto& point = marker.points.emplace_back();
+    point.x = pos.x();
+    point.y = pos.y();
+    point.z = pos.z() + info.z_offset;
+
+    auto& color = marker.colors.emplace_back();
+    color.a = config.alpha;
+    if (!config.use_node_color && mesh.has_colors) {
+      visualizer::fillColorMsg(mesh.color(idx), color);
+    } else {
+      visualizer::fillColorMsg(node_color, color);
+    }
+  }
+}
+
+void fillMarker(const MeshPointPlugin::Config& config,
+                const visualizer::LayerInfo& info,
+                const ObjectNodeAttributes& attrs,
+                const spark_dsg::Mesh& mesh,
+                const spark_dsg::Color& node_color,
+                Marker& marker) {
+  for (const auto idx : attrs.mesh_connections) {
     const auto& pos = mesh.pos(idx);
     auto& point = marker.points.emplace_back();
     point.x = pos.x();
@@ -95,13 +117,13 @@ void MeshPointPlugin::draw(const std_msgs::msg::Header& header,
     const auto color = info.node_color(*node);
     auto obj_attrs = node->tryAttributes<ObjectNodeAttributes>();
     if (obj_attrs) {
-      fillMarker(config, info, obj_attrs->mesh_connections, *mesh, color, marker);
+      fillMarker(config, info, *obj_attrs, *mesh, color, marker);
       continue;
     }
 
     auto place_attrs = node->tryAttributes<Place2dNodeAttributes>();
     if (place_attrs) {
-      fillMarker(config, info, place_attrs->mesh_connections, *mesh, color, marker);
+      fillMarker(config, info, *place_attrs, *mesh, color, marker);
       continue;
     }
   }
