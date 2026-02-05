@@ -34,8 +34,10 @@
 #
 #
 """Copy static tfs from one uhumans2 bag to a launch file."""
-import rosbag
+
 import argparse
+
+import rosbag
 
 LINE_STR = "{ts},{x},{y},{z},{qw},{qx},{qy},{qz}\n"
 

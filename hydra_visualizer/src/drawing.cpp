@@ -438,7 +438,7 @@ MarkerArray makeLayerNodeTextMarkers(const std_msgs::msg::Header& header,
 
     marker.text = name.empty() ? NodeSymbol(node->id).str() : name;
     marker.scale.z = info.config.text.scale;
-    marker.color = makeColorMsg(Color());
+    marker.color = makeColorMsg(info.text_color());
 
     fillPoseWithIdentity(marker.pose);
     tf2::convert(node->attributes().position, marker.pose.position);
@@ -511,10 +511,17 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
     return marker;
   }
 
+  size_t num_seen = 0;
   for (const auto& [key, edge] : layer.edges()) {
     const auto& source_node = layer.getNode(edge.source);
     const auto& target_node = layer.getNode(edge.target);
     if (info.filter && (!info.filter(source_node) || !info.filter(target_node))) {
+      continue;
+    }
+
+    bool should_skip = num_seen % (info.config.edges.insertion_skip + 1);
+    ++num_seen;
+    if (should_skip) {
       continue;
     }
 
@@ -528,76 +535,9 @@ Marker makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
     target.z += info.z_offset;
     marker.points.push_back(target);
 
-    // TMP(lschmid): If edges have weights use these instead.
-    const auto& attrs = edge.attributes();
-    if (attrs.weighted) {
-      const auto color =
-          attrs.weight != 0.0 ? spark_dsg::colormaps::rainbow(attrs.weight) : Color();
-      marker.colors.emplace_back(makeColorMsg(color, info.config.edges.alpha));
-      marker.colors.emplace_back(marker.colors.back());
-    } else {
-      const auto c_source =
-          info.config.edges.use_color ? info.node_color(source_node) : Color();
-      const auto c_target =
-          info.config.edges.use_color ? info.node_color(target_node) : Color();
-      marker.colors.push_back(makeColorMsg(c_source, info.config.edges.alpha));
-      marker.colors.push_back(makeColorMsg(c_target, info.config.edges.alpha));
-    }
-  }
-
-  return marker;
-}
-
-Marker makeMeshEdgesMarker(const std_msgs::msg::Header& header,
-                           const LayerInfo& info,
-                           const SceneGraphLayer& layer,
-                           const Mesh& mesh,
-                           const std::string& ns) {
-  Marker marker;
-  marker.header = header;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = ns;
-
-  marker.scale.x = info.config.edges.interlayer_scale;
-  fillPoseWithIdentity(marker.pose);
-
-  for (const auto& [node_id, node] : layer.nodes()) {
-    const auto& attrs = node->attributes<Place2dNodeAttributes>();
-    const auto& mesh_edge_indices = attrs.pcl_mesh_connections;
-    if (mesh_edge_indices.empty()) {
-      continue;
-    }
-
-    const auto alpha = info.config.edges.interlayer_alpha;
-    const auto color =
-        info.config.edges.interlayer_use_color ? info.node_color(*node) : Color();
-
-    geometry_msgs::msg::Point centroid_location;
-    tf2::convert(attrs.position, centroid_location);
-    centroid_location.z += info.z_offset;
-
-    size_t i = 0;
-    for (const auto midx : mesh_edge_indices) {
-      ++i;
-      if ((i - 1) % (info.config.edges.interlayer_insertion_skip + 1) != 0) {
-        continue;
-      }
-
-      if (midx >= mesh.numVertices()) {
-        continue;
-      }
-
-      Eigen::Vector3d vertex_pos = mesh.pos(midx).cast<double>();
-      geometry_msgs::msg::Point vertex;
-      tf2::convert(vertex_pos, vertex);
-
-      marker.points.push_back(centroid_location);
-      marker.points.push_back(vertex);
-      marker.colors.push_back(makeColorMsg(color, alpha));
-      marker.colors.push_back(makeColorMsg(color, alpha));
-    }
+    const auto [color_source, color_target] = info.edge_color(edge);
+    marker.colors.push_back(makeColorMsg(color_source, info.config.edges.alpha));
+    marker.colors.push_back(makeColorMsg(color_target, info.config.edges.alpha));
   }
 
   return marker;
@@ -616,7 +556,7 @@ Marker makeLayerTextMarker(const std_msgs::msg::Header& header,
   marker.id = 0;
   marker.action = Marker::ADD;
   marker.scale.z = info.config.text.scale;
-  marker.color = makeColorMsg(Color());
+  marker.color = makeColorMsg(info.text_color());
 
   std::optional<uint64_t> best_stamp;
   Eigen::Vector3d pos = Eigen::Vector3d::Zero();
@@ -659,12 +599,11 @@ kimera_pgmo_msgs::msg::Mesh makeMeshMsg(const std_msgs::msg::Header& header,
 
   MeshColorAdapter adapter(mesh, coloring);
   msg.vertices.resize(mesh.points.size());
-  msg.vertex_colors.resize(mesh.points.size());
   for (size_t i = 0; i < mesh.points.size(); ++i) {
     auto& vertex = msg.vertices[i];
-    tf2::convert(mesh.points[i].cast<double>().eval(), vertex);
-    auto& color = msg.vertex_colors[i];
-    color = visualizer::makeColorMsg(adapter.getVertexColor(i));
+    tf2::convert(mesh.points[i].cast<double>().eval(), vertex.pos);
+    vertex.has_color = true;
+    vertex.color = visualizer::makeColorMsg(adapter.getVertexColor(i));
   }
 
   msg.triangles.resize(mesh.faces.size());

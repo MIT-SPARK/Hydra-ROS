@@ -49,32 +49,32 @@ using namespace spark_dsg;
 namespace {
 
 static const auto id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    IdTextAdapter,
                                    IdTextAdapter::Config>("IdTextAdapter");
 
 static const auto label_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    LabelTextAdapter,
                                    LabelTextAdapter::Config>("LabelTextAdapter");
 
 static const auto label_id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    LabelIdTextAdapter,
                                    LabelIdTextAdapter::Config>("LabelIdTextAdapter");
 
 static const auto name_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    NameTextAdapter,
                                    NameTextAdapter::Config>("NameTextAdapter");
 
 static const auto name_id_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    NameIdTextAdapter,
                                    NameIdTextAdapter::Config>("NameIdTextAdapter");
 
 static const auto attributes_reg =
-    config::RegistrationWithConfig<GraphTextAdapter,
+    config::RegistrationWithConfig<NodeTextAdapter,
                                    AttributesTextAdaptor,
                                    AttributesTextAdaptor::Config>(
         "AttributesTextAdaptor");
@@ -154,29 +154,7 @@ void declare_config(AttributesTextAdaptor::Config&) {}
 std::string AttributesTextAdaptor::getText(const DynamicSceneGraph&,
                                            const SceneGraphNode& node) const {
   std::stringstream ss;
-  // TMP
-  auto attrs = node.tryAttributes<TraversabilityNodeAttributes>();
-  if (attrs) {
-    if (attrs->cognition_labels.empty()) {
-      ss << "No Label";
-    } else {
-      int max_label = -1;
-      float max_weight = -1.0f;
-      float total_weight = 0.0f;
-
-      for (const auto& [label, weight] : attrs->cognition_labels) {
-        total_weight += weight;
-        if (weight > max_weight) {
-          max_weight = weight;
-          max_label = label;
-        }
-      }
-
-      ss << max_label << " (" << int(max_weight / total_weight * 100.0f) << "%)";
-    }
-  }
-
-  // ss << node.attributes();
+  ss << node.attributes();
   return ss.str();
 }
 

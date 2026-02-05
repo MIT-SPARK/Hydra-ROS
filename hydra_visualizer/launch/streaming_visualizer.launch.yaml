@@ -8,7 +8,6 @@ launch:
   - arg: {name: visualizer_config_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_config.yaml}
   - arg: {name: visualizer_plugins_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_plugins.yaml}
   - arg: {name: external_plugins_path, default: $(find-pkg-share hydra_visualizer)/config/external_plugins.yaml}
-  - arg: {name: use_color_adapter, default: 'false', description: Start visualizer using mesh color adapter}
   # communication
   - arg: {name: use_zmq, default: 'false', description: use zmq to receive scene graphs}
   - arg: {name: visualizer_frame, default: map, description: frame ID for zmq to use}
@@ -26,9 +25,8 @@ launch:
         --config-utilities-file $(var visualizer_config_path)
         --config-utilities-file $(var visualizer_plugins_path)
         --config-utilities-file $(var external_plugins_path)
-        --config-utilities-yaml {glog_level: 1, glog_verbosity: $(var verbosity)}
+        --config-utilities-yaml {glog_level: 0, glog_verbosity: $(var verbosity)}
         --config-utilities-yaml {graph: {type: $(if $(var use_zmq) GraphFromZmq GraphFromRos), url: $(var zmq_url), frame_id: $(var visualizer_frame)}}
-        --config-utilities-yaml {plugins: {mesh: {use_color_adapter: $(var use_color_adapter)}}}
   # rviz node and control for launching
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
   - arg: {name: rviz_path, default: $(find-pkg-share hydra_visualizer)/rviz/streaming_visualizer.rviz, description: rviz file to load}

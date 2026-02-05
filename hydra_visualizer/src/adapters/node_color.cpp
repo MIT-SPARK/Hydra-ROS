@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_visualizer/adapters/graph_color.h"
+#include "hydra_visualizer/adapters/node_color.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/validation.h>
@@ -46,16 +46,16 @@ namespace hydra {
 
 using namespace spark_dsg;
 
-void declare_config(NodeColorAdapter::Config& config) {
+void declare_config(AttributeColorAdapter::Config& config) {
   using namespace config;
-  name("NodeColorAdapter::Config");
+  name("AttributeColorAdapter::Config");
   field(config.default_color, "default_color");
 }
 
-NodeColorAdapter::NodeColorAdapter(const Config& config) : config(config) {}
+AttributeColorAdapter::AttributeColorAdapter(const Config& config) : config(config) {}
 
-Color NodeColorAdapter::getColor(const DynamicSceneGraph&,
-                                 const SceneGraphNode& node) const {
+Color AttributeColorAdapter::getColor(const DynamicSceneGraph&,
+                                      const SceneGraphNode& node) const {
   try {
     return node.attributes<SemanticNodeAttributes>().color;
   } catch (const std::bad_cast&) {
@@ -137,11 +137,6 @@ bool IsActiveFunctor::eval(const DynamicSceneGraph&, const SceneGraphNode& node)
   return node.attributes().is_active;
 }
 
-bool NeedsCleanupFunctor::eval(const DynamicSceneGraph&,
-                               const SceneGraphNode& node) const {
-  return node.attributes<Place2dNodeAttributes>().need_cleanup_splitting;
-}
-
 bool HasActiveMeshFunctor::eval(const DynamicSceneGraph&,
                                 const SceneGraphNode& node) const {
   return node.attributes<Place2dNodeAttributes>().has_active_mesh_indices;
@@ -200,6 +195,10 @@ Color FrontierColorAdapter::getColor(const DynamicSceneGraph&,
       return config.predicted;
     }
 
+    if (attrs.anti_frontier) {
+      return config.anti_frontier;
+    }
+
     return attrs.active_frontier ? config.active : config.archived;
   } catch (const std::bad_cast&) {
     return Color();
@@ -230,18 +229,17 @@ ValueColorAdapter::ValueColorAdapter(const Config& config)
       min_value_(0.0),
       max_value_(1.0),
       functor_(config::create<ValueFunctor>(config.value_functor)),
-      colormap_(config.colormap) {
-  CHECK(functor_) << "invalid functor type: " << config.value_functor;
-}
+      colormap_(config.colormap) {}
 
-void ValueColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerId layer) {
+void ValueColorAdapter::setGraph(const DynamicSceneGraph& graph, LayerKey layer_key) {
   if (!functor_) {
     return;
   }
 
   bool is_first = true;
   try {
-    for (const auto& [node_id, node] : graph.getLayer(layer).nodes()) {
+    const auto& layer = graph.getLayer(layer_key.layer, layer_key.partition);
+    for (const auto& [node_id, node] : layer.nodes()) {
       const auto value = functor_->eval(graph, *node);
       if (is_first) {
         min_value_ = value;

@@ -34,10 +34,10 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/mesh_segmenter.h>
+#include <hydra_visualizer/color/colormap_utilities.h>
 #include <ianvs/lazy_publisher_group.h>
-#include <kimera_pgmo/mesh_delta.h>
 
-#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 namespace hydra {
 
@@ -48,6 +48,8 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
     double point_scale = 0.1;
     double point_alpha = 0.7;
     bool use_spheres = false;
+    double bounding_box_scale = 0.1;
+    visualizer::CategoricalColormap::Config colormap;
   } const config;
 
   explicit ObjectVisualizer(const Config& config);
@@ -58,8 +60,8 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
 
   void call(uint64_t timestamp_ns,
             const kimera_pgmo::MeshDelta& delta,
-            const std::vector<size_t>& active,
-            const LabelIndices& label_indices) const override;
+            const LabelIndices& label_indices,
+            const MeshSegmenter::LabelClusters& clusters) const override;
 
  protected:
   void fillMarkerFromCloud(const kimera_pgmo::MeshDelta& delta,
@@ -68,12 +70,9 @@ class ObjectVisualizer : public MeshSegmenter::Sink {
 
  protected:
   ianvs::NodeHandle nh_;
-  ianvs::RosPublisherGroup<visualization_msgs::msg::Marker> pubs_;
+  ianvs::RosPublisherGroup<visualization_msgs::msg::MarkerArray> pubs_;
 
- private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<MeshSegmenter::Sink, ObjectVisualizer, Config>(
-          "ObjectVisualizer");
+  const visualizer::CategoricalColormap colormap_;
 };
 
 void declare_config(ObjectVisualizer::Config& conf);

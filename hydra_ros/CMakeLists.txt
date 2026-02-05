@@ -36,7 +36,7 @@ add_library(
   src/active_window/reconstruction_visualizer.cpp
   src/active_window/tsdf_occupancy_publisher.cpp
   src/backend/ros_backend_publisher.cpp
-  src/backend/ros_meta_data_listener.cpp
+  src/backend/gt_room_publisher.cpp
   src/frontend/gvd_occupancy_publisher.cpp
   src/frontend/gvd_visualization_utilities.cpp
   src/frontend/object_visualizer.cpp
@@ -50,6 +50,7 @@ add_library(
   src/input/ros_data_receiver.cpp
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
+  src/places/external_traversability_estimator.cpp
   src/odometry/ros_pose_graph_tracker.cpp
   src/openset/ros_embedding_group.cpp
   src/utils/bow_subscriber.cpp
@@ -118,6 +119,7 @@ install(TARGETS hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(TARGETS cluster_places_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(
   PROGRAMS app/csv_to_tf
+           app/dsg_file_publisher
            app/dsg_republisher
            app/odom_to_tf
            app/noisy_tf_publisher

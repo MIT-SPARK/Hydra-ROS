@@ -33,13 +33,12 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <config_utilities/dynamic_config.h>
 #include <config_utilities/virtual_config.h>
 #include <ianvs/node_handle.h>
 
 #include <kimera_pgmo_msgs/msg/mesh.hpp>
 #include <rclcpp/publisher.hpp>
-#include <rclcpp/service.hpp>
-#include <std_srvs/srv/set_bool.hpp>
 
 #include "hydra_visualizer/adapters/mesh_color.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
@@ -52,9 +51,8 @@ class MeshPlugin : public VisualizerPlugin {
   using LabelsPtr = std::shared_ptr<Labels>;
 
   struct Config {
-    bool use_color_adapter = false;
-    config::VirtualConfig<MeshColoring> coloring{SemanticMeshColoring::Config()};
-  } const config;
+    config::VirtualConfig<MeshColoring, true> coloring;
+  };
 
   MeshPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
 
@@ -66,15 +64,11 @@ class MeshPlugin : public VisualizerPlugin {
   void reset(const std_msgs::msg::Header& header) override;
 
  protected:
-  void handleService(const std_srvs::srv::SetBool::Request::SharedPtr& req,
-                     std_srvs::srv::SetBool::Response::SharedPtr res);
+  config::DynamicConfig<Config> config_;
 
   std::string getMsgNamespace() const;
 
-  bool use_color_adapter_;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
-  rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr toggle_service_;
-  std::shared_ptr<MeshColoring> mesh_coloring_;
 };
 
 void declare_config(MeshPlugin::Config& config);

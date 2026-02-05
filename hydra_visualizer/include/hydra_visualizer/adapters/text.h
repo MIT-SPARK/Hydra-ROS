@@ -38,14 +38,14 @@
 
 namespace hydra::visualizer {
 
-struct GraphTextAdapter {
-  using Ptr = std::shared_ptr<GraphTextAdapter>;
-  virtual ~GraphTextAdapter() = default;
+struct NodeTextAdapter {
+  using Ptr = std::shared_ptr<NodeTextAdapter>;
+  virtual ~NodeTextAdapter() = default;
   virtual std::string getText(const spark_dsg::DynamicSceneGraph& graph,
                               const spark_dsg::SceneGraphNode& node) const = 0;
 };
 
-struct IdTextAdapter : GraphTextAdapter {
+struct IdTextAdapter : NodeTextAdapter {
   struct Config {};
   explicit IdTextAdapter(const Config&) {}
   virtual ~IdTextAdapter() = default;
@@ -55,7 +55,7 @@ struct IdTextAdapter : GraphTextAdapter {
 
 void declare_config(IdTextAdapter::Config& config);
 
-struct LabelTextAdapter : GraphTextAdapter {
+struct LabelTextAdapter : NodeTextAdapter {
   struct Config {};
   explicit LabelTextAdapter(const Config&) {}
   virtual ~LabelTextAdapter() = default;
@@ -67,7 +67,7 @@ struct LabelTextAdapter : GraphTextAdapter {
 
 void declare_config(LabelTextAdapter::Config& config);
 
-struct LabelIdTextAdapter : GraphTextAdapter {
+struct LabelIdTextAdapter : NodeTextAdapter {
   struct Config {};
   explicit LabelIdTextAdapter(const Config&) {}
   virtual ~LabelIdTextAdapter() = default;
@@ -79,7 +79,7 @@ struct LabelIdTextAdapter : GraphTextAdapter {
 
 void declare_config(LabelIdTextAdapter::Config& config);
 
-struct NameTextAdapter : GraphTextAdapter {
+struct NameTextAdapter : NodeTextAdapter {
   struct Config {};
   explicit NameTextAdapter(const Config&) {}
   virtual ~NameTextAdapter() = default;
@@ -89,7 +89,7 @@ struct NameTextAdapter : GraphTextAdapter {
 
 void declare_config(NameTextAdapter::Config& config);
 
-struct NameIdTextAdapter : GraphTextAdapter {
+struct NameIdTextAdapter : NodeTextAdapter {
   struct Config {};
   explicit NameIdTextAdapter(const Config&) {}
   virtual ~NameIdTextAdapter() = default;
@@ -99,7 +99,7 @@ struct NameIdTextAdapter : GraphTextAdapter {
 
 void declare_config(NameIdTextAdapter::Config& config);
 
-struct AttributesTextAdaptor : GraphTextAdapter {
+struct AttributesTextAdaptor : NodeTextAdapter {
   struct Config {};
   explicit AttributesTextAdaptor(const Config&) {}
   virtual ~AttributesTextAdaptor() = default;

@@ -32,3 +32,75 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
+#include <gtest/gtest.h>
+#include <hydra_visualizer/utils/layer_key_selector.h>
+
+namespace hydra {
+
+TEST(LayerKeySelector, ParsingCorrect) {
+  {  // normal layer
+    LayerKeySelector expected{{3}, false, false};
+    const auto result = LayerKeySelector::parse("3");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(*result, expected);
+  }
+
+  {  // partition
+    LayerKeySelector expected{{3, 2}, false, false};
+    const auto result = LayerKeySelector::parse("3p2");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(*result, expected);
+  }
+
+  {  // partitions >= 1
+    LayerKeySelector expected{{3}, true, false};
+    const auto result = LayerKeySelector::parse("3p*");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(*result, expected);
+  }
+
+  {  // partitions >= 0
+    LayerKeySelector expected{{3}, true, true};
+    const auto result = LayerKeySelector::parse("3*");
+    ASSERT_TRUE(result);
+    EXPECT_EQ(*result, expected);
+  }
+
+  EXPECT_FALSE(LayerKeySelector::parse("3p"));
+}
+
+TEST(LayerKeySelector, MatchesCorrect) {
+  {  // normal layer
+    LayerKeySelector selector{{3}, false, false};
+    EXPECT_FALSE(selector.matches({2}));
+    EXPECT_TRUE(selector.matches({3}));
+    EXPECT_FALSE(selector.matches({3, 1}));
+    EXPECT_FALSE(selector.matches({3, 1}));
+  }
+
+  {  // partition
+    LayerKeySelector selector{{3, 2}, false, false};
+    EXPECT_FALSE(selector.matches({2}));
+    EXPECT_FALSE(selector.matches({3}));
+    EXPECT_FALSE(selector.matches({3, 1}));
+    EXPECT_TRUE(selector.matches({3, 2}));
+  }
+
+  {  // any partition
+    LayerKeySelector selector{{3}, true, false};
+    EXPECT_FALSE(selector.matches({2}));
+    EXPECT_FALSE(selector.matches({3}));
+    EXPECT_TRUE(selector.matches({3, 1}));
+    EXPECT_TRUE(selector.matches({3, 2}));
+  }
+
+  {  // any partition + default
+    LayerKeySelector selector{{3}, true, true};
+    EXPECT_FALSE(selector.matches({2}));
+    EXPECT_TRUE(selector.matches({3}));
+    EXPECT_TRUE(selector.matches({3, 1}));
+    EXPECT_TRUE(selector.matches({3, 2}));
+  }
+}
+
+}  // namespace hydra

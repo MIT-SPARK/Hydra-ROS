@@ -4,12 +4,11 @@
 import pathlib
 import sys
 
+import geometry_msgs.msg
 import rclpy
 import rclpy.node
 import rclpy.utilities
 import tf2_ros
-import geometry_msgs.msg
-
 
 DEFAULT_ORDER = ["x", "y", "z", "qw", "qx", "qy", "qz"]
 
@@ -58,7 +57,9 @@ class CsvToTf(rclpy.node.Node):
         self._stale_threshold = rclpy.duration.Duration(seconds=stale_threshold_s)
         lookahead_s = self._get_param("lookahead_s", 0.1).double_value
         self._lookahead = rclpy.duration.Duration(seconds=lookahead_s)
-        self.get_logger().info(f"offset: {self._offset}, lookahead: {self._lookahead}, stale: {self._stale_threshold}")
+        self.get_logger().info(
+            f"offset: {self._offset}, lookahead: {self._lookahead}, stale: {self._stale_threshold}"
+        )
 
         trajectory_file = self._get_param("trajectory_file", "").string_value
         if trajectory_file == "":

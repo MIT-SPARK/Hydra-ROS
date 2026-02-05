@@ -73,6 +73,7 @@
 
 #pragma once
 
+#include <config_utilities/dynamic_config.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/color.h>
 #include <spark_dsg/node_attributes.h>
@@ -122,7 +123,7 @@ class KhronosObjectPlugin : public VisualizerPlugin {
 
     //! Layer to draw objects for
     std::string layer = spark_dsg::DsgLayers::OBJECTS;
-  } const config;
+  };
 
   // Construction.
   KhronosObjectPlugin(const Config& config,
@@ -136,9 +137,11 @@ class KhronosObjectPlugin : public VisualizerPlugin {
 
  protected:
   // Helper functions.
-  void drawDynamicObjects(const std_msgs::msg::Header& header,
+  void drawDynamicObjects(const Config& config,
+                          const std_msgs::msg::Header& header,
                           const spark_dsg::DynamicSceneGraph& graph);
-  void drawStaticObjects(const std_msgs::msg::Header& header,
+  void drawStaticObjects(const Config& config,
+                         const std_msgs::msg::Header& header,
                          const spark_dsg::DynamicSceneGraph& graph);
 
   // Mesh namespace for the visualizer plugin.
@@ -153,13 +156,15 @@ class KhronosObjectPlugin : public VisualizerPlugin {
                         const uint64_t id);
 
   // Get the color of a dynamic object.
-  spark_dsg::Color getDynamicColor(const spark_dsg::KhronosObjectAttributes& attrs,
+  spark_dsg::Color getDynamicColor(const Config& config,
+                                   const spark_dsg::KhronosObjectAttributes& attrs,
                                    const uint64_t id) const;
 
   // Clear static object visuliazation
   void resetObject(const std_msgs::msg::Header& header, const uint64_t id);
 
  private:
+  const config::DynamicConfig<Config> config_;
   // ROS.
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr dynamic_pub_;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr static_pub_;

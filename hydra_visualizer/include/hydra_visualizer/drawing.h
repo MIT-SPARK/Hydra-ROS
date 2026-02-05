@@ -96,11 +96,7 @@ MarkerMsg makeLayerEdgeMarkers(const std_msgs::msg::Header& header,
                                const SceneGraphLayer& layer,
                                const std::string& ns);
 
-MarkerMsg makeMeshEdgesMarker(const std_msgs::msg::Header& header,
-                              const LayerInfo& info,
-                              const SceneGraphLayer& layer,
-                              const spark_dsg::Mesh& mesh,
-                              const std::string& ns);
+// TODO(nathan) add ability to draw mesh points for given 2D place or object
 
 MarkerMsg makeLayerTextMarker(const std_msgs::msg::Header& header,
                               const LayerInfo& info,

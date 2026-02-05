@@ -55,10 +55,10 @@ class TraversabilityPlugin : public VisualizerPlugin {
                                          spark_dsg::Color::red(),     // Intraversable
                                          spark_dsg::Color::green()};  // Traversed
     //! Height of the slice to visualize in meters.
-    float slice_height = 0.0f;
+    float slice_height = 2.0f;
 
     //! line width of the boundary markers
-    float line_width = 0.05f;
+    float line_width = 0.07f;
   };
 
   TraversabilityPlugin(const Config& config,
@@ -82,6 +82,14 @@ class TraversabilityPlugin : public VisualizerPlugin {
                       const spark_dsg::SceneGraphLayer& layer,
                       visualization_msgs::msg::MarkerArray& msg) const;
 
+  void drawBlockBoundary(const Config& config,
+                         const spark_dsg::TraversabilityNodeAttributes& attrs,
+                         visualization_msgs::msg::Marker& marker) const;
+
+  void drawRegionBoundary(const Config& config,
+                          const spark_dsg::TravNodeAttributes& attrs,
+                          visualization_msgs::msg::Marker& marker) const;
+
   void addBoundaryPoint(const Config& config,
                         visualization_msgs::msg::Marker& marker,
                         const Eigen::Vector3d& point,
@@ -91,6 +99,14 @@ class TraversabilityPlugin : public VisualizerPlugin {
   config::DynamicConfig<Config> config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
   mutable MarkerTracker tracker_;
+
+  // Start and stop indices for the corner points of the boundary along the state
+  // direction.
+  inline static const std::array<std::pair<size_t, size_t>, 4> state_pairs_ = {
+      std::make_pair(1, 0),
+      std::make_pair(1, 2),
+      std::make_pair(2, 3),
+      std::make_pair(0, 3)};
 };
 
 void declare_config(TraversabilityPlugin::Config& config);

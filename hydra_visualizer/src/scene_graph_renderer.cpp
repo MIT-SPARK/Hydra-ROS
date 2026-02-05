@@ -35,6 +35,7 @@
 #include "hydra_visualizer/scene_graph_renderer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/types/collections.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
@@ -58,31 +59,13 @@ namespace {
 
 inline std::string keyToLayerName(LayerKey key) {
   std::stringstream ss;
-  ss << "layer_" << key.layer;
+  ss << "layer" << key.layer;
   if (key.partition) {
     ss << "p" << key.partition;
   }
 
   return ss.str();
 }
-
-inline Marker makeNewEdgeList(const std_msgs::msg::Header& header,
-                              const std::string& ns_prefix,
-                              LayerKey source,
-                              LayerKey target) {
-  Marker marker;
-  marker.header = header;
-  marker.type = Marker::LINE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-
-  std::stringstream ss;
-  ss << ns_prefix << source << "_" << target;
-  marker.ns = ss.str();
-  return marker;
-}
-
-}  // namespace
 
 struct MarkerNamespaces {
   static std::string layerNodeNamespace(LayerKey key) {
@@ -118,6 +101,34 @@ struct MarkerNamespaces {
   }
 };
 
+struct InterlayerInfo {
+  using EdgeColor = EdgeColorAdapter::EdgeColor;
+  using ColorFunc = std::function<EdgeColor(const SceneGraphEdge& edge)>;
+  InterlayerEdgeConfig config;
+  size_t marker_idx;
+  std::unique_ptr<EdgeColorAdapter> adapter;
+  size_t num_since_last = 0;
+};
+
+}  // namespace
+
+InterlayerEdgeConfig::InterlayerEdgeConfig() { color = {}; }
+
+void declare_config(InterlayerEdgeConfig& config) {
+  using namespace config;
+  name("InterlayerEdgeConfig");
+  base<visualizer::LayerConfig::Edges>(config);
+  field(config.use_child_color, "use_child_color");
+}
+
+void declare_config(SceneGraphRenderer::Config::InterlayerEdges& config) {
+  using namespace config;
+  name("SceneGraphRenderer::Config::InterlayerEdges");
+  field(config.config, "");
+  field<SelectorConversion>(config.from, "from");
+  field<SelectorConversion>(config.to, "to");
+}
+
 void declare_config(GraphRenderConfig& config) {
   using namespace config;
   name("GraphRenderConfig");
@@ -125,32 +136,34 @@ void declare_config(GraphRenderConfig& config) {
   field(config.collapse_layers, "collapse_layers");
 }
 
+void declare_config(SceneGraphRenderer::LayerPluginsConfig& config) {
+  using namespace config;
+  name("SceneGraphRenderer::LayerPluginsConfig");
+  field<LayerKeyConversion>(config.layer, "layer");
+  field(config.plugins, "plugins");
+}
+
 void declare_config(SceneGraphRenderer::Config& config) {
   using namespace config;
   name("SceneGraphRenderer::Config");
   field(config.graph, "graph");
-  field(config.layers, "layers");
-  field(config.partitions, "partitions");
+  field<MapKeyConverter<SelectorConversion>>(config.layers, "layers");
+  field(config.interlayer_edges, "interlayer_edges");
+  field(config.layer_plugins, "layer_plugins");
 }
 
 SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle nh)
-    : nh_(nh),
-      graph_config_("renderer", config.graph, [this]() { has_change_ = true; }),
+    : init_config_(config),
+      nh_(nh),
+      graph_config_("scene_graph", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
       has_change_(false) {
-  // init wrappers from parsed initial config
-  for (const auto& [layer_id, layer_config] : config.layers) {
-    const auto ns = "renderer/config/layer" + std::to_string(layer_id);
-    layers_.emplace(layer_id,
-                    std::make_unique<LayerConfigWrapper>(
-                        ns, layer_config, [this]() { has_change_ = true; }));
-  }
-
-  for (const auto& [layer_id, layer_config] : config.partitions) {
-    const auto ns = "renderer/config/partitions/layer" + std::to_string(layer_id);
-    partitions_.emplace(layer_id,
-                        std::make_unique<LayerConfigWrapper>(
-                            ns, layer_config, [this]() { has_change_ = true; }));
+  for (const auto& plugin_config : config.layer_plugins) {
+    const auto key = plugin_config.layer;
+    auto& plugin_list = layer_plugins_[key];
+    for (const auto& plugin : plugin_config.plugins) {
+      plugin_list.emplace_back(plugin.create(keyToLayerName(key)));
+    }
   }
 }
 
@@ -171,81 +184,128 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   setConfigs(graph);
 
   MarkerArray msg;
-  for (const auto& [layer_id, layer] : graph.layers()) {
-    drawLayer(header, layer_infos_.at(layer_id), *layer, graph.mesh().get(), msg);
+  for (const auto& [_, layer] : graph.layers()) {
+    drawLayer(header, layer_infos_.at(layer->id), *layer, graph.mesh().get(), msg);
   }
 
-  for (const auto& [l_id, partitions] : graph.layer_partitions()) {
-    for (const auto& [partition_id, partition] : partitions) {
-      drawLayer(header, partition_infos_.at(l_id), *partition, graph.mesh().get(), msg);
+  for (const auto& [_, partitions] : graph.layer_partitions()) {
+    for (const auto& [_, partition] : partitions) {
+      const auto& partition_info = layer_infos_.at(partition->id);
+      drawLayer(header, partition_info, *partition, graph.mesh().get(), msg);
     }
   }
 
   MarkerArray edges;
   drawInterlayerEdges(header, graph, edges);
   tracker_.add(edges, msg);
-
   tracker_.clearPrevious(header, msg);
   if (!msg.markers.empty()) {
     pub_->publish(msg);
   }
 }
 
+InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent,
+                                                                 LayerKey child) const {
+  const auto name = keyToLayerName(parent) + "_to_" + keyToLayerName(child);
+  auto iter = interlayer_edges_.find(name);
+  if (iter == interlayer_edges_.end()) {
+    InterlayerEdgeConfig config;
+    for (const auto& info : init_config_.interlayer_edges) {
+      bool from_parent = info.from.matches(parent) && info.to.matches(child);
+      bool to_parent = info.to.matches(parent) && info.from.matches(child);
+      if (!from_parent && !to_parent) {
+        continue;
+      }
+
+      config = info.config;
+      if (info.from.wildcard || info.to.wildcard) {
+        continue;  // allow more specific keys to take precedence
+      } else {
+        break;
+      }
+    }
+
+    const auto ns = "scene_graph_interlayer_" + name;
+    auto wrapper = std::make_unique<EdgeConfigWrapper>(ns, config);
+    wrapper->setCallback([this]() { has_change_ = true; });
+    iter = interlayer_edges_.emplace(name, std::move(wrapper)).first;
+  }
+
+  return iter->second->get();
+}
+
 void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header,
                                              const DynamicSceneGraph& graph,
                                              MarkerArray& msg) const {
   const std::string ns_prefix = "interlayer_edges_";
-  std::map<LayerKey, size_t> marker_indices;
-  std::map<LayerKey, size_t> num_since_last;
+  std::map<std::pair<LayerKey, LayerKey>, InterlayerInfo> edge_info;
   for (const auto& [key, edge] : graph.interlayer_edges()) {
     const auto& source = graph.getNode(edge.source);
-    const auto& source_info = getLayerInfo(source.layer);
     const auto& target = graph.getNode(edge.target);
+    const auto& source_info = getLayerInfo(source.layer);
     const auto& target_info = getLayerInfo(target.layer);
     if (!source_info.shouldVisualize(source) || !target_info.shouldVisualize(target)) {
       continue;
     }
 
-    if (!source_info.config.edges.draw_interlayer ||
-        !target_info.config.edges.draw_interlayer) {
+    const auto target_is_parent = source.layer < target.layer;
+    auto keys = target_is_parent ? std::make_pair(target.layer, source.layer)
+                                 : std::make_pair(source.layer, target.layer);
+    auto iter = edge_info.find(keys);
+    if (iter == edge_info.end()) {
+      std::stringstream ss;
+      ss << ns_prefix << source.layer << "_" << target.layer;
+      const auto new_conf = getInterlayerEdgeConfig(keys.first, keys.second);
+
+      InterlayerInfo new_info{new_conf, msg.markers.size(), new_conf.color.create()};
+      new_info.num_since_last = new_conf.insertion_skip;
+      if (new_info.adapter) {
+        // TODO(nathan) this is awkard because it only supports intralayer edges
+        new_info.adapter->setGraph(graph, keys.first);
+      }
+
+      iter = edge_info.emplace(keys, std::move(new_info)).first;
+      auto& marker = msg.markers.emplace_back();
+      marker.header = header;
+      marker.type = Marker::LINE_LIST;
+      marker.action = Marker::ADD;
+      marker.id = 0;
+      marker.ns = ss.str();
+      marker.scale.x = new_conf.scale;
+    }
+
+    auto& info = iter->second;
+    if (!info.config.draw) {
       continue;
     }
 
-    const auto use_source = source_info.config.edges.interlayer_use_source;
-    const auto& info = use_source ? source_info : target_info;
-
-    auto iter = marker_indices.find(source.layer);
-    if (iter == marker_indices.end()) {
-      iter = marker_indices.emplace(source.layer, msg.markers.size()).first;
-      msg.markers.push_back(
-          makeNewEdgeList(header, ns_prefix, source.layer, target.layer));
-      msg.markers.back().scale.x = info.config.edges.interlayer_scale;
-      // make sure we always draw at least one edge
-      num_since_last[source.layer] = info.config.edges.interlayer_insertion_skip;
-    }
-
-    if (num_since_last[source.layer] >= info.config.edges.interlayer_insertion_skip) {
-      num_since_last[source.layer] = 0;
+    if (info.num_since_last >= info.config.insertion_skip) {
+      info.num_since_last = 0;
     } else {
-      num_since_last[source.layer]++;
+      ++info.num_since_last;
       continue;
     }
 
-    auto& marker = msg.markers.at(iter->second);
-    geometry_msgs::msg::Point source_point;
+    auto& marker = msg.markers.at(info.marker_idx);
+    auto& source_point = marker.points.emplace_back();
     tf2::convert(source.attributes().position, source_point);
     source_point.z += source_info.z_offset;
-    marker.points.push_back(source_point);
 
-    geometry_msgs::msg::Point target_point;
+    auto& target_point = marker.points.emplace_back();
     tf2::convert(target.attributes().position, target_point);
     target_point.z += target_info.z_offset;
-    marker.points.push_back(target_point);
 
-    const auto color = makeColorMsg(info.node_color(use_source ? source : target),
-                                    info.config.edges.interlayer_alpha);
-    marker.colors.push_back(color);
-    marker.colors.push_back(color);
+    if (info.adapter) {
+      const auto [c_s, c_t] = info.adapter->getColor(graph, edge);
+      marker.colors.push_back(makeColorMsg(c_s, info.config.alpha));
+      marker.colors.push_back(makeColorMsg(c_t, info.config.alpha));
+    } else {
+      bool use_source = !target_is_parent ^ info.config.use_child_color;
+      const auto color =
+          use_source ? source_info.node_color(source) : target_info.node_color(target);
+      marker.colors.push_back(makeColorMsg(color, info.config.alpha));
+      marker.colors.push_back(makeColorMsg(color, info.config.alpha));
+    }
   }
 }
 
@@ -266,7 +326,9 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
   }
 
   const auto node_ns = MarkerNamespaces::layerNodeNamespace(layer.id);
-  tracker_.add(makeLayerNodeMarkers(header, info, layer, node_ns), msg);
+  if (info.config.nodes.draw) {
+    tracker_.add(makeLayerNodeMarkers(header, info, layer, node_ns), msg);
+  }
 
   if (info.config.text.draw) {
     if (info.config.text.draw_layer) {
@@ -307,54 +369,68 @@ void SceneGraphRenderer::drawLayer(const std_msgs::msg::Header& header,
   const auto edge_ns = MarkerNamespaces::layerEdgeNamespace(layer.id);
   tracker_.add(makeLayerEdgeMarkers(header, info, layer, edge_ns), msg);
 
-  if (mesh && info.config.draw_mesh_edges) {
-    const std::string ns = MarkerNamespaces::meshEdgeNamespace(layer.id);
-    tracker_.add(makeMeshEdgesMarker(header, info, layer, *mesh, ns), msg);
+  // dispatch drawing to layer plugins
+  auto plugins = layer_plugins_.find(layer.id);
+  if (plugins != layer_plugins_.end()) {
+    for (const auto& plugin : plugins->second) {
+      if (!plugin) {
+        continue;
+      }
+
+      plugin->draw(header, info, layer, mesh, msg, tracker_);
+    }
   }
+}
+
+LayerConfig SceneGraphRenderer::getLayerConfig(spark_dsg::LayerKey key) const {
+  auto iter = layers_.find(key);
+  if (iter == layers_.end()) {
+    // TODO(nathan) actually allow layer names when looking up configs
+    LayerConfig init_config;
+    for (const auto& [config_key, config] : init_config_.layers) {
+      if (!config_key.matches(key)) {
+        continue;
+      }
+
+      init_config = config;
+      if (config_key.wildcard) {
+        continue;  // allow more specific keys to take precedence
+      } else {
+        break;
+      }
+    }
+
+    const auto ns = "scene_graph_" + keyToLayerName(key);
+    iter = layers_.emplace(key, std::make_unique<LayerConfigWrapper>(ns, init_config))
+               .first;
+    iter->second->setCallback([this]() { has_change_ = true; });
+  }
+
+  return iter->second->get();
 }
 
 void SceneGraphRenderer::setConfigs(const DynamicSceneGraph& graph) const {
   layer_infos_.clear();
-  partition_infos_.clear();
-
-  const auto& graph_config = graph_config_.get();
-  for (const auto& [layer_id, layer] : graph.layers()) {
-    auto iter = layers_.find(layer_id);
-    if (iter == layers_.end()) {
-      // TODO(nathan) think about logging
-      const auto ns = "renderer/config/layer" + std::to_string(layer_id);
-      iter = layers_.emplace(layer_id, std::make_unique<LayerConfigWrapper>(ns)).first;
-      iter->second->setCallback([this]() { has_change_ = true; });
-    }
-
-    // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
-    layer_infos_.emplace(layer_id, LayerInfo(iter->second->get()))
-        .first->second.offset(graph_config.layer_z_step, graph_config.collapse_layers)
-        .graph(graph, layer_id);
+  const auto graph_config = graph_config_.get();
+  const auto z_step = graph_config.layer_z_step;
+  const auto collapse = graph_config.collapse_layers;
+  for (const auto& [_, layer] : graph.layers()) {
+    const auto layer_config = getLayerConfig(layer->id);
+    auto& [_key, info] = *layer_infos_.emplace(layer->id, layer_config).first;
+    info.offset(z_step, collapse).graph(graph, layer->id);
   }
 
-  for (const auto& [l_id, partitions] : graph.layer_partitions()) {
-    auto iter = partitions_.find(l_id);
-    if (iter == partitions_.end()) {
-      // TODO(nathan) think about logging
-      const auto ns = "renderer/config/partitions/layer" + std::to_string(l_id);
-      iter = partitions_.emplace(l_id, std::make_unique<LayerConfigWrapper>(ns)).first;
-      iter->second->setCallback([this]() { has_change_ = true; });
+  for (const auto& [_, partitions] : graph.layer_partitions()) {
+    for (const auto& [_, layer] : partitions) {
+      const auto layer_config = getLayerConfig(layer->id);
+      auto& [_key, info] = *layer_infos_.emplace(layer->id, layer_config).first;
+      info.offset(z_step, collapse).graph(graph, layer->id);
     }
-
-    // TODO(nathan) this is ugly because layer info doesn't have a copy constructor
-    partition_infos_.emplace(l_id, LayerInfo(iter->second->get()))
-        .first->second.offset(graph_config.layer_z_step, graph_config.collapse_layers)
-        .graph(graph, l_id);
   }
 }
 
 const LayerInfo& SceneGraphRenderer::getLayerInfo(LayerKey layer) const {
-  if (!layer.partition) {
-    return layer_infos_.at(layer.layer);
-  } else {
-    return partition_infos_.at(layer.layer);
-  }
+  return layer_infos_.at(layer);
 }
 
 }  // namespace hydra

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22.1)
 project(hydra_visualizer)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -29,9 +29,9 @@ find_package(visualization_msgs REQUIRED)
 
 add_library(
   ${PROJECT_NAME}
-  src/plugins/traversability_plugin.cpp
-  src/adapters/graph_color.cpp
+  src/adapters/edge_color.cpp
   src/adapters/mesh_color.cpp
+  src/adapters/node_color.cpp
   src/adapters/text.cpp
   src/color/colormap_utilities.cpp
   src/drawing.cpp
@@ -45,10 +45,13 @@ add_library(
   src/plugins/footprint_plugin.cpp
   src/plugins/khronos_object_plugin.cpp
   src/plugins/mesh_plugin.cpp
+  src/plugins/mesh_point_plugin.cpp
   src/plugins/places_freespace_plugin.cpp
   src/plugins/pose_plugin.cpp
+  src/plugins/traversability_plugin.cpp
   src/scene_graph_renderer.cpp
   src/utils/ear_clipping.cpp
+  src/utils/layer_key_selector.cpp
   src/utils/marker_group_pub.cpp
   src/utils/marker_tracker.cpp
   src/utils/polygon_utilities.cpp
@@ -88,7 +91,11 @@ target_link_libraries(
 
 if(BUILD_TESTING)
   find_package(ament_cmake_gtest)
-  ament_add_gtest(test_${PROJECT_NAME} tests/main.cpp tests/test_ear_clipping.cpp)
+  ament_add_gtest(test_${PROJECT_NAME}
+      tests/main.cpp
+      tests/test_ear_clipping.cpp
+      tests/test_layer_key_selector.cpp
+  )
   target_link_libraries(
     test_${PROJECT_NAME}
     ${PROJECT_NAME}

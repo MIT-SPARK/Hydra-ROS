@@ -12,6 +12,24 @@
 #include <spark_dsg/node_symbol.h>
 
 namespace hydra {
+namespace {
+
+static const auto score_registration =
+    config::RegistrationWithConfig<NodeColorAdapter,
+                                   FeatureScoreColor,
+                                   FeatureScoreColor::Config>("FeatureScoreColor");
+
+static const auto nearest_registration =
+    config::RegistrationWithConfig<NodeColorAdapter,
+                                   NearestFeatureColor,
+                                   NearestFeatureColor::Config>("NearestFeatureColor");
+
+static const auto text_registration =
+    config::RegistrationWithConfig<visualizer::NodeTextAdapter,
+                                   NearestFeatureLabel,
+                                   NearestFeatureLabel::Config>("NearestFeatureLabel");
+
+}  // namespace
 
 using namespace spark_dsg;
 using semantic_inference_msgs::msg::FeatureVectorStamped;
@@ -103,13 +121,13 @@ FeatureScoreColor::FeatureScoreColor(const Config& config)
 
 FeatureScoreColor::~FeatureScoreColor() = default;
 
-void FeatureScoreColor::setGraph(const DynamicSceneGraph& graph, LayerId layer_id) {
+void FeatureScoreColor::setGraph(const DynamicSceneGraph& graph, LayerKey layer_key) {
   values_.clear();
   if (!has_feature_ || !metric_) {
     return;
   }
 
-  const auto& layer = graph.getLayer(layer_id);
+  const auto& layer = graph.getLayer(layer_key.layer, layer_key.partition);
   range_.min = 1.0f;
   range_.max = 0.0f;
   for (const auto& [node_id, node] : layer.nodes()) {

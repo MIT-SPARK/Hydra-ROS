@@ -48,21 +48,29 @@ namespace hydra {
 class TraversabilityVisualizer : public places::TraversabilityPlaceExtractor::Sink {
  public:
   struct Config {
+    //! Namespace to use for the visualizer node.
     std::string ns = "~/traversability";
+    //! Colormap to use for traversability values.
     visualizer::RangeColormap::Config traversability_colormap{
         createSpectrumColormap({spark_dsg::Color::red(),
                                 spark_dsg::Color::yellow(),
                                 spark_dsg::Color::green()})};
+    //! Colormap to use for confidence values.
     visualizer::RangeColormap::Config confidence_colormap{
         createSpectrumColormap({spark_dsg::Color::black(),
                                 spark_dsg::Color::blue(),
                                 spark_dsg::Color::cyan()})};
+    //! Colors to use for the different traversability states (unknown, traversable,
+    //! intraversable, traversed).
     std::vector<spark_dsg::Color> state_colors{spark_dsg::Color::black(),
                                                spark_dsg::Color::blue(),
                                                spark_dsg::Color::red(),
                                                spark_dsg::Color::green()};
-    float slice_height = 2.0f;  // Height of the slice to visualize in meteres.
-    bool use_relative_height = false;
+    //! Height where the slice is visualized [m].
+    float drawing_offset_z = 0.0f;
+    //! True: Use height relative to the robot, false: use absolute height.
+    bool use_relative_offset = true;
+    //! Alpha value to use for the voxel colors.
     double alpha = 0.3;
   };
 

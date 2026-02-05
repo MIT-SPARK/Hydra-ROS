@@ -39,6 +39,7 @@
 #include <config_utilities/parsing/context.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/types/path.h>
+#include <config_utilities_ros/ros_dynamic_config_server.h>
 #include <hydra/common/global_info.h>
 #include <ianvs/node_init.h>
 #include <ianvs/spin_functions.h>
@@ -48,6 +49,7 @@
 namespace hydra {
 
 struct RunSettings {
+  bool show_run_settings = true;
   size_t robot_id = 0;
   bool exit_after_clock = false;
   bool force_shutdown = false;
@@ -63,6 +65,7 @@ struct RunSettings {
 void declare_config(RunSettings& config) {
   using namespace config;
   name("RunSettings");
+  field(config.show_run_settings, "show_run_settings");
   field(config.robot_id, "robot_id");
   field(config.exit_after_clock, "exit_after_clock");
   field(config.force_shutdown, "force_shutdown");
@@ -125,6 +128,7 @@ int main(int argc, char* argv[]) {
 
   [[maybe_unused]] const auto node = ianvs::init_node(argc, argv, "hydra_ros_node");
   auto nh = ianvs::NodeHandle::this_node();
+  const config::RosDynamicConfigServer config_server(nh.node());
 
   std::shared_ptr<hydra::RosSink> ros_sink;
   if (settings.forward_glog_to_ros) {
@@ -133,7 +137,9 @@ int main(int argc, char* argv[]) {
   }
 
   config::Settings().setLogger("glog");
-  LOG(INFO) << "Using node settings\n" << config::toString(settings);
+  if (settings.show_run_settings) {
+    LOG(INFO) << "Using node settings\n" << config::toString(settings);
+  }
 
   [[maybe_unused]] const auto plugins = config::loadExternalFactories(settings.paths);
 
