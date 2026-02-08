@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-<<<<<<<< HEAD:hydra_ros/include/hydra_ros/backend/ros_meta_data_listener.h
 #include <hydra/backend/backend_module.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/metadata.h>
@@ -72,36 +71,6 @@ class RosMetaDataListener : public BackendModule::Sink {
   rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
   mutable spark_dsg::Metadata meta_data_;
   mutable std::mutex mutex_;
-========
-#include <spark_dsg/dynamic_scene_graph.h>
-
-#include <visualization_msgs/msg/marker_array.hpp>
-
-#include "hydra_visualizer/layer_info.h"
-#include "hydra_visualizer/utils/marker_tracker.h"
-
-namespace hydra {
-
-struct LayerPlugin {
- public:
-  using Ptr = std::unique_ptr<LayerPlugin>;
-
-  virtual ~LayerPlugin() = default;
-
-  virtual void draw(const std_msgs::msg::Header& header,
-                    const visualizer::LayerInfo& info,
-                    const spark_dsg::SceneGraphLayer& layer,
-                    const spark_dsg::Mesh* mesh,
-                    visualization_msgs::msg::MarkerArray& msg,
-                    MarkerTracker& tracker) = 0;
-
-  virtual bool hasChange() const { return has_change_; }
-
-  virtual void clearChangeFlag() { has_change_ = false; }
-
- protected:
-  bool has_change_ = false;
->>>>>>>> origin/develop:hydra_visualizer/include/hydra_visualizer/plugins/layer_plugin.h
 };
 
 }  // namespace hydra

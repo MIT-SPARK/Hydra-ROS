@@ -32,68 +32,6 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-<<<<<<<< HEAD:hydra_ros/src/backend/ros_meta_data_listener.cpp
-#include "hydra_ros/backend/ros_meta_data_listener.h"
-
-#include <config_utilities/config.h>
-#include <config_utilities/printing.h>
-#include <config_utilities/validation.h>
-#include <hydra/common/common_types.h>
-#include <hydra/common/global_info.h>
-#include <ianvs/node_handle.h>
-#include <kimera_pgmo_ros/visualization_functions.h>
-
-namespace hydra {
-
-namespace {
-static const auto registration =
-    config::RegistrationWithConfig<BackendModule::Sink,
-                                   RosMetaDataListener,
-                                   RosMetaDataListener::Config>("RosMetaDataListener");
-}  // namespace
-
-void declare_config(RosMetaDataListener::Config& config) {
-  using namespace config;
-  name("RosMetaDataListener::Config");
-  field(config.topic_name, "topic_name");
-}
-
-RosMetaDataListener::RosMetaDataListener(const Config& config) {
-  sub_ = ianvs::NodeHandle::this_node().create_subscription<std_msgs::msg::String>(
-      config.topic_name,
-      rclcpp::QoS(100),
-      std::bind(&RosMetaDataListener::callback, this, std::placeholders::_1));
-}
-
-void RosMetaDataListener::call(uint64_t,
-                               const DynamicSceneGraph& graph,
-                               const kimera_pgmo::DeformationGraph&) const {
-  if (meta_data_.empty()) {
-    return;
-  }
-  // TODO(lschmid): This isn't beutiful, revisit the callback interfaces if we want to
-  // expose also setting things properly.
-  std::lock_guard<std::mutex> lock(mutex_);
-  const_cast<DynamicSceneGraph&>(graph).metadata.add(meta_data_);
-  meta_data_.clear();
-}
-
-std::string RosMetaDataListener::printInfo() const { return config::toString(config); }
-
-void RosMetaDataListener::callback(const std_msgs::msg::String::ConstSharedPtr& msg) {
-  nlohmann::json input_json;
-  try {
-    input_json = nlohmann::json::parse(msg->data);
-  } catch (const nlohmann::json::parse_error& e) {
-    LOG(ERROR) << "Failed to read meta data. JSON parse error: " << e.what();
-    return;
-  }
-
-  // Accumulate incoming meta data till the next call.
-  std::lock_guard<std::mutex> lock(mutex_);
-  meta_data_.add(input_json);
-}
-========
 #pragma once
 
 #include <config_utilities/dynamic_config.h>
@@ -135,6 +73,5 @@ class MeshPointPlugin : public LayerPlugin {
 };
 
 void declare_config(MeshPointPlugin::Config& config);
->>>>>>>> origin/develop:hydra_visualizer/include/hydra_visualizer/plugins/mesh_point_plugin.h
 
 }  // namespace hydra

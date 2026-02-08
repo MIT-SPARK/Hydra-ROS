@@ -45,7 +45,7 @@
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/graph_builder.h>
 #include <hydra/loop_closure/loop_closure_module.h>
-#include <hydra/utils/cognition_labels.h>
+#include <hydra/utils/daaam_labels.h>
 #include <pose_graph_tools_ros/conversions.h>
 
 #include <cstdint>
@@ -135,10 +135,10 @@ void HydraRosPipeline::init() {
     frontend_->addSink(std::make_shared<RosFrontendPublisher>(nh / "frontend"));
   }
 
-  // TMP Setup cognition labels for consistency.
-  CognitionLabels::setup();
-  LOG(INFO) << "Setup cognition labels:\n"
-            << config::toString(CognitionLabels::instance().config);
+  // TMP Setup daaam labels for consistency.
+  DaaamLabels::setup();
+  LOG(INFO) << "Setup daaam labels:\n"
+            << config::toString(DaaamLabels::instance().config);
 
   input_module_ =
       std::make_shared<RosInputModule>(config.input, active_window_->queue());

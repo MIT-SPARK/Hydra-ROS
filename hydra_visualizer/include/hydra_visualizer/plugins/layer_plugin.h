@@ -33,46 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-<<<<<<<< HEAD:hydra_ros/include/hydra_ros/backend/ros_meta_data_listener.h
-#include <hydra/backend/backend_module.h>
-#include <ianvs/node_handle.h>
-#include <spark_dsg/metadata.h>
-
-#include <mutex>
-
-#include <rclcpp/subscription.hpp>
-#include <std_msgs/msg/string.hpp>
-
-namespace hydra {
-
-/**
- * @brief Class that listens to exernal updates to the meta data of the scene graph,
- * which are received as JSON strings via ROS topics.
- */
-class RosMetaDataListener : public BackendModule::Sink {
- public:
-  struct Config {
-    //! @brief Input topic to listen to for meta data
-    std::string topic_name = "~/meta_data_in";
-  } const config;
-
-  explicit RosMetaDataListener(const Config& config);
-
-  virtual ~RosMetaDataListener() = default;
-
-  void call(uint64_t,
-            const DynamicSceneGraph& graph,
-            const kimera_pgmo::DeformationGraph&) const override;
-
-  std::string printInfo() const override;
-
- protected:
-  void callback(const std_msgs::msg::String::ConstSharedPtr& msg);
-
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr sub_;
-  mutable spark_dsg::Metadata meta_data_;
-  mutable std::mutex mutex_;
-========
 #include <spark_dsg/dynamic_scene_graph.h>
 
 #include <visualization_msgs/msg/marker_array.hpp>
@@ -101,7 +61,6 @@ struct LayerPlugin {
 
  protected:
   bool has_change_ = false;
->>>>>>>> origin/develop:hydra_visualizer/include/hydra_visualizer/plugins/layer_plugin.h
 };
 
 }  // namespace hydra

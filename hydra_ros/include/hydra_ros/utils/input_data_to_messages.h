@@ -66,13 +66,6 @@ sensor_msgs::msg::Image::SharedPtr convertImage(const std_msgs::msg::Header& hea
                                                 const cv::Mat& img,
                                                 const DisplayConfig& config);
 
-struct DisplayConfig {
-  float width_scale = 1.0f;
-  float height_scale = 1.0f;
-};
-
-void declare_config(DisplayConfig& config);
-
 /**
  * @brief Make a colored image for the current labels in the input data
  */

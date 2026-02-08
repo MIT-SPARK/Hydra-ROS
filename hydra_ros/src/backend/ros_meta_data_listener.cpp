@@ -32,7 +32,6 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-<<<<<<<< HEAD:hydra_ros/src/backend/ros_meta_data_listener.cpp
 #include "hydra_ros/backend/ros_meta_data_listener.h"
 
 #include <config_utilities/config.h>
@@ -93,48 +92,5 @@ void RosMetaDataListener::callback(const std_msgs::msg::String::ConstSharedPtr& 
   std::lock_guard<std::mutex> lock(mutex_);
   meta_data_.add(input_json);
 }
-========
-#pragma once
-
-#include <config_utilities/dynamic_config.h>
-
-#include "hydra_visualizer/plugins/layer_plugin.h"
-
-namespace hydra {
-
-/**
- * @brief Plugin to draw mesh points that comprise a node
- *
- * Works for 2D places or objects
- */
-class MeshPointPlugin : public LayerPlugin {
- public:
-  struct Config {
-    //! Draw size for mesh points
-    double point_size = 0.02;
-    //! Use spheres for mesh points instead of cubes
-    bool use_spheres = false;
-    //! Use the node color instead of the mesh color
-    bool use_node_color = true;
-    //! Alpha for mesh points
-    double alpha = 1.0;
-  };
-
-  MeshPointPlugin(const Config& config, const std::string& ns);
-
-  void draw(const std_msgs::msg::Header& header,
-            const visualizer::LayerInfo& info,
-            const spark_dsg::SceneGraphLayer& layer,
-            const spark_dsg::Mesh* mesh,
-            visualization_msgs::msg::MarkerArray& msg,
-            MarkerTracker& tracker) override;
-
- private:
-  std::string ns_;
-  config::DynamicConfig<Config> config_;
-};
-
-void declare_config(MeshPointPlugin::Config& config);
->>>>>>>> origin/develop:hydra_visualizer/include/hydra_visualizer/plugins/mesh_point_plugin.h
 
 }  // namespace hydra
