@@ -187,6 +187,32 @@ struct SeenDurationMeshColoring : public MeshColoring {
 void declare_config(SeenDurationMeshColoring::Config& config);
 
 /**
+ * @brief Functor to partially apply a color functor
+ *
+ * Points with a positive distance to the plane will use the child coloring functor,
+ * otherwise they will use the original mesh color
+ */
+struct SplitMeshColoring : public MeshColoring {
+  struct Config {
+    config::VirtualConfig<MeshColoring> coloring;
+    Eigen::Vector3f normal = Eigen::Vector3f::Ones();
+    Eigen::Vector3f origin = Eigen::Vector3f::Zero();
+    spark_dsg::Color default_color = spark_dsg::Color::gray();
+  } const config;
+
+  explicit SplitMeshColoring(const Config& config);
+  virtual ~SplitMeshColoring() = default;
+
+  void setMesh(const spark_dsg::Mesh& mesh) override;
+  spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
+
+ private:
+  MeshColoring::Ptr coloring_;
+};
+
+void declare_config(SplitMeshColoring::Config& config);
+
+/**
  * @brief Utility class to color a mesh based on a mesh coloring for visualization.
  */
 struct MeshColorAdapter {

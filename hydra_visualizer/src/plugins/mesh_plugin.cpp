@@ -64,7 +64,8 @@ MeshPlugin::MeshPlugin(const Config& config,
                        ianvs::NodeHandle nh,
                        const std::string& name)
     : VisualizerPlugin(name),
-      config_("mesh_plugin", config::checkValid(config)),
+      config_(
+          "mesh_plugin", config::checkValid(config), [this]() { has_change_ = true; }),
       mesh_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>(
           name, rclcpp::QoS(1).transient_local())) {}
 
