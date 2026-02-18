@@ -1,10 +1,20 @@
 #include "hydra_visualizer/adapters/mesh_color.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/types/eigen_matrix.h>
+#include <config_utilities/validation.h>
 
 #include "hydra_visualizer/color/color_parsing.h"
 
 namespace hydra {
+namespace {
+
+static const auto splt_reg =
+    config::RegistrationWithConfig<MeshColoring,
+                                   SplitMeshColoring,
+                                   SplitMeshColoring::Config>("SplitMeshColoring");
+
+}
 
 using spark_dsg::Color;
 using spark_dsg::Mesh;
@@ -122,6 +132,35 @@ Color SeenDurationMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const
 
 void SeenDurationMeshColoring::setMaxDuration(spark_dsg::Mesh::Timestamp max) {
   max_ = max;
+}
+
+void declare_config(SplitMeshColoring::Config& config) {
+  using namespace config;
+  name("SplitMeshColoring::Config");
+  config.coloring.setOptional();
+  field(config.coloring, "coloring");
+  field(config.normal, "normal");
+  field(config.origin, "origin");
+  field(config.default_color, "default_color");
+}
+
+SplitMeshColoring::SplitMeshColoring(const Config& config)
+    : config(config::checkValid(config)), coloring_(config.coloring.create()) {}
+
+void SplitMeshColoring::setMesh(const Mesh& mesh) {
+  if (coloring_) {
+    coloring_->setMesh(mesh);
+  }
+}
+
+Color SplitMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const {
+  const auto& pos = mesh.pos(i);
+  const auto dist = config.normal.dot(pos - config.origin);
+  if (dist >= 0.0f && coloring_) {
+    return coloring_->getVertexColor(mesh, i);
+  }
+
+  return mesh.has_colors ? mesh.color(i) : config.default_color;
 }
 
 MeshColorAdapter::MeshColorAdapter(const Mesh& mesh, MeshColoring::ConstPtr coloring)
