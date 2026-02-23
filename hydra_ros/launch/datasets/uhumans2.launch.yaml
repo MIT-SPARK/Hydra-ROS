@@ -2,6 +2,7 @@
 launch:
   - arg: {name: scene, default: office, description: uhumans2 scene name}
   - arg: {name: use_gt_semantics, default: 'true'}
+  # TODO (aryan): add option to toggle khronos objects/hydra objects
   - arg: {name: use_openset_places, default: 'false'}
   - arg: {name: labelspace, default: $(if $(var use_gt_semantics) uhumans2_$(var scene) ade20k_full)}
   - arg: {name: log_prefix, default: uhumans2_$(var scene)}
@@ -29,7 +30,7 @@ launch:
   - include:
       file: $(find-pkg-share hydra_ros)/launch/hydra.launch.yaml
       arg:
-        - {name: dataset, value: uhumans2}
+        - {name: dataset, value: uhumans2_khronos}
         - {name: labelspace, value: $(var labelspace)}
         - {name: log_prefix, value: $(var log_prefix)}
         - {name: sensor_frame, value: left_cam}
