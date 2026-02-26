@@ -148,7 +148,7 @@ class Clusterer {
 
   // Compute weighted average feature for multi-label nodes
   FeatureVector getWeightedFeature(NodeId node_id,
-                                   const std::map<int, float>& daaam_labels) const {
+                                   const std::map<spark_dsg::SemanticLabel, float>& daaam_labels) const {
     // Check cache first
     auto cache_it = weighted_feature_cache_.find(node_id);
     if (cache_it != weighted_feature_cache_.end()) {
@@ -191,8 +191,8 @@ class Clusterer {
   }
 
   // Compute max similarity across all label pairs
-  double getMultiLabelMaxScore(const std::map<int, float>& source_labels,
-                               const std::map<int, float>& target_labels) const {
+  double getMultiLabelMaxScore(const std::map<spark_dsg::SemanticLabel, float>& source_labels,
+                               const std::map<spark_dsg::SemanticLabel, float>& target_labels) const {
     double max_score = 0.0;
 
     for (const auto& [source_label, source_weight] : source_labels) {
@@ -212,7 +212,7 @@ class Clusterer {
   }
 
   // Compute semantic consistency of a node's daaam labels
-  double computeSelfConsistency(const std::map<int, float>& daaam_labels) const {
+  double computeSelfConsistency(const std::map<spark_dsg::SemanticLabel, float>& daaam_labels) const {
     if (daaam_labels.empty()) return 0.0;
     if (daaam_labels.size() == 1) return 1.0;  // Pure node = max consistency
 
@@ -377,7 +377,7 @@ class Clusterer {
       attrs.is_predicted = false;  // Hijack the is_predicted flag for valid nodes.
 
       // Check if we have an ID.
-      if (attrs.daaam_labels.empty()) {
+      if (attrs.label_weights.empty()) {
         attrs.semantic_label = 0;  // No Label attached.
         attrs.color = Color::gray();
         continue;
@@ -385,7 +385,7 @@ class Clusterer {
 
       // Check if we have a feature.
       num_with_id++;
-      attrs.semantic_label = hydra::getMaxDaaamLabel(attrs.daaam_labels).first;
+      attrs.semantic_label = hydra::getMaxDaaamLabel(attrs.label_weights).first;
       const auto& feature = labels_->get(attrs.semantic_label);
       if (feature.size() == 0) {
         attrs.color = Color::red();
@@ -437,9 +437,9 @@ class Clusterer {
         case MergeLabelStrategy::WEIGHTED_AVERAGE: {
           // Compare weighted average features
           const auto source_feature =
-              getWeightedFeature(edge.source, source_attrs.daaam_labels);
+              getWeightedFeature(edge.source, source_attrs.label_weights);
           const auto target_feature =
-              getWeightedFeature(edge.target, target_attrs.daaam_labels);
+              getWeightedFeature(edge.target, target_attrs.label_weights);
           if (source_feature.size() > 0 && target_feature.size() > 0) {
             score = DaaamLabels::getScore(source_feature, target_feature);
           }
@@ -448,8 +448,8 @@ class Clusterer {
 
         case MergeLabelStrategy::MULTI_LABEL_MAX: {
           // Compare all label pairs, use maximum
-          score = getMultiLabelMaxScore(source_attrs.daaam_labels,
-                                       target_attrs.daaam_labels);
+          score = getMultiLabelMaxScore(source_attrs.label_weights,
+                                       target_attrs.label_weights);
           break;
         }
       }
@@ -493,7 +493,7 @@ class Clusterer {
 
       if (config.node_distance_aggregation == NodeDistanceAggregation::SELF_CONSISTENCY) {
         // Use semantic consistency of node's own labels
-        attrs.distance = computeSelfConsistency(attrs.daaam_labels);
+        attrs.distance = computeSelfConsistency(attrs.label_weights);
       } else {
         // Aggregate neighbor scores
         auto it = node_neighbor_scores.find(node_id);
