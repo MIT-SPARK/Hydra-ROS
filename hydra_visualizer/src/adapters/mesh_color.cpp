@@ -24,6 +24,7 @@ void declare_config(SemanticMeshColoring::Config& config) {
   using namespace config;
   name("SemanticMeshColoring::Config");
   field(config.colormap, "colormap");
+  field(config.instance_id, "instance_id");
 }
 
 SemanticMeshColoring::SemanticMeshColoring(const Config& config)
@@ -34,7 +35,10 @@ Color SemanticMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const {
     return Color::black();
   }
 
-  return colormap_.getColor(mesh.label(i));
+  const auto raw_label = mesh.label(i);
+  const auto label =
+      (config.instance_id && raw_label > 0xFFFF) ? (raw_label >> 16) : raw_label;
+  return colormap_.getColor(label);
 }
 
 void declare_config(FirstSeenMeshColoring::Config&) {
