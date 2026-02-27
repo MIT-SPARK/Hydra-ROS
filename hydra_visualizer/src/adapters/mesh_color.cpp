@@ -242,7 +242,14 @@ Color TemporalIslandMeshColoring::getVertexColor(const Mesh& mesh, size_t i) con
     return Color::gray();
   }
 
-  return spark_dsg::colormaps::distinct150Id(island_id);
+  // Skip grey-like indices in distinct150 palette (3, 141, 149)
+  // These are too similar to the grey background used for non-island vertices
+  uint32_t adjusted_id = island_id;
+  if (island_id >= 3) adjusted_id++;
+  if (island_id >= 140) adjusted_id++;   // accounts for shift, targeting 141
+  if (island_id >= 147) adjusted_id++;   // accounts for shift, targeting 149
+
+  return spark_dsg::colormaps::distinct150Id(adjusted_id);
 }
 
 MeshColorAdapter::MeshColorAdapter(const Mesh& mesh, MeshColoring::ConstPtr coloring)
