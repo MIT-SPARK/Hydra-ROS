@@ -88,6 +88,9 @@ Color LabelColorAdapter::getColor(const DynamicSceneGraph&,
     VLOG(5) << "Node " << NodeSymbol(node.id).str() << " has no label!";
   }
 
+  if (config.instance_id && label > 0xFFFF) {
+    label = label >> 16;
+  }
   return colormap_.getColor(label);
 }
 
@@ -95,6 +98,7 @@ void declare_config(LabelColorAdapter::Config& config) {
   using namespace config;
   name("LabelColorAdapter::Config");
   field(config.colormap, "colormap");
+  field(config.instance_id, "instance_id");
 }
 
 IdColorAdapter::IdColorAdapter(const Config& config)

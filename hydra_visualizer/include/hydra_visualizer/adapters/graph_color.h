@@ -105,6 +105,7 @@ void declare_config(UniformColorAdapter::Config& config);
 struct LabelColorAdapter : GraphColorAdapter {
   struct Config {
     visualizer::CategoricalColormap::Config colormap;
+    bool instance_id = false;
   } const config;
 
   explicit LabelColorAdapter(const Config& config);
