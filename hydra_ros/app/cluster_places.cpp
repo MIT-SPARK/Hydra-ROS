@@ -145,6 +145,7 @@ class Clusterer {
   Config prev_config_;
   std::unique_ptr<LazyDaaamLabels> labels_;
   mutable std::unordered_map<NodeId, FeatureVector> weighted_feature_cache_;
+  double mean_edge_score_ = 0.0;
 
   // Compute weighted average feature for multi-label nodes
   FeatureVector getWeightedFeature(NodeId node_id,
@@ -473,6 +474,7 @@ class Clusterer {
       sum_sq += d * d;
     }
     double mean = distances.empty() ? 0.0 : sum / distances.size();
+    mean_edge_score_ = mean;
     double stddev = 0.0;
     if (!distances.empty()) {
       stddev = std::sqrt(sum_sq / distances.size() - mean * mean);
@@ -507,7 +509,12 @@ class Clusterer {
   }
 
   void cluster(const Config& config) {
-    hydra::RoomFinder room_finder(config.room_finder);
+    auto rf_config = config.room_finder;
+    if (rf_config.min_dilation_m < 0) {
+      rf_config.min_dilation_m = mean_edge_score_;
+      LOG(INFO) << "Auto-setting min_dilation_m to mean edge score: " << mean_edge_score_;
+    }
+    hydra::RoomFinder room_finder(rf_config);
     auto rooms =
         room_finder.findRooms(*merged_graph_->getLayer(config.places_layer).clone());
     // auto rooms = room_finder.findRooms(graph_->getLayer(config.places_layer));
