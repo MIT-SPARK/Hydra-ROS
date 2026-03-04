@@ -89,7 +89,7 @@ void DsgVisualizer::reset() {
     }
   }
 
-  graph_ = config.graph.create();
+  graph_ = config.graph.create(nh_);
 }
 
 void DsgVisualizer::addPlugin(VisualizerPlugin::Ptr plugin) {
