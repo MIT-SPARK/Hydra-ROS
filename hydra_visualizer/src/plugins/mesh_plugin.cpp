@@ -35,6 +35,7 @@
 #include "hydra_visualizer/plugins/mesh_plugin.h"
 
 #include <config_utilities/config.h>
+#include <limits>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
@@ -61,6 +62,7 @@ void declare_config(MeshPlugin::Config& config) {
   // TODO(lschmid): Not the most elegant, would be nice to dynamically set different
   // colorings once config_utilities dynamic config is ready.
   field(config.use_color_adapter, "use_color_adapter");
+  field(config.mesh_update_period_s, "mesh_update_period_s", "s");
   config.coloring.setOptional();
   field(config.coloring, "coloring");
 }
@@ -88,6 +90,17 @@ void MeshPlugin::draw(const std_msgs::msg::Header& header,
   if (!mesh || mesh->empty()) {
     return;
   }
+
+  const size_t vertex_count = mesh->numVertices();
+  const rclcpp::Time now(header.stamp);
+  const double elapsed = last_mesh_pub_time_
+                             ? (now - *last_mesh_pub_time_).seconds()
+                             : std::numeric_limits<double>::max();
+  if (vertex_count == last_mesh_vertex_count_ || elapsed < config.mesh_update_period_s) {
+    return;
+  }
+  last_mesh_pub_time_ = now;
+  last_mesh_vertex_count_ = vertex_count;
 
   if (use_color_adapter_ && !mesh_coloring_) {
     LOG(WARNING)

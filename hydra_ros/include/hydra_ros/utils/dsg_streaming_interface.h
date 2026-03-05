@@ -51,10 +51,11 @@ class DsgSender {
   struct Config {
     std::string frame_id;
     std::string timer_name = "publish_dsg";
-    bool serialize_dsg_mesh = true;
-    bool publish_mesh = false;
-    double min_mesh_separation_s = 0.0;
-    double min_dsg_separation_s = 0.0;
+    bool serialize_dsg_mesh = true; // bundle with scene graph in the msg ## turn this off
+    bool publish_mesh = false; // separately from dsg as separate topic
+    double min_mesh_separation_s = 0.0; // minimum time between mesh publications (if publish_mesh is true) 
+    double min_dsg_separation_s = 0.0; // minimum time between dsg publications ## decrease publishing rate to 1hz
+    // both frontend and backedn sink has the config
 
     Config with_name(const std::string& name) const;
     Config with_frame(const std::string& frame) const;

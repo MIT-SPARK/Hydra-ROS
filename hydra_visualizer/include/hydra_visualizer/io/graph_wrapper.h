@@ -35,6 +35,7 @@
 #pragma once
 #include <spark_dsg/dynamic_scene_graph.h>
 
+#include <mutex>
 #include <rclcpp/time.hpp>
 
 namespace hydra {
@@ -47,6 +48,7 @@ struct StampedGraph {
 };
 
 struct GraphWrapper {
+  mutable std::mutex mutex;  // protects graph_ from concurrent read/write
   using Ptr = std::shared_ptr<GraphWrapper>;
   virtual ~GraphWrapper() = default;
   virtual bool hasChange() const = 0;

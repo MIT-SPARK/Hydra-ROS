@@ -53,6 +53,7 @@ class MeshPlugin : public VisualizerPlugin {
 
   struct Config {
     bool use_color_adapter = false;
+    double mesh_update_period_s = 1.0;
     config::VirtualConfig<MeshColoring> coloring{SemanticMeshColoring::Config()};
   } const config;
 
@@ -72,6 +73,8 @@ class MeshPlugin : public VisualizerPlugin {
   std::string getMsgNamespace() const;
 
   bool use_color_adapter_;
+  std::optional<rclcpp::Time> last_mesh_pub_time_;
+  size_t last_mesh_vertex_count_ = 0;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
   rclcpp::Service<std_srvs::srv::SetBool>::SharedPtr toggle_service_;
   std::shared_ptr<MeshColoring> mesh_coloring_;
