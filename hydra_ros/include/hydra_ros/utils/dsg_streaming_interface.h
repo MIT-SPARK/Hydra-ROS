@@ -49,14 +49,22 @@ namespace hydra {
 class DsgSender {
  public:
   struct Config {
+    //! Frame ID to publish scene graph under
     std::string frame_id;
+    //! Timer name to record serialization timing
     std::string timer_name = "publish_dsg";
+    //! Include mesh in serialized scene graph message
     bool serialize_dsg_mesh = true;
+    //! Publish mesh separately from scene graph
     bool publish_mesh = false;
+    //! Minimum amount of time separating mesh messages
     double min_mesh_separation_s = 0.0;
+    //! Minimum amount of time separating scene graph messages
     double min_dsg_separation_s = 0.0;
 
+    //! Create a config with a specific timer name
     Config with_name(const std::string& name) const;
+    //! Create a config with a specific frame ID
     Config with_frame(const std::string& frame) const;
   } const config;
 

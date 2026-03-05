@@ -79,6 +79,7 @@ void GraphRosWrapper::callback(const DsgUpdate::ConstSharedPtr& msg) {
   }
 
   try {
+    std::lock_guard<std::mutex> lk(mutex);
     if (!graph_) {
       graph_ = spark_dsg::io::binary::readGraph(msg->layer_contents);
     } else {

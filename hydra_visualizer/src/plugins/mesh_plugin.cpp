@@ -53,22 +53,25 @@ static const auto registration =
 
 }
 
+using MeshMsg = kimera_pgmo_msgs::msg::Mesh;
+
+using config::checkValid;
 using spark_dsg::DynamicSceneGraph;
+using visualizer::makeMeshMsg;
 
 void declare_config(MeshPlugin::Config& config) {
   using namespace config;
   name("MeshPlugin::Config");
   field(config.coloring, "coloring");
+  field(config.mesh_update_period_s, "mesh_update_period_s", "s");
 }
 
 MeshPlugin::MeshPlugin(const Config& config,
                        ianvs::NodeHandle nh,
                        const std::string& name)
     : VisualizerPlugin(name),
-      config_(
-          "mesh_plugin", config::checkValid(config), [this]() { has_change_ = true; }),
-      mesh_pub_(nh.create_publisher<kimera_pgmo_msgs::msg::Mesh>(
-          name, rclcpp::QoS(1).transient_local())) {}
+      config_("mesh_plugin", checkValid(config), [this]() { has_change_ = true; }),
+      mesh_pub_(nh.create_publisher<MeshMsg>(name, rclcpp::QoS(1).transient_local())) {}
 
 MeshPlugin::~MeshPlugin() {}
 
@@ -80,9 +83,13 @@ void MeshPlugin::draw(const std_msgs::msg::Header& header,
   }
 
   const auto config = config_.get();
+  const rclcpp::Time now(header.stamp);
+  if (last_pub_ && (now - *last_pub_).seconds() < config.mesh_update_period_s) {
+    return;
+  }
 
-  auto msg = visualizer::makeMeshMsg(
-      header, *mesh, getMsgNamespace(), config.coloring.create());
+  last_pub_ = now;
+  auto msg = makeMeshMsg(header, *mesh, getMsgNamespace(), config.coloring.create());
   mesh_pub_->publish(msg);
 }
 

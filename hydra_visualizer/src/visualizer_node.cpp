@@ -131,10 +131,13 @@ void DsgVisualizer::spinOnce(bool force) {
   header.frame_id = stamped_graph.frame_id;
   header.stamp = stamped_graph.timestamp.value_or(nh_.now());
 
-  renderer_->draw(header, *stamped_graph.graph);
-  for (const auto& plugin : plugins_) {
-    if (plugin) {
-      plugin->draw(header, *stamped_graph.graph);
+  {
+    std::unique_lock<std::mutex> lock(graph_->mutex);
+    renderer_->draw(header, *stamped_graph.graph);
+    for (const auto& plugin : plugins_) {
+      if (plugin) {
+        plugin->draw(header, *stamped_graph.graph);
+      }
     }
   }
 
