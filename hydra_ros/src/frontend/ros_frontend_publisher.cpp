@@ -94,6 +94,7 @@ void RosFrontendPublisher::call(uint64_t timestamp_ns,
     backend_input.mesh_update->timestamp_ns = timestamp_ns;
     auto delta_msg = std::make_shared<MeshDeltaMsg>();
     kimera_pgmo::conversions::to_ros(*backend_input.mesh_update, *delta_msg);
+    delta_msg->header.frame_id = GlobalInfo::instance().getFrames().odom;
     mesh_update_pub_->publish(*delta_msg);
 
     stored_delta_.insert({backend_input.mesh_update->info.sequence_number, delta_msg});
