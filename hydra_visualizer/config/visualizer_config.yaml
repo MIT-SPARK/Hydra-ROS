@@ -42,8 +42,8 @@ renderer:
     2p*:
       z_offset_scale: 0.0
       visualize: true
-      nodes: {scale: 0.15, alpha: 0.9, use_sphere: false, color: {type: PartitionColorAdapter}}
-      edges: {scale: 0.05, alpha: 0.9, draw_interlayer: false}
+      nodes: {scale: 0.15, alpha: 1.0, use_sphere: true, color: {type: PartitionColorAdapter}}
+      edges: {scale: 0.15, alpha: 1.0, draw_interlayer: false, color: {type: ''}}
       text: {draw_layer: true, height: 0.9, scale: 0.8}
     3p1:
       z_offset_scale: 3.0
