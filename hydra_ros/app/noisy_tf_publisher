@@ -3,35 +3,50 @@
 import numpy as np
 import rclpy
 import tf2_ros
-from geometry_msgs.msg import TransformStamped
+from geometry_msgs.msg import TransformStamped, Pose
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation
 
 
 def _invert_pose(p):
     p_inv = np.zeros((4, 4))
     p_inv[:3, :3] = p[:3, :3].T
     p_inv[:3, 3] = -p[:3, :3].T @ p[:3, 3]
-    p_inv[3, 3] = 1
+    p_inv[3, 3] = 1.0
     return p_inv
+
+
+def _rot_from_pose(pose):
+    q = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
+    return Rotation.from_quat(q).as_matrix()
 
 
 def _mat_from_pose(pose):
     pose_out = np.zeros((4, 4))
-    q = [pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w]
-    t = [pose.position.x, pose.position.y, pose.position.z]
-    Rmat = R.from_quat(q).as_matrix()
-    pose_out[:3, :3] = Rmat
-    pose_out[:3, 3] = t
-    pose_out[3, 3] = 1
+    pose_out[:3, :3] = _rot_from_pose(pose)
+    pose_out[:3, 3] = [pose.position.x, pose.position.y, pose.position.z]
+    pose_out[3, 3] = 1.0
     return pose_out
 
 
-def Exp(rho, theta):
-    cos = np.cos
-    sin = np.sin
-    norm = np.linalg.norm
+def _pose_from_mat(p):
+    msg = Pose()
+    msg.position.x = p[0, 3]
+    msg.position.y = p[1, 3]
+    msg.position.z = p[2, 3]
+
+    q = Rotation.from_matrix(p[:3, :3]).as_quat()
+    msg.orientation.x = q[0]
+    msg.orientation.y = q[1]
+    msg.orientation.z = q[2]
+    msg.orientation.w = q[3]
+
+    return msg
+
+
+def _exp(rho, theta):
+    theta_norm = np.linalg.norm(theta)
     xi_hat = np.zeros((4, 4))
     theta_hat = np.array(
         [[0, -theta[2], theta[1]], [theta[2], 0, -theta[0]], [-theta[1], theta[0], 0]]
@@ -41,12 +56,8 @@ def Exp(rho, theta):
     return (
         np.eye(4)
         + xi_hat
-        + (1 - cos(norm(theta))) / (norm(theta) ** 2) * xi_hat @ xi_hat
-        + (norm(theta) - sin(norm(theta)))
-        / (norm(theta) ** 3)
-        * xi_hat
-        @ xi_hat
-        @ xi_hat
+        + (1 - np.cos(theta_norm)) / (theta_norm**2) * xi_hat @ xi_hat
+        + (theta_norm - np.sin(theta_norm)) / (theta_norm**3) * xi_hat @ xi_hat @ xi_hat
     )
 
 
@@ -65,102 +76,79 @@ class NoisyTransformPublisher(Node):
 
     def __init__(self):
         super().__init__("noisy_tf_publisher_node")
-        self._yaw_std_dev = self._get_param("yaw_std_dev", 0.01).double_value
-        self._xyz_std_dev = self._get_param("xyz_std_dev", 0.01).double_value
-        self._wrong_velocity_frame = self._get_param(
-            "wrong_velocity_frame", False
-        ).bool_value
-        self._start_from_origin = self._get_param("start_from_origin", True).bool_value
-        self._add_noise = self._get_param("add_noise", True).bool_value
-        self._parent_frame = self._get_param("parent_frame", "odom").string_value
-        self._child_frame = self._get_param("child_frame", "base_link").string_value
-        self._br = tf2_ros.TransformBroadcaster(self)
-        self._sub = self.create_subscription(Odometry, "~/odom", self._odom_cb, 10)
-        self._pub = self.create_publisher(Odometry, "noisy_odom_out", 10)
         self._last_gt_odom = None
         self._last_noisy_odom = None
 
-    def _odom_cb(self, odom_msg):
+        self._parent_frame = self._get_param("parent_frame", "odom").string_value
+        self._child_frame = self._get_param("child_frame", "base_link").string_value
+
+        self._yaw_std_dev = self._get_param("yaw_std_dev", 0.001).double_value
+        self._xy_std_dev = self._get_param("xy_std_dev", 0.001).double_value
+        self._z_std_dev = self._get_param("z_std_dev", 0.001).double_value
+
+        self._start_from_origin = self._get_param("start_from_origin", True).bool_value
+        self._add_noise = self._get_param("add_noise", True).bool_value
+        self._wrong_velocity_frame = self._get_param(
+            "wrong_velocity_frame", False
+        ).bool_value
+
+        seed = self._get_param("random_seed", 0).integer_value
+        self._rng = np.random.default_rng(seed=seed if seed > 0 else None)
+
+        self._br = tf2_ros.TransformBroadcaster(self)
+        self._sub = self.create_subscription(Odometry, "odom", self._odom_cb, 10)
+        self._pub = self.create_publisher(Odometry, "~/noisy_odom", 10)
+
+    def _odom_cb(self, msg):
         if self._last_gt_odom is None:
-            self._last_gt_odom = odom_msg
-            self._last_noisy_odom = Odometry() if self._start_from_origin else odom_msg
+            self._last_gt_odom = msg
+            self._last_noisy_odom = Odometry() if self._start_from_origin else msg
             return
 
-        pose_delta = _calc_odom_delta(self._last_gt_odom, odom_msg)
+        delta = _calc_odom_delta(self._last_gt_odom, msg)
+        self._last_noisy_odom = self._add_odom_noise(self._last_noisy_odom, msg, delta)
+        self._last_gt_odom = msg
 
-        self._last_noisy_odom = self._add_odom_noise(
-            self._last_noisy_odom, odom_msg, pose_delta
-        )
-
-        self._publish_noisy_transform(
-            self._parent_frame,
-            self._child_frame,
-            odom_msg.header.stamp,
-            self._last_noisy_odom.pose.pose,
-        )
-
+        self._publish_noisy_transform(msg.header.stamp, self._last_noisy_odom.pose.pose)
         self._pub.publish(self._last_noisy_odom)
-        self._last_gt_odom = odom_msg
 
-    def _publish_noisy_transform(self, fixed_frame, child_frame, time, noisy_pose):
-        t = TransformStamped()
-        t.header.stamp = time
-        t.header.frame_id = fixed_frame
-        t.child_frame_id = child_frame
+    def _publish_noisy_transform(self, time, noisy_pose):
+        msg = TransformStamped()
+        msg.header.stamp = time
+        msg.header.frame_id = self._parent_frame
+        msg.child_frame_id = self._child_frame
+        msg.transform.translation.x = noisy_pose.position.x
+        msg.transform.translation.y = noisy_pose.position.y
+        msg.transform.translation.z = noisy_pose.position.z
+        msg.transform.rotation = noisy_pose.orientation
+        self._br.sendTransform(msg)
 
-        # Set position from noisy pose
-        t.transform.translation.x = noisy_pose.position.x
-        t.transform.translation.y = noisy_pose.position.y
-        t.transform.translation.z = noisy_pose.position.z
+    def _sample_noise(self):
+        t_noise = np.zeros(3)
+        t_noise[:2] = self._rng.normal(scale=self._xy_std_dev)
+        if self._z_std_dev > 0.0:
+            t_noise[2] = self._rng.normal(scale=self._z_std_dev)
 
-        # Set orientation from noisy pose
-        t.transform.rotation = noisy_pose.orientation
-
-        # Broadcast the noisy transform
-        self._br.sendTransform(t)
+        R_noise = [0, 0, self._rng.normal(scale=self._yaw_std_dev)]
+        return t_noise, R_noise
 
     def _add_odom_noise(self, prev_noisy_odom, cur_gt_odom, pose_delta):
-        updated_odom = Odometry()
-        updated_odom.header = cur_gt_odom.header
-
         prev_pose = _mat_from_pose(prev_noisy_odom.pose.pose)
         updated_pose = prev_pose @ pose_delta
         if self._add_noise:
-            noisy_trans = np.random.normal(scale=self._xyz_std_dev)
-            noisy_rot = [0, 0, np.random.normal(scale=self._yaw_std_dev)]
-            updated_pose @= Exp(noisy_trans, noisy_rot)
+            t_noise, R_noise = self._sample_noise()
+            updated_pose @= _exp(t_noise, R_noise)
 
-        updated_odom.pose.pose.position.x = updated_pose[0, 3]
-        updated_odom.pose.pose.position.y = updated_pose[1, 3]
-        updated_odom.pose.pose.position.z = updated_pose[2, 3]
-
-        q = R.from_matrix(updated_pose[:3, :3]).as_quat()
-        updated_odom.pose.pose.orientation.x = q[0]
-        updated_odom.pose.pose.orientation.y = q[1]
-        updated_odom.pose.pose.orientation.z = q[2]
-        updated_odom.pose.pose.orientation.w = q[3]
-
-        q_gt = [
-            cur_gt_odom.pose.pose.orientation.x,
-            cur_gt_odom.pose.pose.orientation.y,
-            cur_gt_odom.pose.pose.orientation.z,
-            cur_gt_odom.pose.pose.orientation.w,
-        ]
-
-        R_gt = R.from_quat(q_gt).as_matrix()
-        R_noisy = updated_pose[:3, :3]
-
-        vel = np.array(
-            [
-                cur_gt_odom.twist.twist.linear.x,
-                cur_gt_odom.twist.twist.linear.y,
-                cur_gt_odom.twist.twist.linear.z,
-            ]
-        )
-
+        curr_twist = cur_gt_odom.twist.twist
+        vel = np.array([curr_twist.linear.x, curr_twist.linear.y, curr_twist.linear.z])
         if self._wrong_velocity_frame:
-            vel = (R_gt.T @ R_noisy).T @ vel
+            R_gt = _rot_from_pose(cur_gt_odom.pose.pose)
+            R_noisy = updated_pose[:3, :3]
+            vel = (R_noisy.T @ R_gt) @ vel
 
+        updated_odom = Odometry()
+        updated_odom.header = cur_gt_odom.header
+        updated_odom.pose.pose = _pose_from_mat(updated_pose)
         updated_odom.twist.twist.linear.x = vel[0]
         updated_odom.twist.twist.linear.y = vel[1]
         updated_odom.twist.twist.linear.z = vel[2]
