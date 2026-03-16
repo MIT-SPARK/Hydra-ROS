@@ -31,17 +31,16 @@ def _mat_from_pose(pose):
 
 
 def _pose_from_mat(p):
+    q = Rotation.from_matrix(p[:3, :3]).as_quat()
+
     msg = Pose()
     msg.position.x = p[0, 3]
     msg.position.y = p[1, 3]
     msg.position.z = p[2, 3]
-
-    q = Rotation.from_matrix(p[:3, :3]).as_quat()
     msg.orientation.x = q[0]
     msg.orientation.y = q[1]
     msg.orientation.z = q[2]
     msg.orientation.w = q[3]
-
     return msg
 
 
@@ -76,12 +75,11 @@ class NoisyTransformPublisher(Node):
 
     def __init__(self):
         super().__init__("noisy_tf_publisher_node")
-        self._last_gt_odom = None
         self._last_noisy_odom = None
+        self._poses = []
 
         self._parent_frame = self._get_param("parent_frame", "odom").string_value
         self._child_frame = self._get_param("child_frame", "base_link").string_value
-
         self._yaw_std_dev = self._get_param("yaw_std_dev", 0.001).double_value
         self._xy_std_dev = self._get_param("xy_std_dev", 0.001).double_value
         self._z_std_dev = self._get_param("z_std_dev", 0.001).double_value
@@ -100,14 +98,18 @@ class NoisyTransformPublisher(Node):
         self._pub = self.create_publisher(Odometry, "~/noisy_odom", 10)
 
     def _odom_cb(self, msg):
-        if self._last_gt_odom is None:
-            self._last_gt_odom = msg
+        self._poses.append(_mat_from_pose(msg.pose.pose))
+        if len(self._poses) == 1:
             self._last_noisy_odom = Odometry() if self._start_from_origin else msg
             return
 
-        delta = _calc_odom_delta(self._last_gt_odom, msg)
-        self._last_noisy_odom = self._add_odom_noise(self._last_noisy_odom, msg, delta)
-        self._last_gt_odom = msg
+        map_T_new = self._poses[-1]
+        map_T_old = self._poses[-2]
+        old_T_new = _invert_pose(map_T_old) @ map_T_new
+        if self._add_noise:
+            old_T_new @= _exp(*self._sample_noise)
+
+        self._last_noisy_odom = self._add_odom_noise(self._last_noisy_odom, msg, old_T_new)
 
         self._publish_noisy_transform(msg.header.stamp, self._last_noisy_odom.pose.pose)
         self._pub.publish(self._last_noisy_odom)
