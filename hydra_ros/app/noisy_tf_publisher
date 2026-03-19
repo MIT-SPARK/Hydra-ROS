@@ -116,7 +116,7 @@ class NoisyTransformPublisher(Node):
             "minimum_loop_closure_separation_s", 1.0
         ).double_value
         self._min_loop_closure_separation_ns = int(1.0e9 * min_lc_sep_s)
-        lc_window_s = self._get_param("loop_closure_window_ns", 10.0).double_value
+        lc_window_s = self._get_param("loop_closure_window_ns", 30.0).double_value
         self._loop_closure_window_ns = int(1.0e9 * lc_window_s)
 
         seed = self._get_param("random_seed", 0).integer_value
