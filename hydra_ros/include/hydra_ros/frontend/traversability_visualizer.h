@@ -100,7 +100,7 @@ class TraversabilityVisualizer : public places::TraversabilityPlaceExtractor::Si
   static visualizer::RangeColormap::Config createSpectrumColormap(
       std::vector<spark_dsg::Color> colors);
 
-  Color debugColor(float value) const;
+  spark_dsg::Color debugColor(float value) const;
 
   void onConfigUpdate();
 
