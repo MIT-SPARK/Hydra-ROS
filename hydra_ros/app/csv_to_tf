@@ -2,6 +2,7 @@
 """Node that broadcasts a CSV as a tf."""
 
 import argparse
+import json
 import pathlib
 import sys
 
@@ -14,9 +15,18 @@ import tf2_ros
 DEFAULT_ORDER = ["x", "y", "z", "qw", "qx", "qy", "qz"]
 
 
-def _parse_file(trajectory_file, parent, child, skip_first=True, order=None):
+def _parse_file(
+    trajectory_file, parent, child, skip_first=True, order=None, origin=None
+):
     if order is None:
         order = DEFAULT_ORDER
+    else:
+        order = json.loads(order)
+
+    if origin:
+        origin = json.loads(origin)
+    else:
+        origin = [0.0, 0.0, 0.0]
 
     transforms = []
     have_first_line = False
@@ -29,19 +39,19 @@ def _parse_file(trajectory_file, parent, child, skip_first=True, order=None):
 
             values = [x.strip() for x in line.split(",")]
             time_ns = int(values[0])
-            pose = [float(x) for x in values[1:]]
+            pose = {n: float(x) for n, x in zip(order, values[1:])}
 
             t = geometry_msgs.msg.TransformStamped()
             t.header.stamp = rclpy.time.Time(nanoseconds=time_ns).to_msg()
             t.header.frame_id = parent
             t.child_frame_id = child
-            t.transform.translation.x = pose[0]
-            t.transform.translation.y = pose[1]
-            t.transform.translation.z = pose[2]
-            t.transform.rotation.w = pose[3]
-            t.transform.rotation.x = pose[4]
-            t.transform.rotation.y = pose[5]
-            t.transform.rotation.z = pose[6]
+            t.transform.translation.x = pose["x"] - origin[0]
+            t.transform.translation.y = pose["y"] - origin[1]
+            t.transform.translation.z = pose["z"] - origin[2]
+            t.transform.rotation.w = pose["qw"]
+            t.transform.rotation.x = pose["qx"]
+            t.transform.rotation.y = pose["qy"]
+            t.transform.rotation.z = pose["qz"]
             transforms.append(t)
 
     return transforms
@@ -138,13 +148,27 @@ def main(args=None):
     )
     parser.add_argument("--parent", default="odom", help="frame ID for parent frame")
     parser.add_argument("--child", default="base_link", help="frame ID for child frame")
+    parser.add_argument(
+        "--origin", default=None, help="origin coordinates to use in json"
+    )
+    parser.add_argument("--column_order", default=None, help="column names in json")
+    parser.add_argument(
+        "--parse_first", action="store_true", help="parse first CSV line"
+    )
     args, rest = parser.parse_known_args()
 
     filepath = pathlib.Path(args.filepath).expanduser().absolute()
     if not filepath.exists():
         sys.exit(f"Trajectory file {filepath} does not exist!")
 
-    transforms = _parse_file(filepath, args.parent, args.child)
+    transforms = _parse_file(
+        filepath,
+        args.parent,
+        args.child,
+        origin=args.origin,
+        order=args.column_order,
+        skip_first=not args.parse_first,
+    )
 
     rclpy.init(args=rest)
     try:
