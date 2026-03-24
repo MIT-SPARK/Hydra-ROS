@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Node that broadcasts a CSV as a tf."""
 
+import argparse
 import pathlib
 import sys
 
@@ -46,44 +47,26 @@ def _parse_file(trajectory_file, parent, child, skip_first=True, order=None):
     return transforms
 
 
-class CsvToTf(rclpy.node.Node):
-    def __init__(self):
+class CsvToTfNode(rclpy.node.Node):
+    """Node that uses a CSV to simulate a live TF."""
+
+    def __init__(
+        self, transforms, offset=0.0, lookahead=0.0, stale=0.5, poll_period=0.01
+    ):
+        """Initialize the node."""
         super().__init__("csv_to_tf")
+        self._idx = 0
+        self._transforms = transforms
         self._broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        offset_s = self._get_param("offset_s", 0.0).double_value
-        self._offset = rclpy.duration.Duration(seconds=offset_s)
-        stale_threshold_s = self._get_param("stale_threshold_s", 0.5).double_value
-        self._stale_threshold = rclpy.duration.Duration(seconds=stale_threshold_s)
-        lookahead_s = self._get_param("lookahead_s", 0.1).double_value
-        self._lookahead = rclpy.duration.Duration(seconds=lookahead_s)
+        self._offset = rclpy.duration.Duration(seconds=offset)
+        self._stale_threshold = rclpy.duration.Duration(seconds=stale)
+        self._lookahead = rclpy.duration.Duration(seconds=lookahead)
         self.get_logger().info(
             f"offset: {self._offset}, lookahead: {self._lookahead}, stale: {self._stale_threshold}"
         )
 
-        trajectory_file = self._get_param("trajectory_file", "").string_value
-        if trajectory_file == "":
-            self.get_logger().fatal("File required!")
-            sys.exit(1)
-
-        trajectory_file = pathlib.Path(trajectory_file).expanduser().absolute()
-        if not trajectory_file.exists():
-            self.get_logger().fatal(
-                f"Trajectory file {trajectory_file} does not exist!"
-            )
-            sys.exit(1)
-
-        parent_frame = self._get_param("parent_frame", "odom").string_value
-        child_frame = self._get_param("child_frame", "base_link").string_value
-        self._transforms = _parse_file(trajectory_file, parent_frame, child_frame)
-        self._idx = 0
-        self.get_logger().info(f"Publishing {parent_frame}_T_{child_frame}")
-
-        poll_period_s = self._get_param("poll_period_s", 0.01).double_value
-        self._timer = self.create_timer(poll_period_s, self._callback)
-
-    def _get_param(self, name, default=None):
-        return self.declare_parameter(name, default).get_parameter_value()
+        self._timer = self.create_timer(poll_period, self._callback)
 
     def _curr_tf_is_stale(self, ros_stamp):
         # we want to reject any transforms that are more than stale_threshold_s than the current stamp
@@ -137,13 +120,48 @@ class CsvToTf(rclpy.node.Node):
 
 def main(args=None):
     """Do stuff."""
-    rclpy.init(args=args)
+    parser = argparse.ArgumentParser(
+        "Node that publishes parent_T_child from a CSV file"
+    )
+    parser.add_argument("filepath")
+    parser.add_argument(
+        "--offset", default=0.0, help="Amount of time to offset stamps by"
+    )
+    parser.add_argument(
+        "--lookahead", default=0.0, help="Amount of lead time to publish TF by"
+    )
+    parser.add_argument(
+        "--stale", default=0.5, help="Amount of time before a TF is stale"
+    )
+    parser.add_argument(
+        "--poll_period", default=0.01, help="Amount of time before a TF is stale"
+    )
+    parser.add_argument("--parent", default="odom", help="frame ID for parent frame")
+    parser.add_argument("--child", default="base_link", help="frame ID for child frame")
+    args, rest = parser.parse_known_args()
+
+    filepath = pathlib.Path(args.filepath).expanduser().absolute()
+    if not filepath.exists():
+        sys.exit(f"Trajectory file {filepath} does not exist!")
+
+    transforms = _parse_file(filepath, args.parent, args.child)
+
+    rclpy.init(args=rest)
     try:
-        node = CsvToTf()
+        node = CsvToTfNode(
+            transforms,
+            offset=args.offset,
+            lookahead=args.lookahead,
+            stale=args.stale,
+            poll_period=args.poll_period,
+        )
+        node.get_logger().info(f"Publishing {args.parent}_T_{args.child}")
         rclpy.spin(node)
         node.destroy_node()
+    except KeyboardInterrupt:
+        pass
     finally:
-        rclpy.utilities.try_shutdown()
+        rclpy.try_shutdown()
 
 
 if __name__ == "__main__":
