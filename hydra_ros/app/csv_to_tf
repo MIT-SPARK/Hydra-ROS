@@ -15,22 +15,13 @@ import tf2_ros
 DEFAULT_ORDER = ["x", "y", "z", "qw", "qx", "qy", "qz"]
 
 
-def _parse_file(
-    trajectory_file, parent, child, skip_first=True, order=None, origin=None
-):
-    if order is None:
-        order = DEFAULT_ORDER
-    else:
-        order = json.loads(order)
-
-    if origin:
-        origin = json.loads(origin)
-    else:
-        origin = [0.0, 0.0, 0.0]
+def _parse_file(filepath, parent, child, skip_first=True, order=None, origin=None):
+    order = DEFAULT_ORDER if order is None else json.loads(order)
+    origin = json.loads(origin) if origin else [0.0, 0.0, 0.0]
 
     transforms = []
     have_first_line = False
-    with open(trajectory_file, "r") as fin:
+    with open(filepath, "r") as fin:
         for line in fin:
             if not have_first_line:
                 have_first_line = True
@@ -60,23 +51,27 @@ def _parse_file(
 class CsvToTfNode(rclpy.node.Node):
     """Node that uses a CSV to simulate a live TF."""
 
-    def __init__(
-        self, transforms, offset=0.0, lookahead=0.0, stale=0.5, poll_period=0.01
-    ):
+    def __init__(self, transforms):
         """Initialize the node."""
         super().__init__("csv_to_tf")
         self._idx = 0
         self._transforms = transforms
         self._broadcaster = tf2_ros.TransformBroadcaster(self)
 
-        self._offset = rclpy.duration.Duration(seconds=offset)
-        self._stale_threshold = rclpy.duration.Duration(seconds=stale)
-        self._lookahead = rclpy.duration.Duration(seconds=lookahead)
-        self.get_logger().info(
-            f"offset: {self._offset}, lookahead: {self._lookahead}, stale: {self._stale_threshold}"
-        )
+        self._offset = self._duration_param("offset_s", 0.0)
+        self._lookahead = self._duration_param("lookahead_s", 0.0)
+        self._stale = self._duration_param("stale_threshold_s", 0.5)
+        period = self._duration_param("poll_period_s", 0.001)
+        self._timer = self.create_timer(period, self._callback)
 
-        self._timer = self.create_timer(poll_period, self._callback)
+        self.get_logger().info(f"Polling clock every {period}")
+        self.get_logger().info(f"Offsetting transforms by {self._offset}")
+        self.get_logger().info(f"Using lookahead of {self._lookahead}")
+        self.get_logger().info(f"Discarding TFs more than {self._stale} behind clock")
+
+    def _duration_param(self, name, default):
+        val = self._declare_parameter(name, default).get_parameter_value().double_value
+        return rclpy.durationDuration(seconds=val)
 
     def _curr_tf_is_stale(self, ros_stamp):
         # we want to reject any transforms that are more than stale_threshold_s than the current stamp
@@ -84,7 +79,7 @@ class CsvToTfNode(rclpy.node.Node):
         if curr_stamp is None:
             return False
 
-        return ros_stamp - curr_stamp > self._stale_threshold
+        return ros_stamp - curr_stamp > self._stale
 
     def _get_curr_tf_stamp(self):
         if self._idx >= len(self._transforms):
@@ -95,6 +90,7 @@ class CsvToTfNode(rclpy.node.Node):
 
     def _callback(self):
         stamp = self.get_clock().now()
+        stamp_ns = stamp.nanoseconds
 
         prev_idx = self._idx
         while self._curr_tf_is_stale(stamp):
@@ -102,9 +98,7 @@ class CsvToTfNode(rclpy.node.Node):
 
         num_dropped = self._idx - prev_idx
         if num_dropped > 0:
-            self.get_logger().warn(
-                f"Dropped {num_dropped} TFs older than {stamp.nanoseconds} [ns]"
-            )
+            self.get_logger().warn(f"Dropped {num_dropped} older than {stamp_ns} [ns]")
 
         if self._idx >= len(self._transforms):
             self.get_logger().info("Finished publishing transforms")
@@ -112,16 +106,16 @@ class CsvToTfNode(rclpy.node.Node):
             return
 
         next_stamp = self._get_curr_tf_stamp()
-        diff_str = f"diff: {(next_stamp - stamp).nanoseconds} [ns]"
-        self.get_logger().debug(
-            f"waiting for time {next_stamp.nanoseconds} [ns] ({diff_str})"
-        )
-        # if the next TF timestamp is ahead of the current ROS time by more than the lookahead,
-        # don't publish anything
-        if next_stamp - stamp > self._lookahead:
+        next_stamp_ns = next_stamp.nanoseconds
+        diff = next_stamp - stamp
+        diff_str = f"diff: {diff.nanoseconds} [ns]"
+        self.get_logger().debug(f"waiting for time {next_stamp_ns} [ns] ({diff_str})")
+        if diff > self._lookahead:
+            # if the next TF timestamp is ahead of the current ROS time by more than the lookahead,
+            # don't publish anything
             return
 
-        self.get_logger().debug(f"sending {next_stamp.nanoseconds} [ns]")
+        self.get_logger().debug(f"sending {next_stamp_ns} [ns]")
         msg = self._transforms[self._idx]
         msg.header.stamp = next_stamp.to_msg()  # reset header stamp
         self._broadcaster.sendTransform(msg)
@@ -130,31 +124,13 @@ class CsvToTfNode(rclpy.node.Node):
 
 def main(args=None):
     """Do stuff."""
-    parser = argparse.ArgumentParser(
-        "Node that publishes parent_T_child from a CSV file"
-    )
+    parser = argparse.ArgumentParser("Node publishing parent_T_child from CSV")
     parser.add_argument("filepath")
-    parser.add_argument(
-        "--offset", default=0.0, help="Amount of time to offset stamps by"
-    )
-    parser.add_argument(
-        "--lookahead", default=0.0, help="Amount of lead time to publish TF by"
-    )
-    parser.add_argument(
-        "--stale", default=0.5, help="Amount of time before a TF is stale"
-    )
-    parser.add_argument(
-        "--poll_period", default=0.01, help="Amount of time before a TF is stale"
-    )
     parser.add_argument("--parent", default="odom", help="frame ID for parent frame")
     parser.add_argument("--child", default="base_link", help="frame ID for child frame")
-    parser.add_argument(
-        "--origin", default=None, help="origin coordinates to use in json"
-    )
+    parser.add_argument("--origin", default=None, help="origin to use in json")
     parser.add_argument("--column_order", default=None, help="column names in json")
-    parser.add_argument(
-        "--parse_first", action="store_true", help="parse first CSV line"
-    )
+    parser.add_argument("--parse_first", action="store_true", help="parse first line")
     args, rest = parser.parse_known_args()
 
     filepath = pathlib.Path(args.filepath).expanduser().absolute()
@@ -172,13 +148,7 @@ def main(args=None):
 
     rclpy.init(args=rest)
     try:
-        node = CsvToTfNode(
-            transforms,
-            offset=args.offset,
-            lookahead=args.lookahead,
-            stale=args.stale,
-            poll_period=args.poll_period,
-        )
+        node = CsvToTfNode(transforms)
         node.get_logger().info(f"Publishing {args.parent}_T_{args.child}")
         rclpy.spin(node)
         node.destroy_node()
