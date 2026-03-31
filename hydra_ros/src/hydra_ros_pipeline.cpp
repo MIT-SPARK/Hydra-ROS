@@ -48,8 +48,12 @@
 #include <hydra/utils/daaam_labels.h>
 #include <pose_graph_tools_ros/conversions.h>
 
+#include <spark_dsg/serialization/graph_binary_serialization.h>
+
+#include <chrono>
 #include <cstdint>
 #include <memory>
+#include <thread>
 
 #include "hydra_ros/backend/ros_backend_publisher.h"
 #include "hydra_ros/frontend/ros_frontend_publisher.h"
@@ -112,6 +116,9 @@ void HydraRosPipeline::init() {
 
   auto bnh = nh / "backend";
   backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
+
+  // Publisher for final enriched DSG at shutdown (bypasses DsgSender throttling/sub check)
+  final_dsg_pub_ = bnh.create_publisher<hydra_msgs::msg::DsgUpdate>("dsg", 1);
   backend_->addSink(BackendModule::Sink::fromCallback(
       [this](uint64_t timestamp_ns, const auto&, const auto&) {
         status_monitor_->recordModuleCallback("backend",
@@ -150,6 +157,46 @@ void HydraRosPipeline::init() {
 void HydraRosPipeline::start() {
   HydraPipeline::start();
   status_monitor_->start();
+}
+
+void HydraRosPipeline::save(const DataDirectory& log_setup) const {
+  HydraPipeline::save(log_setup);
+  if (!active_window_ || !log_setup) {
+    return;
+  }
+
+  auto remaining = active_window_->extractRemainingObjects();
+
+  // Clone backend DSG and add remaining active window objects
+  auto dsg = backend_dsg_->graph->clone();
+  size_t max_id = 0;
+  for (const auto& [id, node] : dsg->getLayer(DsgLayers::OBJECTS).nodes()) {
+    max_id = std::max(max_id, NodeSymbol(id).categoryId());
+  }
+  for (auto& obj : remaining) {
+    NodeSymbol sym('O', ++max_id);
+    dsg->emplaceNode(DsgLayers::OBJECTS, sym, std::move(obj));
+  }
+
+  // Publish final enriched DSG via ROS topic (bypasses DsgSender throttling/sub check)
+  if (final_dsg_pub_) {
+    auto msg = std::make_unique<hydra_msgs::msg::DsgUpdate>();
+    msg->header.stamp = rclcpp::Clock().now();
+    msg->header.frame_id = GlobalInfo::instance().getFrames().map;
+    spark_dsg::io::binary::writeGraph(*dsg, msg->layer_contents, false);
+    msg->full_update = true;
+    final_dsg_pub_->publish(std::move(msg));
+    LOG(INFO) << "[HydraRosPipeline] Published final DSG with " << remaining.size()
+              << " additional active window objects via ROS topic";
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  }
+
+  // Save to disk (backup, used by Python path)
+  const auto backend_path = log_setup.path("backend");
+  dsg->save(backend_path / "dsg_with_mesh", true);
+  dsg->save(backend_path / "dsg", false);
+  LOG(INFO) << "[HydraRosPipeline] Saved DSG with " << remaining.size()
+            << " additional active window objects to disk";
 }
 
 void HydraRosPipeline::stop() {

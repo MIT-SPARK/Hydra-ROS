@@ -41,6 +41,9 @@
 
 #include <memory>
 
+#include <hydra_msgs/msg/dsg_update.hpp>
+#include <rclcpp/publisher.hpp>
+
 #include "hydra_ros/input/feature_receiver.h"
 #include "hydra_ros/input/ros_input_module.h"
 #include "hydra_ros/utils/status_monitor.h"
@@ -86,6 +89,8 @@ class HydraRosPipeline : public HydraPipeline {
 
   void stop() override;
 
+  void save(const DataDirectory& log_setup) const override;
+
  protected:
   virtual void initLCD();
 
@@ -97,6 +102,8 @@ class HydraRosPipeline : public HydraPipeline {
 
   std::unique_ptr<BowSubscriber> bow_sub_;
   std::unique_ptr<ExternalLoopClosureSubscriber> external_loop_closure_sub_;
+
+  rclcpp::Publisher<hydra_msgs::msg::DsgUpdate>::SharedPtr final_dsg_pub_;
 };
 
 void declare_config(HydraRosPipeline::Config& config);
