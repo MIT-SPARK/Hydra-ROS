@@ -183,7 +183,7 @@ void HydraRosPipeline::save(const DataDirectory& log_setup) const {
     auto msg = std::make_unique<hydra_msgs::msg::DsgUpdate>();
     msg->header.stamp = rclcpp::Clock().now();
     msg->header.frame_id = GlobalInfo::instance().getFrames().map;
-    spark_dsg::io::binary::writeGraph(*dsg, msg->layer_contents, false);
+    spark_dsg::io::binary::writeGraph(*dsg, msg->layer_contents, true);
     msg->full_update = true;
     final_dsg_pub_->publish(std::move(msg));
     LOG(INFO) << "[HydraRosPipeline] Published final DSG with " << remaining.size()
