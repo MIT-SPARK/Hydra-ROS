@@ -48,6 +48,7 @@ add_library(
   src/plugins/mesh_point_plugin.cpp
   src/plugins/places_freespace_plugin.cpp
   src/plugins/pose_plugin.cpp
+  src/plugins/region_growing_boundary_plugin.cpp
   src/plugins/traversability_plugin.cpp
   src/scene_graph_renderer.cpp
   src/utils/ear_clipping.cpp
