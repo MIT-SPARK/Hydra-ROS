@@ -49,6 +49,9 @@ namespace hydra {
 class TraversabilityPlugin : public VisualizerPlugin {
  public:
   struct Config {
+    //! Layer to visualize
+    std::string layer = spark_dsg::DsgLayers::TRAVERSABILITY;
+
     //! Colors representing each traversability state.
     std::vector<spark_dsg::Color> colors{spark_dsg::Color::gray(),    // Unknown
                                          spark_dsg::Color::blue(),    // Traversable
