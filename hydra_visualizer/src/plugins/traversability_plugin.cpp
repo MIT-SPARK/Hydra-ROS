@@ -57,10 +57,8 @@ static const auto registration_ =
 
 }
 
-using spark_dsg::Color;
 using spark_dsg::DynamicSceneGraph;
 using spark_dsg::SceneGraphLayer;
-using spark_dsg::SceneGraphNode;
 using spark_dsg::TraversabilityNodeAttributes;
 using spark_dsg::TraversabilityState;
 using spark_dsg::TravNodeAttributes;
@@ -70,6 +68,7 @@ using visualization_msgs::msg::MarkerArray;
 void declare_config(TraversabilityPlugin::Config& config) {
   using namespace config;
   name("TraversabilityPlugin::Config");
+  field(config.layer, "layer");
   field(config.colors, "colors");
   field(config.slice_height, "slice_height", "m");
   field(config.line_width, "line_width", "m");
@@ -110,11 +109,13 @@ void TraversabilityPlugin::reset(const std_msgs::msg::Header& header) {
 void TraversabilityPlugin::fillMarkers(const std_msgs::msg::Header& header,
                                        const DynamicSceneGraph& graph,
                                        MarkerArray& msg) const {
-  auto layer = graph.findLayer(spark_dsg::DsgLayers::TRAVERSABILITY);
+  const auto config = config_.get();
+  auto layer = graph.findLayer(config.layer);
   if (!layer) {
     return;
   }
-  drawBoundaries(config_.get(), header, *layer, msg);
+
+  drawBoundaries(config, header, *layer, msg);
 }
 
 void TraversabilityPlugin::drawBoundaries(const Config& config,
@@ -151,10 +152,9 @@ void TraversabilityPlugin::drawBoundaries(const Config& config,
   }
 }
 
-void TraversabilityPlugin::drawBlockBoundary(
-    const Config& config,
-    const spark_dsg::TraversabilityNodeAttributes& attrs,
-    visualization_msgs::msg::Marker& marker) const {
+void TraversabilityPlugin::drawBlockBoundary(const Config& config,
+                                             const TraversabilityNodeAttributes& attrs,
+                                             Marker& marker) const {
   // Get the world frame positions of the boundary points, adjusted for the line width
   // for non-overlapping rendering. bot-right, bot-left, top-left, top-right
   std::vector<Eigen::Vector3d> pts;
@@ -205,10 +205,9 @@ void TraversabilityPlugin::drawBlockBoundary(
   }
 }
 
-void TraversabilityPlugin::drawRegionBoundary(
-    const Config& config,
-    const TravNodeAttributes& attrs,
-    visualization_msgs::msg::Marker& marker) const {
+void TraversabilityPlugin::drawRegionBoundary(const Config& config,
+                                              const TravNodeAttributes& attrs,
+                                              Marker& marker) const {
   marker.type = Marker::LINE_STRIP;
   for (size_t i = 0; i < attrs.radii.size(); ++i) {
     tf2::convert(attrs.getBoundaryPoint(i), marker.points.emplace_back());
