@@ -102,23 +102,19 @@ void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
       continue;
     }
 
-    for (size_t i = 1; i < attrs->radii.size(); ++i) {
-      auto start = attrs->getBoundaryPoint(i - 1);
+    for (size_t i = 1; i <= attrs->radii.size(); ++i) {
+      const auto start_idx = i - 1;
+      const auto end_idx = i % attrs->radii.size();
+      auto start = attrs->getBoundaryPoint(start_idx);
       start.z() += info.z_offset;
       tf2::convert(start, marker.points.emplace_back());
-      auto end = attrs->getBoundaryPoint(i);
+      auto end = attrs->getBoundaryPoint(end_idx);
       end.z() += info.z_offset;
       tf2::convert(end, marker.points.emplace_back());
       marker.colors.emplace_back(
-          makeBoundaryColor(config.colors, attrs->states[i - 1]));
-      marker.colors.emplace_back(makeBoundaryColor(config.colors, attrs->states[i]));
-    }
-
-    if (attrs->radii.size() > 1) {
-      marker.points.emplace_back(marker.points.back());
-      marker.colors.emplace_back(marker.colors.back());
-      marker.points.emplace_back(marker.points.front());
-      marker.colors.emplace_back(marker.colors.front());
+          makeBoundaryColor(config.colors, attrs->states[start_idx]));
+      marker.colors.emplace_back(
+          makeBoundaryColor(config.colors, attrs->states[end_idx]));
     }
   }
 
