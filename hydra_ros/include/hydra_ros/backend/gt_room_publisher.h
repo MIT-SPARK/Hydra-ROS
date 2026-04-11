@@ -14,7 +14,7 @@ namespace hydra {
 class GtRoomPublisher : public UpdateRoomsFunctor::Sink {
  public:
   struct Config {
-    std::string ns = "~gt_rooms";
+    std::string ns = "~/gt_rooms";
     visualizer::DiscreteColormap::Config colormap;
   } const config;
 

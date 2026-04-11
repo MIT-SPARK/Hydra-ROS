@@ -1,5 +1,6 @@
 #include "hydra_ros/backend/gt_room_publisher.h"
 
+#include <Eigen/src/Geometry/Quaternion.h>
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
 #include <config_utilities/parsing/context.h>
@@ -47,12 +48,17 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   for (auto room : rf.room_extents.room_bounding_boxes) {
     for (auto box : room) {
       auto& m = ma.markers.emplace_back();
-      m.header.frame_id = "map";
+      m.header.frame_id = "euclid/utm_local";
       m.ns = "gt_rooms";
       m.id = idx++;
       m.action = m.ADD;
       m.type = m.CUBE;
-      m.pose.orientation.w = 1;
+
+      Eigen::Quaternionf q(box.world_R_center);
+      m.pose.orientation.x = q.x();
+      m.pose.orientation.y = q.y();
+      m.pose.orientation.z = q.z();
+      m.pose.orientation.w = q.w();
       m.pose.position.x = box.world_P_center.x();
       m.pose.position.y = box.world_P_center.y();
       m.pose.position.z = box.world_P_center.z();
