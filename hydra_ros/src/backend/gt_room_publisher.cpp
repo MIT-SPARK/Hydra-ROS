@@ -22,6 +22,7 @@ void declare_config(GtRoomPublisher::Config& config) {
   using namespace config;
   name("GtRoomPublisher::Config");
   field(config.ns, "ns");
+  field(config.room_frame_id, "room_frame_id");
   field(config.colormap, "colormap");
 }
 
@@ -36,7 +37,6 @@ GtRoomPublisher::GtRoomPublisher(const Config& config)
 std::string GtRoomPublisher::printInfo() const { return config::toString(config); }
 
 void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
-  LOG(WARNING) << "GT Room sink called";
   MarkerArray ma;
   auto& m = ma.markers.emplace_back();
   m.action = m.DELETEALL;
@@ -48,7 +48,7 @@ void GtRoomPublisher::call(uint64_t, const RoomFinder& rf) const {
   for (auto room : rf.room_extents.room_bounding_boxes) {
     for (auto box : room) {
       auto& m = ma.markers.emplace_back();
-      m.header.frame_id = "euclid/utm_local";
+      m.header.frame_id = config.room_frame_id;
       m.ns = "gt_rooms";
       m.id = idx++;
       m.action = m.ADD;

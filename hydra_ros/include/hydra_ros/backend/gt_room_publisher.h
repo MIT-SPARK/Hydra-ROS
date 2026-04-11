@@ -15,6 +15,7 @@ class GtRoomPublisher : public UpdateRoomsFunctor::Sink {
  public:
   struct Config {
     std::string ns = "~/gt_rooms";
+    std::string room_frame_id = "map";
     visualizer::DiscreteColormap::Config colormap;
   } const config;
 
