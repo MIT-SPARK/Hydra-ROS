@@ -112,7 +112,11 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
-install(TARGETS hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
+add_executable(visualize_deformation_graph app/visualize_deformation_graph.cpp)
+target_link_libraries(visualize_deformation_graph ${PROJECT_NAME})
+ament_target_dependencies(visualize_deformation_graph rclcpp kimera_pgmo_ros)
+
+install(TARGETS hydra_ros_node visualize_deformation_graph RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(
   PROGRAMS app/dsg_file_publisher
            app/dsg_republisher

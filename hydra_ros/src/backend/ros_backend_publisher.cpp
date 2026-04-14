@@ -55,6 +55,7 @@ using kimera_pgmo::KimeraPgmoConfig;
 using kimera_pgmo_msgs::msg::Mesh;
 using pose_graph_tools::PoseGraphTypeAdapter;
 using visualization_msgs::msg::Marker;
+using visualization_msgs::msg::MarkerArray;
 
 namespace {
 
@@ -79,7 +80,7 @@ void declare_config(RosBackendPublisher::Config& config) {
 
 RosBackendPublisher::RosBackendPublisher(ianvs::NodeHandle nh)
     : config(config::checkValid(get_config())), nh_(nh), tf_br_(nh_.node()) {
-  mesh_mesh_edges_pub_ = nh.create_publisher<Marker>("deformation_graph_mesh_mesh", 10);
+  mesh_mesh_edges_pub_ = nh.create_publisher<MarkerArray>("deformation_graph_mesh_mesh", 10);
   pose_mesh_edges_pub_ = nh.create_publisher<Marker>("deformation_graph_pose_mesh", 10);
   pose_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>("pose_graph", 10);
   mesh_graph_pub_ = nh.create_publisher<PoseGraphTypeAdapter>("mesh_graph", 10);
@@ -202,7 +203,7 @@ void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgr
                                                      size_t timestamp_ns) const {
   const rclcpp::Time stamp(timestamp_ns);
 
-  Marker mm_edges_msg;
+  MarkerArray mm_edges_msg;
   Marker pm_edges_msg;
   kimera_pgmo::fillDeformationGraphMarkers(dgraph,
                                            stamp,
@@ -210,7 +211,7 @@ void RosBackendPublisher::publishDeformationGraphViz(const DeformationGraph& dgr
                                            pm_edges_msg,
                                            GlobalInfo::instance().getFrames().map);
 
-  if (!mm_edges_msg.points.empty()) {
+  if (!mm_edges_msg.markers.empty()) {
     mesh_mesh_edges_pub_->publish(mm_edges_msg);
   }
   if (!pm_edges_msg.points.empty()) {

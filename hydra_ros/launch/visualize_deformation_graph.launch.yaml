@@ -1,0 +1,25 @@
+---
+launch:
+  - arg: {name: graph_file, default: '$(find-pkg-share khronos_ros)/../output/uh2_incremental_1/deformation_graph.dgrf'}
+  - arg: {name: frame_id, default: world}
+  - arg: {name: publish_rate, default: '1.0'}
+  - arg: {name: include_temp, default: 'true'}
+  - arg: {name: start_rviz, default: 'true'}
+  - arg: {name: rviz_path, default: $(find-pkg-share hydra_ros)/config/rviz/deformation_graph.rviz}
+
+  - node:
+      pkg: hydra_ros
+      exec: visualize_deformation_graph
+      name: deformation_graph_visualizer
+      output: screen
+      param:
+        - {name: dgrf_path, value: $(var graph_file)}
+        - {name: frame_id, value: $(var frame_id)}
+        - {name: publish_rate, value: $(var publish_rate)}
+        - {name: include_temp, value: $(var include_temp)}
+
+  - node:
+      if: $(var start_rviz)
+      pkg: rviz2
+      exec: rviz2
+      args: -d $(var rviz_path)

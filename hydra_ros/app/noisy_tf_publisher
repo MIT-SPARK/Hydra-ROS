@@ -72,6 +72,11 @@ class NoisyTransformPublisher(Node):
         ).bool_value
         self._start_from_origin = self._get_param("start_from_origin", True).bool_value
         self._add_noise = self._get_param("add_noise", True).bool_value
+        self._noise_seed = self._get_param("noise_seed", -1).integer_value
+        if self._noise_seed >= 0:
+            self._rng = np.random.default_rng(self._noise_seed)
+        else:
+            self._rng = np.random.default_rng()
         self._parent_frame = self._get_param("parent_frame", "odom").string_value
         self._child_frame = self._get_param("child_frame", "base_link").string_value
         self._br = tf2_ros.TransformBroadcaster(self)
@@ -126,8 +131,8 @@ class NoisyTransformPublisher(Node):
         prev_pose = _mat_from_pose(prev_noisy_odom.pose.pose)
         updated_pose = prev_pose @ pose_delta
         if self._add_noise:
-            noisy_trans = np.random.normal(scale=self._xyz_std_dev)
-            noisy_rot = [0, 0, np.random.normal(scale=self._yaw_std_dev)]
+            noisy_trans = self._rng.normal(scale=self._xyz_std_dev)
+            noisy_rot = [0, 0, self._rng.normal(scale=self._yaw_std_dev)]
             updated_pose @= Exp(noisy_trans, noisy_rot)
 
         updated_odom.pose.pose.position.x = updated_pose[0, 3]

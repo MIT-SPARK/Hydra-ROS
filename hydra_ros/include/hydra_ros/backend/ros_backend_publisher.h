@@ -40,6 +40,7 @@
 
 #include <rclcpp/publisher.hpp>
 #include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 #include "hydra_ros/utils/dsg_streaming_interface.h"
 
@@ -90,7 +91,7 @@ class RosBackendPublisher : public BackendModule::Sink {
 
  protected:
   ianvs::NodeHandle nh_;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr mesh_mesh_edges_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr mesh_mesh_edges_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pose_mesh_edges_pub_;
   pose_graph_tools::PoseGraphPublisher pose_graph_pub_;
   pose_graph_tools::PoseGraphPublisher mesh_graph_pub_;
