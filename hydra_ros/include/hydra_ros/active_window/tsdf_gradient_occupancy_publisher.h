@@ -99,6 +99,8 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
 
  private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr height_map_pub_;
+  rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr gradient_map_pub_;
 
   // Helper functions
   std::optional<float> extractSurfaceHeight(const TsdfLayer& layer,
@@ -119,6 +121,14 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
                          const Eigen::Isometry3d& world_T_sensor,
                          const TsdfLayer& layer,
                          nav_msgs::msg::OccupancyGrid& msg) const;
+
+  void publishHeightMapViz(const Index2DMap<float>& height_map,
+                           const TsdfLayer& layer,
+                           uint64_t timestamp_ns) const;
+
+  void publishGradientMapViz(const Index2DMap<GradientInfo>& gradient_map,
+                             const TsdfLayer& layer,
+                             uint64_t timestamp_ns) const;
 
   float computeHorizontalDistance(const Index2D& offset,
                                   float voxel_size) const;

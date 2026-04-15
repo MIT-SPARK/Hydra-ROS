@@ -90,7 +90,15 @@ TsdfGradientOccupancyPublisher::TsdfGradientOccupancyPublisher(const Config& con
       pub_(ianvs::NodeHandle::this_node(config.ns)
                .create_publisher<nav_msgs::msg::OccupancyGrid>(
                    "occupancy",
-                   rclcpp::QoS(1).transient_local())) {}
+                   rclcpp::QoS(1).transient_local())),
+      height_map_pub_(ianvs::NodeHandle::this_node(config.ns)
+                          .create_publisher<nav_msgs::msg::OccupancyGrid>(
+                              "height_map_debug",
+                              rclcpp::QoS(1).transient_local())),
+      gradient_map_pub_(ianvs::NodeHandle::this_node(config.ns)
+                            .create_publisher<nav_msgs::msg::OccupancyGrid>(
+                                "gradient_map_debug",
+                                rclcpp::QoS(1).transient_local())) {}
 
 std::string TsdfGradientOccupancyPublisher::printInfo() const {
   return config::toString(config);
@@ -99,7 +107,8 @@ std::string TsdfGradientOccupancyPublisher::printInfo() const {
 void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
                                           const VolumetricMap& map,
                                           const ActiveWindowOutput& output) const {
-  if (!pub_->get_subscription_count()) {
+  if (!pub_->get_subscription_count() && !height_map_pub_->get_subscription_count() &&
+      !gradient_map_pub_->get_subscription_count()) {
     return;
   }
 
@@ -119,10 +128,12 @@ void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
   // Build height map (Pass 1)
   Index2DMap<float> height_map;
   buildHeightMap(tsdf_layer, min_z, max_z, height_map);
+  publishHeightMapViz(height_map, tsdf_layer, timestamp_ns);
 
   // Compute gradient map (Pass 2)
   Index2DMap<GradientInfo> gradient_map;
   computeGradientMap(height_map, voxel_size, gradient_map);
+  publishGradientMapViz(gradient_map, tsdf_layer, timestamp_ns);
 
   // Fill and publish occupancy grid (Pass 3)
   nav_msgs::msg::OccupancyGrid msg;
@@ -195,7 +206,7 @@ void TsdfGradientOccupancyPublisher::buildHeightMap(
       for (int local_y = 0; local_y < vps; ++local_y) {
         // Compute global 2D index
         const Index2D global_2d(block.index.x() * vps + local_x,
-                                        block.index.y() * vps + local_y);
+                                block.index.y() * vps + local_y);
 
         // Extract surface height for this column
         auto surface_height = extractSurfaceHeight(layer, global_2d, min_z, max_z);
@@ -376,6 +387,149 @@ int8_t TsdfGradientOccupancyPublisher::gradientToOccupancy(float gradient,
     // Binary mode: threshold-based
     return gradient >= config.gradient_threshold ? 100 : 0;
   }
+}
+
+void TsdfGradientOccupancyPublisher::publishHeightMapViz(
+    const Index2DMap<float>& height_map,
+    const TsdfLayer& layer,
+    uint64_t timestamp_ns) const {
+  if (!height_map_pub_->get_subscription_count()) {
+    return;
+  }
+
+  if (height_map.empty()) {
+    return;
+  }
+
+  // Find min/max heights for normalization
+  float min_height = std::numeric_limits<float>::max();
+  float max_height = std::numeric_limits<float>::lowest();
+  for (const auto& [_, height] : height_map) {
+    min_height = std::min(min_height, height);
+    max_height = std::max(max_height, height);
+  }
+
+  // Compute bounds
+  Eigen::Vector2f x_min = Eigen::Vector2f::Constant(std::numeric_limits<float>::max());
+  Eigen::Vector2f x_max =
+      Eigen::Vector2f::Constant(std::numeric_limits<float>::lowest());
+
+  const float voxel_size = layer.voxel_size;
+  for (const auto& [idx, _] : height_map) {
+    const Eigen::Vector2f pos = idx.cast<float>() * voxel_size;
+    x_min = x_min.array().min(pos.array());
+    x_max = x_max.array().max(pos.array());
+  }
+
+  x_min -= Eigen::Vector2f::Constant(voxel_size);
+  x_max += Eigen::Vector2f::Constant(voxel_size);
+
+  const Eigen::Vector2f dims = (x_max - x_min) / voxel_size;
+
+  // Initialize grid
+  nav_msgs::msg::OccupancyGrid msg;
+  msg.header.frame_id = GlobalInfo::instance().getFrames().map;
+  msg.header.stamp = rclcpp::Time(timestamp_ns);
+  msg.info.map_load_time = msg.header.stamp;
+  msg.info.resolution = voxel_size;
+  msg.info.width = std::ceil(dims.x());
+  msg.info.height = std::ceil(dims.y());
+  msg.info.origin.position.x = x_min.x();
+  msg.info.origin.position.y = x_min.y();
+  msg.info.origin.position.z = 0.0;
+  msg.info.origin.orientation.w = 1.0;
+  msg.data.resize(msg.info.width * msg.info.height, -1);
+
+  // Fill grid with normalized heights
+  const float height_range = max_height - min_height;
+  for (const auto& [global_idx, height] : height_map) {
+    const Eigen::Vector2f pos = global_idx.cast<float>() * voxel_size;
+    const Eigen::Vector2f rel_pos = pos - x_min;
+
+    const auto r = std::floor(rel_pos.y() / voxel_size);
+    const auto c = std::floor(rel_pos.x() / voxel_size);
+    const size_t index = r * msg.info.width + c;
+
+    if (index >= msg.data.size()) {
+      continue;
+    }
+
+    // Normalize height to 0-100 range
+    if (height_range > 1e-6f) {
+      const float normalized = (height - min_height) / height_range * 100.0f;
+      msg.data[index] = static_cast<int8_t>(std::clamp(normalized, 0.0f, 100.0f));
+    } else {
+      msg.data[index] = 50;  // All same height -> mid-gray
+    }
+  }
+
+  height_map_pub_->publish(msg);
+}
+
+void TsdfGradientOccupancyPublisher::publishGradientMapViz(
+    const Index2DMap<GradientInfo>& gradient_map,
+    const TsdfLayer& layer,
+    uint64_t timestamp_ns) const {
+  if (!gradient_map_pub_->get_subscription_count()) {
+    return;
+  }
+
+  if (gradient_map.empty()) {
+    return;
+  }
+
+  // Compute bounds
+  Eigen::Vector2f x_min = Eigen::Vector2f::Constant(std::numeric_limits<float>::max());
+  Eigen::Vector2f x_max =
+      Eigen::Vector2f::Constant(std::numeric_limits<float>::lowest());
+
+  const float voxel_size = layer.voxel_size;
+  for (const auto& [idx, _] : gradient_map) {
+    const Eigen::Vector2f pos = idx.cast<float>() * voxel_size;
+    x_min = x_min.array().min(pos.array());
+    x_max = x_max.array().max(pos.array());
+  }
+
+  x_min -= Eigen::Vector2f::Constant(voxel_size);
+  x_max += Eigen::Vector2f::Constant(voxel_size);
+
+  const Eigen::Vector2f dims = (x_max - x_min) / voxel_size;
+
+  // Initialize grid
+  nav_msgs::msg::OccupancyGrid msg;
+  msg.header.frame_id = GlobalInfo::instance().getFrames().map;
+  msg.header.stamp = rclcpp::Time(timestamp_ns);
+  msg.info.map_load_time = msg.header.stamp;
+  msg.info.resolution = voxel_size;
+  msg.info.width = std::ceil(dims.x());
+  msg.info.height = std::ceil(dims.y());
+  msg.info.origin.position.x = x_min.x();
+  msg.info.origin.position.y = x_min.y();
+  msg.info.origin.position.z = 0.0;
+  msg.info.origin.orientation.w = 1.0;
+  msg.data.resize(msg.info.width * msg.info.height, -1);
+
+  // Fill grid with gradient values
+  for (const auto& [global_idx, gradient_info] : gradient_map) {
+    const Eigen::Vector2f pos = global_idx.cast<float>() * voxel_size;
+    const Eigen::Vector2f rel_pos = pos - x_min;
+
+    const auto r = std::floor(rel_pos.y() / voxel_size);
+    const auto c = std::floor(rel_pos.x() / voxel_size);
+    const size_t index = r * msg.info.width + c;
+
+    if (index >= msg.data.size()) {
+      continue;
+    }
+
+    // Map gradient to 0-100 (using gradient_threshold as max)
+    // Low gradient (flat) -> 0 (free), high gradient (steep) -> 100 (occupied)
+    const float normalized =
+        std::min(gradient_info.gradient / config.gradient_threshold, 1.0f) * 100.0f;
+    msg.data[index] = static_cast<int8_t>(normalized);
+  }
+
+  gradient_map_pub_->publish(msg);
 }
 
 namespace {
