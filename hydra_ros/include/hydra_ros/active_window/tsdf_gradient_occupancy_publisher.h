@@ -38,11 +38,12 @@
 #include <ianvs/node_handle.h>
 #include <spark_dsg/bounding_box.h>
 
+#include <optional>
+
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <rclcpp/publisher.hpp>
 
 #include <Eigen/Geometry>
-#include <optional>
 
 namespace hydra {
 
@@ -74,7 +75,7 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
     bool collate = false;
     bool use_relative_height = true;
     double slice_height = -1.0;
-    size_t num_slices = 20; // if if 10 cm, we want 2 m from -1 m to +1 m
+    size_t num_slices = 20;  // if if 10 cm, we want 2 m from -1 m to +1 m
     bool add_robot_footprint = false;
     Eigen::Vector3f footprint_min = Eigen::Vector3f::Zero();
     Eigen::Vector3f footprint_max = Eigen::Vector3f::Zero();
@@ -131,8 +132,7 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
                              const TsdfLayer& layer,
                              uint64_t timestamp_ns) const;
 
-  float computeHorizontalDistance(const Index2D& offset,
-                                  float voxel_size) const;
+  float computeHorizontalDistance(const Index2D& offset, float voxel_size) const;
 
   float computeTraversabilityFromGradient(float gradient) const;
 

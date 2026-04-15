@@ -61,8 +61,8 @@ const std::array<Index2D, 8> kNeighborOffsetsArray = {{
 
 }  // namespace
 
-const std::array<Index2D, 8>
-    TsdfGradientOccupancyPublisher::kNeighborOffsets = kNeighborOffsetsArray;
+const std::array<Index2D, 8> TsdfGradientOccupancyPublisher::kNeighborOffsets =
+    kNeighborOffsetsArray;
 
 void declare_config(TsdfGradientOccupancyPublisher::Config& config) {
   using namespace config;
@@ -90,16 +90,14 @@ TsdfGradientOccupancyPublisher::TsdfGradientOccupancyPublisher(const Config& con
     : config(config::checkValid(config)),
       pub_(ianvs::NodeHandle::this_node(config.ns)
                .create_publisher<nav_msgs::msg::OccupancyGrid>(
-                   "occupancy",
-                   rclcpp::QoS(1).transient_local())),
+                   "occupancy", rclcpp::QoS(1).transient_local())),
       height_map_pub_(ianvs::NodeHandle::this_node(config.ns)
                           .create_publisher<nav_msgs::msg::OccupancyGrid>(
-                              "height_map_debug",
-                              rclcpp::QoS(1).transient_local())),
-      gradient_map_pub_(ianvs::NodeHandle::this_node(config.ns)
-                            .create_publisher<nav_msgs::msg::OccupancyGrid>(
-                                "gradient_map_debug",
-                                rclcpp::QoS(1).transient_local())) {}
+                              "height_map_debug", rclcpp::QoS(1).transient_local())),
+      gradient_map_pub_(
+          ianvs::NodeHandle::this_node(config.ns)
+              .create_publisher<nav_msgs::msg::OccupancyGrid>(
+                  "gradient_map_debug", rclcpp::QoS(1).transient_local())) {}
 
 std::string TsdfGradientOccupancyPublisher::printInfo() const {
   return config::toString(config);
@@ -165,15 +163,14 @@ std::optional<float> TsdfGradientOccupancyPublisher::extractSurfaceHeight(
 
   // Scan from top to bottom to find highest surface
   for (int block_z = max_key.first.z(); block_z >= min_key.first.z(); --block_z) {
-    const auto tsdf_block = layer.getBlockPtr(
-        BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z));
+    const auto tsdf_block =
+        layer.getBlockPtr(BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z));
     if (!tsdf_block) {
       continue;
     }
 
     const int min_voxel_z = block_z == min_key.first.z() ? min_key.second.z() : 0;
-    const int max_voxel_z =
-        block_z == max_key.first.z() ? max_key.second.z() : vps - 1;
+    const int max_voxel_z = block_z == max_key.first.z() ? max_key.second.z() : vps - 1;
 
     for (int z = max_voxel_z; z >= min_voxel_z; --z) {
       const auto& voxel =
@@ -201,7 +198,8 @@ void TsdfGradientOccupancyPublisher::buildHeightMap(
     Index2DMap<float>& height_map) const {
   const int vps = static_cast<int>(layer.voxels_per_side);
 
-  // Deduplicate to unique 2D blocks (exact pattern from GradientTraversabilityEstimator:293)
+  // Deduplicate to unique 2D blocks (exact pattern from
+  // GradientTraversabilityEstimator:293)
   spatial_hash::IndexSet blocks_2d;
   for (const auto& block_index : layer.allocatedBlockIndices()) {
     blocks_2d.emplace(block_index.x(), block_index.y(), 0);
@@ -211,12 +209,11 @@ void TsdfGradientOccupancyPublisher::buildHeightMap(
   for (const auto& block_idx_2d : blocks_2d) {
     for (int x = 0; x < vps; ++x) {
       for (int y = 0; y < vps; ++y) {
-        std::optional<float> surface_height =
-            extractSurfaceHeight(layer, block_idx_2d, VoxelIndex(x, y, 0), min_z, max_z);
+        std::optional<float> surface_height = extractSurfaceHeight(
+            layer, block_idx_2d, VoxelIndex(x, y, 0), min_z, max_z);
 
         if (surface_height) {
-          const Index2D key(block_idx_2d.x() * vps + x,
-                            block_idx_2d.y() * vps + y);
+          const Index2D key(block_idx_2d.x() * vps + x, block_idx_2d.y() * vps + y);
           height_map[key] = *surface_height;
         }
       }
@@ -238,7 +235,7 @@ void TsdfGradientOccupancyPublisher::computeGradientMap(
 
       for (const auto& offset : kNeighborOffsets) {
         const Index2D neighbor_idx(center_idx.x() + offset.x(),
-                                           center_idx.y() + offset.y());
+                                   center_idx.y() + offset.y());
         auto it = height_map.find(neighbor_idx);
         if (it != height_map.end()) {
           height_sum += it->second;
@@ -260,7 +257,7 @@ void TsdfGradientOccupancyPublisher::computeGradientMap(
 
     for (const auto& offset : kNeighborOffsets) {
       const Index2D neighbor_idx(center_idx.x() + offset.x(),
-                                         center_idx.y() + offset.y());
+                                 center_idx.y() + offset.y());
 
       auto neighbor_it = grad_height_map.find(neighbor_idx);
       if (neighbor_it == grad_height_map.end()) {
@@ -328,7 +325,8 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
   for (const auto& [global_idx, gradient_info] : gradient_map) {
     // Convert global 2D index to 3D, get voxel key, then actual position
     const spatial_hash::GlobalIndex global_3d(global_idx.x(), global_idx.y(), 0);
-    const VoxelKey key = spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
+    const VoxelKey key =
+        spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
     const Eigen::Vector3f pos_3d = layer.getVoxelPosition(key);
     const Eigen::Vector2f pos = pos_3d.head<2>();
     const Eigen::Vector2f rel_pos = pos - x_min;
@@ -357,8 +355,7 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
 }
 
 float TsdfGradientOccupancyPublisher::computeHorizontalDistance(
-    const Index2D& offset,
-    float voxel_size) const {
+    const Index2D& offset, float voxel_size) const {
   // Diagonal: sqrt(2) * voxel_size
   if (offset.x() != 0 && offset.y() != 0) {
     return voxel_size * std::sqrt(2.0f);
@@ -450,7 +447,8 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
   for (const auto& [global_idx, height] : height_map) {
     // Convert global 2D index to actual voxel position
     const spatial_hash::GlobalIndex global_3d(global_idx.x(), global_idx.y(), 0);
-    const VoxelKey key = spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
+    const VoxelKey key =
+        spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
     const Eigen::Vector3f pos_3d = layer.getVoxelPosition(key);
     const Eigen::Vector2f pos = pos_3d.head<2>();
     const Eigen::Vector2f rel_pos = pos - x_min;
@@ -520,7 +518,8 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
   for (const auto& [global_idx, gradient_info] : gradient_map) {
     // Convert global 2D index to actual voxel position
     const spatial_hash::GlobalIndex global_3d(global_idx.x(), global_idx.y(), 0);
-    const VoxelKey key = spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
+    const VoxelKey key =
+        spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
     const Eigen::Vector3f pos_3d = layer.getVoxelPosition(key);
     const Eigen::Vector2f pos = pos_3d.head<2>();
     const Eigen::Vector2f rel_pos = pos - x_min;
