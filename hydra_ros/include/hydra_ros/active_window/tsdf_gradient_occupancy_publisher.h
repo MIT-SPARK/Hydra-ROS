@@ -104,7 +104,8 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
 
   // Helper functions
   std::optional<float> extractSurfaceHeight(const TsdfLayer& layer,
-                                            const Index2D& global_2d,
+                                            const BlockIndex& block_2d_index,
+                                            const VoxelIndex& local_2d,
                                             float min_z,
                                             float max_z) const;
 

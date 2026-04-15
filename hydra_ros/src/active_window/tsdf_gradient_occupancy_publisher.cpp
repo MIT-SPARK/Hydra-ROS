@@ -41,6 +41,7 @@
 #include <hydra/common/global_info.h>
 
 #include <cmath>
+#include <set>
 
 namespace hydra {
 
@@ -147,17 +148,16 @@ void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
 
 std::optional<float> TsdfGradientOccupancyPublisher::extractSurfaceHeight(
     const TsdfLayer& layer,
-    const Index2D& global_2d,
+    const BlockIndex& block_2d_index,
+    const VoxelIndex& local_2d,
     float min_z,
     float max_z) const {
+  // Uses block/local index access directly (same pattern as
+  // GradientTraversabilityEstimator) to avoid the signed/unsigned division bug in
+  // spatial_hash::blockIndexFromGlobalIndex, which corrupts getVoxelPtr lookups for
+  // negative world coordinates.
   const float voxel_size = layer.voxel_size;
   const int vps = static_cast<int>(layer.voxels_per_side);
-
-  // Convert global 2D index to block coordinates
-  const int block_x = global_2d.x() / vps;
-  const int block_y = global_2d.y() / vps;
-  const int local_x = global_2d.x() % vps;
-  const int local_y = global_2d.y() % vps;
 
   // Get vertical range in voxel coordinates
   const auto min_key = layer.getVoxelKey(spatial_hash::Point(0, 0, min_z));
@@ -165,7 +165,8 @@ std::optional<float> TsdfGradientOccupancyPublisher::extractSurfaceHeight(
 
   // Scan from top to bottom to find highest surface
   for (int block_z = max_key.first.z(); block_z >= min_key.first.z(); --block_z) {
-    const auto tsdf_block = layer.getBlockPtr(BlockIndex(block_x, block_y, block_z));
+    const auto tsdf_block = layer.getBlockPtr(
+        BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z));
     if (!tsdf_block) {
       continue;
     }
@@ -175,15 +176,16 @@ std::optional<float> TsdfGradientOccupancyPublisher::extractSurfaceHeight(
         block_z == max_key.first.z() ? max_key.second.z() : vps - 1;
 
     for (int z = max_voxel_z; z >= min_voxel_z; --z) {
-      const auto& voxel = tsdf_block->getVoxel(VoxelIndex(local_x, local_y, z));
+      const auto& voxel =
+          tsdf_block->getVoxel(VoxelIndex(local_2d.x(), local_2d.y(), z));
 
       if (voxel.weight < config.min_weight) {
         continue;
       }
 
       if (voxel.distance < voxel_size) {
-        const VoxelKey key(BlockIndex(block_x, block_y, block_z),
-                           VoxelIndex(local_x, local_y, z));
+        const VoxelKey key(BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z),
+                           VoxelIndex(local_2d.x(), local_2d.y(), z));
         return layer.getVoxelPosition(key).z();
       }
     }
@@ -199,18 +201,26 @@ void TsdfGradientOccupancyPublisher::buildHeightMap(
     Index2DMap<float>& height_map) const {
   const int vps = static_cast<int>(layer.voxels_per_side);
 
-  // Iterate over all allocated TSDF blocks
+  // Deduplicate to unique 2D blocks (matching GradientTraversabilityEstimator pattern)
+  spatial_hash::IndexSet blocks_2d;
   for (const auto& block : layer) {
-    // For each 2D column in the block
+    blocks_2d.emplace(block.index.x(), block.index.y(), 0);
+  }
+
+  // Process each 2D column ONCE
+  for (const auto& block_2d : blocks_2d) {
     for (int local_x = 0; local_x < vps; ++local_x) {
       for (int local_y = 0; local_y < vps; ++local_y) {
-        // Compute global 2D index
-        const Index2D global_2d(block.index.x() * vps + local_x,
-                                block.index.y() * vps + local_y);
+        const VoxelIndex local_2d(local_x, local_y, 0);
 
-        // Extract surface height for this column
-        auto surface_height = extractSurfaceHeight(layer, global_2d, min_z, max_z);
+        // Pass block/local indices directly (avoids division/modulo bug)
+        auto surface_height =
+            extractSurfaceHeight(layer, block_2d, local_2d, min_z, max_z);
+
         if (surface_height) {
+          // Compute global 2D index for storage (matches GradientTraversabilityEstimator:301-302)
+          const Index2D global_2d(block_2d.x() * vps + local_x,
+                                  block_2d.y() * vps + local_y);
           height_map[global_2d] = *surface_height;
         }
       }
