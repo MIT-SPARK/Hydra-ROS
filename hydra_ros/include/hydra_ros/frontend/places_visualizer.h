@@ -46,11 +46,13 @@ namespace hydra {
 
 class PlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
+  using PlacesGraph = PartialGraph<spark_dsg::PlaceNodeAttributes>;
+
   // TODO(nathan) initialize configs
   struct Config {
     std::string ns = "~/places";
     visualizer::RangeColormap::Config colormap;
-    Color block_color = Color::purple();
+    spark_dsg::Color block_color = spark_dsg::Color::purple();
   } const config;
 
   explicit PlacesVisualizer(const Config& config);
@@ -72,7 +74,7 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
                           const places::GraphExtractor& extractor) const;
 
   void visualizeGraph(const std_msgs::msg::Header& header,
-                      const SceneGraphLayer& graph) const;
+                      const PlacesGraph& graph) const;
 
  protected:
   ianvs::NodeHandle nh_;
@@ -80,11 +82,6 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
   config::DynamicConfig<GvdVisualizerConfig> gvd_config_;
   config::DynamicConfig<visualizer::LayerConfig> layer_config_;
   const visualizer::RangeColormap colormap_;
-
- private:
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<GvdPlaceExtractor::Sink, PlacesVisualizer, Config>(
-          "PlacesVisualizer");
 };
 
 void declare_config(PlacesVisualizer::Config& config);

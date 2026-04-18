@@ -33,9 +33,9 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/places/graph_extractor.h>
-#include <hydra/places/gvd_graph.h>
-#include <hydra/places/gvd_voxel.h>
+#include <hydra/places/gvd_places/graph_extractor.h>
+#include <hydra/places/gvd_places/gvd_graph.h>
+#include <hydra/places/gvd_places/gvd_voxel.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 
 #include <visualization_msgs/msg/marker.hpp>
@@ -43,7 +43,6 @@
 
 namespace hydra {
 
-using CompressedNodeMap = std::unordered_map<uint64_t, places::CompressedNode>;
 using ClusterRemapping = std::unordered_map<uint64_t, uint64_t>;
 using MarkerMsg = visualization_msgs::msg::Marker;
 using MarkerArrayMsg = visualization_msgs::msg::MarkerArray;
@@ -118,8 +117,6 @@ MarkerArrayMsg drawGvdGraph(const places::GvdGraph& graph,
                             size_t marker_id = 0);
 
 MarkerArrayMsg drawGvdClusters(const places::GvdGraph& graph,
-                               const CompressedNodeMap& clusters,
-                               const ClusterRemapping& remapping,
                                const GvdVisualizerConfig& config,
                                const std::string& ns,
                                const visualizer::DiscreteColormap& cmap = {},

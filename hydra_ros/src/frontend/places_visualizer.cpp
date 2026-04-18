@@ -35,6 +35,7 @@
 #include "hydra_ros/frontend/places_visualizer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/factory.h>
 #include <config_utilities/printing.h>
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/gvd_place_extractor.h>
@@ -48,11 +49,20 @@
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
+namespace {
+
+static const auto registration =
+    config::RegistrationWithConfig<GvdPlaceExtractor::Sink,
+                                   PlacesVisualizer,
+                                   PlacesVisualizer::Config>("PlacesVisualizer");
+
+}
 
 using places::GraphExtractor;
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
+using spark_dsg::PlaceNodeAttributes;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using visualizer::ContinuousPalette;
@@ -116,45 +126,14 @@ void PlacesVisualizer::visualizeGvd(const std_msgs::msg::Header& header,
 
 void PlacesVisualizer::visualizeExtractor(const std_msgs::msg::Header& header,
                                           const GraphExtractor& extractor) const {
-  const auto& graph = extractor.getGraph();
-  pubs_.publish("graph_viz", header, [&]() -> MarkerArray {
-    const auto d_min = gvd_config_.get().gvd_min_distance;
-    const auto d_max = gvd_config_.get().gvd_max_distance;
-
-    visualizer::LayerInfo info(layer_config_.get());
-    info.node_color = [&](const SceneGraphNode& node) {
-      const auto dist = node.attributes<PlaceNodeAttributes>().distance;
-      return colormap_(dist, d_min, d_max);
-    };
-
-    // TODO(nathan) work custom edge functor back into config
-    /*    info.edge_color = [&](const auto&, const auto&, const auto& edge, bool) {*/
-    /*const auto dist = edge.attributes().weight;*/
-    /*return colormap_(dist, d_min, d_max);*/
-    /*};*/
-
-    MarkerArray msg;
-    msg.markers.push_back(makeLayerNodeMarkers(header, info, graph, "places_nodes"));
-    msg.markers.push_back(makeLayerEdgeMarkers(header, info, graph, "places_edges"));
-    if (info.config.text.draw) {
-      const auto text = makeLayerNodeTextMarkers(header, info, graph, "places_text");
-      msg.markers.insert(msg.markers.end(), text.markers.begin(), text.markers.end());
-    }
-
-    return msg;
-  });
+  // TODO(nathan) visualize partial graph
 
   pubs_.publish("gvd_graph_viz", header, [&]() -> MarkerArray {
-    return drawGvdGraph(
-        extractor.getGvdGraph(), gvd_config_.get(), colormap_, "gvd_graph");
+    return drawGvdGraph(extractor.gvd(), gvd_config_.get(), colormap_, "gvd_graph");
   });
 
   pubs_.publish("gvd_cluster_viz", header, [&]() -> MarkerArray {
-    return drawGvdClusters(extractor.getGvdGraph(),
-                           extractor.getCompressedNodeInfo(),
-                           extractor.getCompressedRemapping(),
-                           gvd_config_.get(),
-                           "gvd_cluster_graph");
+    return drawGvdClusters(extractor.gvd(), gvd_config_.get(), "gvd_cluster_graph");
   });
 }
 

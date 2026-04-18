@@ -39,8 +39,6 @@
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <hydra_visualizer/drawing.h>
 
-#include <random>
-
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_ros/visualizer/voxel_drawing.h"
@@ -50,6 +48,7 @@ namespace hydra {
 using places::GvdGraph;
 using places::GvdLayer;
 using places::GvdVoxel;
+using spark_dsg::Color;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using visualizer::DiscreteColormap;
@@ -75,7 +74,7 @@ spark_dsg::Color getGvdColor(const GvdVisualizerConfig& config,
   }
 }
 
-size_t fillColors(const CompressedNodeMap& clusters,
+size_t fillColors(const GvdGraph::CompressedNodes& clusters,
                   std::map<uint64_t, size_t>& colors) {
   for (const auto& id_node_pair : clusters) {
     size_t max_color = 0;
@@ -308,7 +307,7 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
                          const std::string& ns,
                          size_t marker_id) {
   MarkerArray marker;
-  if (graph.empty()) {
+  if (graph.uncompressed().empty()) {
     return marker;
   }
 
@@ -344,31 +343,29 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
   auto& edges = marker.markers[1];
 
   EdgeMap seen_edges;
-  for (const auto& id_node_pair : graph.nodes()) {
+  for (const auto& [node_id, node] : graph.uncompressed()) {
     geometry_msgs::msg::Point node_centroid;
-    tf2::convert(id_node_pair.second.position, node_centroid);
+    tf2::convert(node.info.position.cast<double>().eval(), node_centroid);
     nodes.points.push_back(node_centroid);
-    const auto color = getGvdColor(config,
-                                   colors,
-                                   id_node_pair.second.distance,
-                                   id_node_pair.second.num_basis_points);
+    const auto color =
+        getGvdColor(config, colors, node.info.distance, node.info.num_basis_points);
     nodes.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
 
-    auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
-    for (const auto sibling : id_node_pair.second.siblings) {
+    auto& curr_seen = getNodeSet(seen_edges, node_id);
+    for (const auto sibling : node.siblings) {
       if (curr_seen.count(sibling)) {
         continue;
       }
 
       curr_seen.insert(sibling);
-      getNodeSet(seen_edges, sibling).insert(id_node_pair.first);
+      getNodeSet(seen_edges, sibling).insert(node_id);
 
       edges.points.push_back(nodes.points.back());
       edges.colors.push_back(nodes.colors.back());
 
-      const auto& other = *graph.getNode(sibling);
+      const auto& other = *graph.get(sibling);
       geometry_msgs::msg::Point neighbor_centroid;
-      tf2::convert(other.position, neighbor_centroid);
+      tf2::convert(other.position.cast<double>().eval(), neighbor_centroid);
       edges.points.push_back(neighbor_centroid);
       const auto sibling_color =
           getGvdColor(config, colors, other.distance, other.num_basis_points);
@@ -380,14 +377,12 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
 }
 
 MarkerArray drawGvdClusters(const GvdGraph& graph,
-                            const CompressedNodeMap& clusters,
-                            const std::unordered_map<uint64_t, uint64_t>& remapping,
                             const GvdVisualizerConfig& config,
                             const std::string& ns,
                             const DiscreteColormap& colormap,
                             size_t marker_id) {
   MarkerArray marker;
-  if (graph.empty()) {
+  if (graph.uncompressed().empty()) {
     return marker;
   }
 
@@ -423,19 +418,21 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
   auto& edges = marker.markers[1];
 
   std::map<uint64_t, size_t> color_mapping;
-  const size_t num_colors = fillColors(clusters, color_mapping);
+  const size_t num_colors = fillColors(graph.compressed(), color_mapping);
   std::vector<std_msgs::msg::ColorRGBA> colors;
   for (size_t i = 0; i < num_colors; ++i) {
     colors.push_back(visualizer::makeColorMsg(colormap(i), config.gvd_alpha));
   }
 
+  const auto& remapping = graph.remapping();
+
   EdgeMap seen_edges;
-  for (const auto& id_node_pair : graph.nodes()) {
+  for (const auto& [node_id, node] : graph.uncompressed()) {
     geometry_msgs::msg::Point node_centroid;
-    tf2::convert(id_node_pair.second.position, node_centroid);
+    tf2::convert(node.info.position.cast<double>().eval(), node_centroid);
     nodes.points.push_back(node_centroid);
-    if (remapping.count(id_node_pair.first)) {
-      const auto cluster_id = remapping.at(id_node_pair.first);
+    if (remapping.count(node_id)) {
+      const auto cluster_id = remapping.at(node_id);
       const auto& cluster_color = colors.at(color_mapping.at(cluster_id));
       nodes.colors.push_back(cluster_color);
     } else {
@@ -443,21 +440,21 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
           visualizer::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
     }
 
-    auto& curr_seen = getNodeSet(seen_edges, id_node_pair.first);
-    for (const auto sibling : id_node_pair.second.siblings) {
+    auto& curr_seen = getNodeSet(seen_edges, node_id);
+    for (const auto sibling : node.siblings) {
       if (curr_seen.count(sibling)) {
         continue;
       }
 
       curr_seen.insert(sibling);
-      getNodeSet(seen_edges, sibling).insert(id_node_pair.first);
+      getNodeSet(seen_edges, sibling).insert(node_id);
 
       edges.points.push_back(nodes.points.back());
       edges.colors.push_back(nodes.colors.back());
 
-      const auto& other = *graph.getNode(sibling);
+      const auto& other = *graph.get(sibling);
       geometry_msgs::msg::Point neighbor_centroid;
-      tf2::convert(other.position, neighbor_centroid);
+      tf2::convert(other.position.cast<double>().eval(), neighbor_centroid);
       edges.points.push_back(neighbor_centroid);
 
       if (remapping.count(sibling)) {
