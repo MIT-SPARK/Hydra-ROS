@@ -41,6 +41,7 @@
 #include <hydra/common/global_info.h>
 
 #include <cmath>
+#include <queue>
 #include <set>
 
 namespace hydra {
@@ -80,6 +81,7 @@ void declare_config(TsdfGradientOccupancyPublisher::Config& config) {
   field(config.min_confidence, "min_confidence");
   field(config.smoothing, "smoothing");
   field(config.probabilistic, "probabilistic");
+  field(config.filter_disjoint, "filter_disjoint");
 
   checkCondition(config.gradient_threshold > 0.0f,
                  "gradient_threshold must be positive");
@@ -141,6 +143,9 @@ void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
   msg.info.map_load_time = msg.header.stamp;
 
   fillOccupancyGrid(gradient_map, world_T_body, tsdf_layer, msg);
+  if (config.filter_disjoint) {
+    filterDisjointFreeSpace(msg, world_T_body);
+  }
   pub_->publish(msg);
 }
 
@@ -351,6 +356,85 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
     // Map gradient to occupancy
     msg.data[index] =
         gradientToOccupancy(gradient_info.gradient, gradient_info.confidence);
+  }
+}
+
+void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
+    nav_msgs::msg::OccupancyGrid& msg,
+    const Eigen::Isometry3d& world_T_body) const {
+  if (msg.data.empty()) {
+    return;
+  }
+
+  const int width = static_cast<int>(msg.info.width);
+  const int height = static_cast<int>(msg.info.height);
+
+  // Convert robot world position to grid coordinates
+  const auto robot_pos_world = world_T_body.translation();
+  const float rel_x =
+      static_cast<float>(robot_pos_world.x() - msg.info.origin.position.x);
+  const float rel_y =
+      static_cast<float>(robot_pos_world.y() - msg.info.origin.position.y);
+  const int robot_r = static_cast<int>(std::floor(rel_y / msg.info.resolution));
+  const int robot_c = static_cast<int>(std::floor(rel_x / msg.info.resolution));
+
+  // Check if robot is within grid bounds
+  if (robot_r < 0 || robot_r >= height || robot_c < 0 || robot_c >= width) {
+    return;  // Robot outside grid - skip filtering
+  }
+
+  const size_t robot_index = robot_r * width + robot_c;
+
+  // Only filter if robot is in free space
+  if (msg.data[robot_index] != 0) {
+    return;  // Robot not in free space - skip filtering
+  }
+
+  // BFS flood fill from robot position
+  std::vector<bool> visited(msg.data.size(), false);
+  std::queue<size_t> to_visit;
+
+  to_visit.push(robot_index);
+  visited[robot_index] = true;
+
+  while (!to_visit.empty()) {
+    const size_t current_index = to_visit.front();
+    to_visit.pop();
+
+    const int r = current_index / width;
+    const int c = current_index % width;
+
+    // Check 4-connected neighbors (up, down, left, right)
+    const std::array<std::pair<int, int>, 4> neighbors = {{
+        {r - 1, c}, {r + 1, c}, {r, c - 1}, {r, c + 1}
+    }};
+
+    for (const auto& [nr, nc] : neighbors) {
+      // Check bounds
+      if (nr < 0 || nr >= height || nc < 0 || nc >= width) {
+        continue;
+      }
+
+      const size_t neighbor_index = nr * width + nc;
+
+      // Skip if already visited
+      if (visited[neighbor_index]) {
+        continue;
+      }
+
+      // Only expand through free cells (value 0)
+      if (msg.data[neighbor_index] == 0) {
+        visited[neighbor_index] = true;
+        to_visit.push(neighbor_index);
+      }
+    }
+  }
+
+  // Mark unvisited free cells as occupied
+  for (size_t i = 0; i < msg.data.size(); ++i) {
+    if (msg.data[i] == 0 && !visited[i]) {
+      msg.data[i] = 100;  // Mark as occupied
+    }
   }
 }
 

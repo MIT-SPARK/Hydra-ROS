@@ -86,6 +86,7 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
     float min_confidence = 0.5f;      // min confidence (neighbors/8) for valid cell
     bool smoothing = true;            // apply box filter to reduce TSDF ripple
     bool probabilistic = false;       // continuous vs binary occupancy
+    bool filter_disjoint = false;         // remove free space not connected to robot
   } const config;
 
   explicit TsdfGradientOccupancyPublisher(const Config& config);
@@ -123,6 +124,9 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
                          const Eigen::Isometry3d& world_T_sensor,
                          const TsdfLayer& layer,
                          nav_msgs::msg::OccupancyGrid& msg) const;
+
+  void filterDisjointFreeSpace(nav_msgs::msg::OccupancyGrid& msg,
+                               const Eigen::Isometry3d& world_T_body) const;
 
   void publishHeightMapViz(const Index2DMap<float>& height_map,
                            const TsdfLayer& layer,
