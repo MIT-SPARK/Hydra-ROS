@@ -360,8 +360,7 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
 }
 
 void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
-    nav_msgs::msg::OccupancyGrid& msg,
-    const Eigen::Isometry3d& world_T_body) const {
+    nav_msgs::msg::OccupancyGrid& msg, const Eigen::Isometry3d& world_T_body) const {
   if (msg.data.empty()) {
     return;
   }
@@ -405,9 +404,8 @@ void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
     const int c = current_index % width;
 
     // Check 4-connected neighbors (up, down, left, right)
-    const std::array<std::pair<int, int>, 4> neighbors = {{
-        {r - 1, c}, {r + 1, c}, {r, c - 1}, {r, c + 1}
-    }};
+    const std::array<std::pair<int, int>, 4> neighbors = {
+        {{r - 1, c}, {r + 1, c}, {r, c - 1}, {r, c + 1}}};
 
     for (const auto& [nr, nc] : neighbors) {
       // Check bounds

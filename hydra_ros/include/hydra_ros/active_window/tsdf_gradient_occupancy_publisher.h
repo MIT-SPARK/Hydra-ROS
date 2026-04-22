@@ -86,7 +86,7 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
     float min_confidence = 0.5f;      // min confidence (neighbors/8) for valid cell
     bool smoothing = true;            // apply box filter to reduce TSDF ripple
     bool probabilistic = false;       // continuous vs binary occupancy
-    bool filter_disjoint = false;         // remove free space not connected to robot
+    bool filter_disjoint = false;     // remove free space not connected to robot
   } const config;
 
   explicit TsdfGradientOccupancyPublisher(const Config& config);
