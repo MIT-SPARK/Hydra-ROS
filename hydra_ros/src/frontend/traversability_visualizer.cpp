@@ -144,6 +144,9 @@ void TraversabilityVisualizer::visualizeLayer(
           continue;  // Unobserved voxels.
         }
         pos.y = block.origin().y() + (y + 0.5f) * layer.voxel_size;
+        if (voxel.height) {
+          pos.z = *voxel.height;
+        }
         msg.points.push_back(pos);
         msg.colors.push_back(visualizer::makeColorMsg(
             traversability_colormap_->getColor(voxel.traversability),
