@@ -245,9 +245,18 @@ YAML::Node SceneGraphRenderer::dumpConfig() const {
     }
   }
 
+  YAML::Node interlayer_edge_configs(YAML::NodeType::Sequence);
+  for (const auto& [_, info] : interlayer_edges_) {
+    YAML::Node this_config = config::toYaml(info.config->get());
+    this_config["from"] = LayerKeySelector{info.parent}.str();
+    this_config["to"] = LayerKeySelector{info.child}.str();
+    interlayer_edge_configs.push_back(this_config);
+  }
+
   YAML::Node root = config::toYaml(graph_config_.get());
   root["layers"] = layers;
   root["layer_plugins"] = layer_plugins;
+  root["interlayer_edges"] = interlayer_edge_configs;
   return root;
 }
 
@@ -275,10 +284,12 @@ InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent
     const auto ns = "scene_graph_interlayer_" + name;
     auto wrapper = std::make_unique<EdgeConfigWrapper>(ns, config);
     wrapper->setCallback([this]() { has_change_ = true; });
-    iter = interlayer_edges_.emplace(name, std::move(wrapper)).first;
+    iter = interlayer_edges_
+               .emplace(name, EdgeConfigInfo{parent, child, std::move(wrapper)})
+               .first;
   }
 
-  return iter->second->get();
+  return iter->second.config->get();
 }
 
 void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header,
