@@ -35,11 +35,14 @@
 #include "hydra_visualizer/scene_graph_renderer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/types/collections.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/printing.h>
+
+#include <fstream>
 
 #include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
@@ -52,6 +55,7 @@ namespace hydra {
 using namespace spark_dsg;
 using namespace visualizer;
 
+using std_srvs::srv::Empty;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
@@ -157,6 +161,8 @@ SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle n
       nh_(nh),
       graph_config_("scene_graph", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
+      save_service_(
+          nh_.create_service<Empty>("reload", &SceneGraphRenderer::saveConfigs, this)),
       has_change_(false) {
   for (const auto& plugin_config : config.layer_plugins) {
     const auto key = plugin_config.layer;
@@ -202,6 +208,24 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   if (!msg.markers.empty()) {
     pub_->publish(msg);
   }
+}
+
+void SceneGraphRenderer::saveConfigs(const Empty::Request::SharedPtr&,
+                                     Empty::Response::SharedPtr) {
+  YAML::Node root;
+  root["renderer"] = config::toYaml(graph_config_.get());
+
+  YAML::Node layers;
+  for (const auto& [key, wrapper] : layers_) {
+    layers[LayerKeySelector{key}.str()] = config::toYaml(wrapper->get());
+  }
+
+  root["renderer"]["layers"] = layers;
+
+  const auto outfile_name = std::string(std::tmpnam(nullptr)) + "_config.yaml";
+  std::ofstream fout(outfile_name);
+  fout << root;
+  LOG(WARNING) << "Saved config to '" << outfile_name << "'";
 }
 
 InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent,
