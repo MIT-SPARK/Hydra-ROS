@@ -175,6 +175,10 @@ void FootprintPlugin::reset(const std_msgs::msg::Header& header) {
   }
 }
 
-YAML::Node FootprintPlugin::dumpConfig() const { return config::toYaml(config); }
+YAML::Node FootprintPlugin::dumpConfig() const {
+  auto root = config::toYaml(config);
+  root["type"] = "FootprintPlugin";
+  return root;
+}
 
 }  // namespace hydra

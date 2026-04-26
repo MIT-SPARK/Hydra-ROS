@@ -132,6 +132,10 @@ void MeshPointPlugin::draw(const std_msgs::msg::Header& header,
   tracker.add(marker, msg);
 }
 
-YAML::Node MeshPointPlugin::dumpConfig() const { return config::toYaml(config_.get()); }
+YAML::Node MeshPointPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "MeshPointPlugin";
+  return root;
+}
 
 }  // namespace hydra

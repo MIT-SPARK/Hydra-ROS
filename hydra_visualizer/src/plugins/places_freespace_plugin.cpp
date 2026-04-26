@@ -157,7 +157,9 @@ void PlacesFreespacePlugin::drawSpheres(const Config& config,
 }
 
 YAML::Node PlacesFreespacePlugin::dumpConfig() const {
-  return config::toYaml(config_.get());
+  auto root = config::toYaml(config_.get());
+  root["type"] = "PlacesFreespacePlugin";
+  return root;
 }
 
 }  // namespace hydra

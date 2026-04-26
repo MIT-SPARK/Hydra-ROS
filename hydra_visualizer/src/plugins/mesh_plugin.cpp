@@ -98,6 +98,10 @@ std::string MeshPlugin::getMsgNamespace() const {
   return "robot0/dsg_mesh";
 }
 
-YAML::Node MeshPlugin::dumpConfig() const { return config::toYaml(config_.get()); }
+YAML::Node MeshPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "MeshPlugin";
+  return root;
+}
 
 }  // namespace hydra

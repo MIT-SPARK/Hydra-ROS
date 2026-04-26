@@ -35,8 +35,8 @@
 #include "hydra_visualizer/plugins/pose_plugin.h"
 
 #include <config_utilities/config.h>
-#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/factory.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
@@ -125,6 +125,10 @@ void PosePlugin::reset(const std_msgs::msg::Header& header) {
   pub_->publish(msg);
 }
 
-YAML::Node PosePlugin::dumpConfig() const { return config::toYaml(config); }
+YAML::Node PosePlugin::dumpConfig() const {
+  auto root = config::toYaml(config);
+  root["type"] = "PosePlugin";
+  return root;
+}
 
 }  // namespace hydra

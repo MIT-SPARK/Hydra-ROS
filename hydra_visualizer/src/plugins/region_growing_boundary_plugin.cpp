@@ -124,7 +124,9 @@ void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
 }
 
 YAML::Node RegionGrowingBoundaryPlugin::dumpConfig() const {
-  return config::toYaml(config_.get());
+  auto root = config::toYaml(config_.get());
+  root["type"] = "RegionGrowingBoundaryPlugin";
+  return root;
 }
 
 }  // namespace hydra

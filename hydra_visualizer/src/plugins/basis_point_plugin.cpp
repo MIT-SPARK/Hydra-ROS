@@ -246,7 +246,9 @@ void BasisPointPlugin::drawBasisPoints(const Config& config,
 }
 
 YAML::Node BasisPointPlugin::dumpConfig() const {
-  return config::toYaml(config_.get());
+  auto root = config::toYaml(config_.get());
+  root["type"] = "BasisPointPlugin";
+  return root;
 }
 
 }  // namespace hydra

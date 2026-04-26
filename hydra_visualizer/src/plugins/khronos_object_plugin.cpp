@@ -315,7 +315,9 @@ Color KhronosObjectPlugin::getDynamicColor(const Config& config,
 }
 
 YAML::Node KhronosObjectPlugin::dumpConfig() const {
-  return config::toYaml(config_.get());
+  auto root = config::toYaml(config_.get());
+  root["type"] = "KhronosObjectPlugin";
+  return root;
 }
 
 }  // namespace hydra
