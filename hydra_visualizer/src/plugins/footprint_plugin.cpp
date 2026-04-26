@@ -36,6 +36,7 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
@@ -173,5 +174,7 @@ void FootprintPlugin::reset(const std_msgs::msg::Header& header) {
     pub_->publish(msg);
   }
 }
+
+YAML::Node FootprintPlugin::dumpConfig() const { return config::toYaml(config); }
 
 }  // namespace hydra

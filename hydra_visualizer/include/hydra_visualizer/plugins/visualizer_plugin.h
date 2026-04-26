@@ -34,6 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <spark_dsg/dynamic_scene_graph.h>
+#include <yaml-cpp/node/node.h>
 
 #include <std_msgs/msg/header.hpp>
 
@@ -56,6 +57,8 @@ class VisualizerPlugin {
   virtual bool hasChange() const { return has_change_; }
 
   virtual void clearChangeFlag() { has_change_ = false; }
+
+  virtual YAML::Node dumpConfig() const { return YAML::Node(); }
 
   const std::string name;
 

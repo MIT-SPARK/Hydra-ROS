@@ -1,6 +1,7 @@
 #include "hydra_visualizer/plugins/mesh_point_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
 
@@ -130,5 +131,7 @@ void MeshPointPlugin::draw(const std_msgs::msg::Header& header,
 
   tracker.add(marker, msg);
 }
+
+YAML::Node MeshPointPlugin::dumpConfig() const { return config::toYaml(config_.get()); }
 
 }  // namespace hydra

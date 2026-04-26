@@ -75,6 +75,7 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/types/enum.h>
 #include <config_utilities/validation.h>
 #include <spark_dsg/colormaps.h>
@@ -311,6 +312,10 @@ Color KhronosObjectPlugin::getDynamicColor(const Config& config,
     default:
       return Color::gray();
   }
+}
+
+YAML::Node KhronosObjectPlugin::dumpConfig() const {
+  return config::toYaml(config_.get());
 }
 
 }  // namespace hydra

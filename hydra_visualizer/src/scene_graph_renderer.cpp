@@ -42,9 +42,6 @@
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/printing.h>
 
-#include <fstream>
-
-#include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
@@ -55,7 +52,6 @@ namespace hydra {
 using namespace spark_dsg;
 using namespace visualizer;
 
-using std_srvs::srv::Empty;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
@@ -161,8 +157,6 @@ SceneGraphRenderer::SceneGraphRenderer(const Config& config, ianvs::NodeHandle n
       nh_(nh),
       graph_config_("scene_graph", config.graph, [this]() { has_change_ = true; }),
       pub_(nh.create_publisher<MarkerArray>("graph", rclcpp::QoS(1).transient_local())),
-      save_service_(
-          nh_.create_service<Empty>("reload", &SceneGraphRenderer::saveConfigs, this)),
       has_change_(false) {
   for (const auto& plugin_config : config.layer_plugins) {
     const auto key = plugin_config.layer;
@@ -181,9 +175,32 @@ void SceneGraphRenderer::reset(const std_msgs::msg::Header& header) {
   }
 }
 
-bool SceneGraphRenderer::hasChange() const { return has_change_; }
+bool SceneGraphRenderer::hasChange() const {
+  if (has_change_) {
+    return true;
+  }
 
-void SceneGraphRenderer::clearChangeFlag() { has_change_ = false; }
+  for (const auto& [key, plugins] : layer_plugins_) {
+    for (const auto& plugin : plugins) {
+      if (plugin && plugin->hasChange()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+void SceneGraphRenderer::clearChangeFlag() {
+  has_change_ = false;
+  for (const auto& [key, plugins] : layer_plugins_) {
+    for (const auto& plugin : plugins) {
+      if (plugin) {
+        plugin->clearChangeFlag();
+      }
+    }
+  }
+}
 
 void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
                               const DynamicSceneGraph& graph) const {
@@ -210,22 +227,28 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   }
 }
 
-void SceneGraphRenderer::saveConfigs(const Empty::Request::SharedPtr&,
-                                     Empty::Response::SharedPtr) {
-  YAML::Node root;
-  root["renderer"] = config::toYaml(graph_config_.get());
-
-  YAML::Node layers;
+YAML::Node SceneGraphRenderer::dumpConfig() const {
+  YAML::Node layers(YAML::NodeType::Map);
   for (const auto& [key, wrapper] : layers_) {
     layers[LayerKeySelector{key}.str()] = config::toYaml(wrapper->get());
   }
 
-  root["renderer"]["layers"] = layers;
+  YAML::Node layer_plugins(YAML::NodeType::Sequence);
+  for (const auto& [key, plugins] : layer_plugins_) {
+    YAML::Node plugin_configs;
+    for (const auto& plugin : plugins) {
+      if (!plugin) {
+        continue;
+      }
 
-  const auto outfile_name = std::string(std::tmpnam(nullptr)) + "_config.yaml";
-  std::ofstream fout(outfile_name);
-  fout << root;
-  LOG(WARNING) << "Saved config to '" << outfile_name << "'";
+      plugin_configs.push_back(plugin->dumpConfig());
+    }
+  }
+
+  YAML::Node root = config::toYaml(graph_config_.get());
+  root["layers"] = layers;
+  root["layer_plugins"] = layer_plugins;
+  return root;
 }
 
 InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent,

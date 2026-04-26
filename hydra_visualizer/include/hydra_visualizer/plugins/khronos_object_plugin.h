@@ -135,6 +135,8 @@ class KhronosObjectPlugin : public VisualizerPlugin {
             const spark_dsg::DynamicSceneGraph& graph) override;
   void reset(const std_msgs::msg::Header& header) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   // Helper functions.
   void drawDynamicObjects(const Config& config,

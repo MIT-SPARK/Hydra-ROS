@@ -63,6 +63,8 @@ class RegionGrowingBoundaryPlugin : public LayerPlugin {
                     visualization_msgs::msg::MarkerArray& msg,
                     MarkerTracker& tracker) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   const std::string ns_;
   config::DynamicConfig<Config> config_;

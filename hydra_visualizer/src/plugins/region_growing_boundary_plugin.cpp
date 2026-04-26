@@ -35,6 +35,7 @@
 #include "hydra_visualizer/plugins/region_growing_boundary_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <spark_dsg/node_attributes.h>
 
@@ -72,7 +73,8 @@ void declare_config(RegionGrowingBoundaryPlugin::Config& config) {
 RegionGrowingBoundaryPlugin::RegionGrowingBoundaryPlugin(const Config& config,
                                                          const std::string& ns)
     : ns_(ns),
-      config_(ns + "_mesh_point_plugin", config, [this]() { has_change_ = true; }) {}
+      config_(ns + "_region_growing_plugin", config, [this]() { has_change_ = true; }) {
+}
 
 void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
                                        const visualizer::LayerInfo& info,
@@ -119,6 +121,10 @@ void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
   }
 
   tracker.add(marker, msg);
+}
+
+YAML::Node RegionGrowingBoundaryPlugin::dumpConfig() const {
+  return config::toYaml(config_.get());
 }
 
 }  // namespace hydra

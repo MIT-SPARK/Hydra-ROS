@@ -35,6 +35,7 @@
 #include "hydra_visualizer/plugins/mesh_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
@@ -96,5 +97,7 @@ std::string MeshPlugin::getMsgNamespace() const {
   // TODO(lschmid): Hardcoded for now. Eventually read from scene graph or so.
   return "robot0/dsg_mesh";
 }
+
+YAML::Node MeshPlugin::dumpConfig() const { return config::toYaml(config_.get()); }
 
 }  // namespace hydra

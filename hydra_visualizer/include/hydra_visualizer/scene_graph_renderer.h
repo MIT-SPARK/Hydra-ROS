@@ -36,7 +36,6 @@
 #include <config_utilities/dynamic_config.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/dynamic_scene_graph.h>
-#include <std_srvs/srv/empty.hpp>
 
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -107,10 +106,9 @@ class SceneGraphRenderer {
 
   virtual void clearChangeFlag();
 
- protected:
-  void saveConfigs(const std_srvs::srv::Empty::Request::SharedPtr& req,
-              std_srvs::srv::Empty::Response::SharedPtr res);
+  YAML::Node dumpConfig() const;
 
+ protected:
   virtual void setConfigs(const spark_dsg::DynamicSceneGraph& graph) const;
 
   virtual void drawInterlayerEdges(const std_msgs::msg::Header& header,
@@ -137,7 +135,6 @@ class SceneGraphRenderer {
   config::DynamicConfig<GraphRenderConfig> graph_config_;
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
   std::map<spark_dsg::LayerKey, std::list<LayerPlugin::Ptr>> layer_plugins_;
-  rclcpp::Service<std_srvs::srv::Empty>::SharedPtr save_service_;
 
   mutable MarkerTracker tracker_;
   mutable std::atomic<bool> has_change_;

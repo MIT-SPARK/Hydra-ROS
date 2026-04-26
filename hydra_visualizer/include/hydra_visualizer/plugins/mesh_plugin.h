@@ -63,6 +63,8 @@ class MeshPlugin : public VisualizerPlugin {
 
   void reset(const std_msgs::msg::Header& header) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   config::DynamicConfig<Config> config_;
 

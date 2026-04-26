@@ -39,6 +39,7 @@
 #include <ianvs/node_handle.h>
 
 #include <std_srvs/srv/empty.hpp>
+#include <std_msgs/msg/string.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
@@ -76,6 +77,8 @@ class DsgVisualizer {
  private:
   void spinOnce(bool force = false);
 
+  void saveConfigs(const std::filesystem::path& output);
+
   ianvs::NodeHandle nh_;
   rclcpp::TimerBase::SharedPtr loop_timer_;
 
@@ -85,6 +88,7 @@ class DsgVisualizer {
   const config::RosDynamicConfigServer server_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr redraw_service_;
   rclcpp::Service<std_srvs::srv::Empty>::SharedPtr reset_service_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr save_sub_;
 };
 
 void declare_config(DsgVisualizer::Config& config);
