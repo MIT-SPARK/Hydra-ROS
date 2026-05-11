@@ -59,14 +59,9 @@ static const auto registration =
 }
 
 using places::GraphExtractor;
-using places::GvdGraph;
 using places::GvdLayer;
-using places::GvdVoxel;
-using spark_dsg::PlaceNodeAttributes;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
-using visualizer::ContinuousPalette;
-using visualizer::DivergentPalette;
 using visualizer::RangeColormap;
 
 void declare_config(PlacesVisualizer::Config& config) {
@@ -130,6 +125,15 @@ void PlacesVisualizer::visualizeExtractor(const std_msgs::msg::Header& header,
 
   pubs_.publish("gvd_graph_viz", header, [&]() -> MarkerArray {
     return drawGvdGraph(extractor.gvd(), gvd_config_.get(), colormap_, "gvd_graph");
+  });
+
+  pubs_.publish("gvd_active_viz", header, [&]() -> MarkerArray {
+    return drawGvdActive(extractor.gvd(), gvd_config_.get(), "gvd_graph_active");
+  });
+
+  pubs_.publish("gvd_active_cluster_viz", header, [&]() -> MarkerArray {
+    return drawGvdActiveCluster(
+        extractor.gvd(), gvd_config_.get(), "gvd_graph_active_cluster");
   });
 
   pubs_.publish("gvd_cluster_viz", header, [&]() -> MarkerArray {

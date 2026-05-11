@@ -74,60 +74,85 @@ spark_dsg::Color getGvdColor(const GvdVisualizerConfig& config,
   }
 }
 
-size_t fillColors(const GvdGraph::CompressedNodes& clusters,
-                  std::map<uint64_t, size_t>& colors) {
-  for (const auto& id_node_pair : clusters) {
-    size_t max_color = 0;
-    std::set<size_t> seen_colors;
-    for (const auto sibling : id_node_pair.second.siblings) {
-      const auto iter = colors.find(sibling);
-      if (iter == colors.end()) {
-        continue;
-      }
-
-      seen_colors.insert(iter->second);
-      if (iter->second > max_color) {
-        max_color = iter->second;
-      }
-    }
-
-    if (seen_colors.empty()) {
-      colors[id_node_pair.first] = 0;
-      continue;
-    }
-
-    bool found_color = false;
-    for (size_t i = 0; i < max_color; ++i) {
-      if (!seen_colors.count(i)) {
-        colors[id_node_pair.first] = i;
-        found_color = true;
-        break;
-      }
-    }
-
-    if (found_color) {
-      continue;
-    }
-
-    colors[id_node_pair.first] = max_color + 1;
-  }
-
-  size_t num_colors = 0;
-  for (const auto& id_color_pair : colors) {
-    if (id_color_pair.second > num_colors) {
-      num_colors = id_color_pair.second;
-    }
-  }
-
-  return num_colors + 1;
-}
-
 std::unordered_set<uint64_t>& getNodeSet(EdgeMap& edge_map, uint64_t node) {
   auto iter = edge_map.find(node);
   if (iter == edge_map.end()) {
     iter = edge_map.emplace(node, std::unordered_set<uint64_t>()).first;
   }
   return iter->second;
+}
+
+MarkerArray drawWireframe(const GvdGraph& graph,
+                          const GvdVisualizerConfig& config,
+                          const std::string& ns,
+                          size_t marker_id,
+                          const std::function<Color(const GvdGraph::Node&)>& coloring) {
+  MarkerArray marker;
+  if (graph.uncompressed().empty()) {
+    return marker;
+  }
+
+  const Eigen::Vector3d p_identity = Eigen::Vector3d::Zero();
+  const Eigen::Quaterniond q_identity = Eigen::Quaterniond::Identity();
+  {  // scope to make handling stuff a little easier
+    Marker nodes;
+    nodes.type = Marker::SPHERE_LIST;
+    nodes.id = marker_id;
+    nodes.ns = ns + "_nodes";
+    nodes.action = Marker::ADD;
+    nodes.scale.x = config.gvd_graph_scale;
+    nodes.scale.y = config.gvd_graph_scale;
+    nodes.scale.z = config.gvd_graph_scale;
+    tf2::convert(p_identity, nodes.pose.position);
+    tf2::convert(q_identity, nodes.pose.orientation);
+    marker.markers.push_back(nodes);
+  }
+
+  {  // scope to make handling stuff a little easier
+    Marker edges;
+    edges.type = Marker::LINE_LIST;
+    edges.id = marker_id;
+    edges.ns = ns + "_edges";
+    edges.action = Marker::ADD;
+    edges.scale.x = config.gvd_graph_scale;
+    tf2::convert(p_identity, edges.pose.position);
+    tf2::convert(q_identity, edges.pose.orientation);
+    marker.markers.push_back(edges);
+  }
+
+  auto& nodes = marker.markers[0];
+  auto& edges = marker.markers[1];
+
+  EdgeMap seen_edges;
+  for (const auto& [node_id, node] : graph.uncompressed()) {
+    geometry_msgs::msg::Point node_centroid;
+    tf2::convert(node.info.position.cast<double>().eval(), node_centroid);
+    nodes.points.push_back(node_centroid);
+    const auto color = coloring(node);
+    nodes.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
+
+    auto& curr_seen = getNodeSet(seen_edges, node_id);
+    for (const auto sibling : node.siblings) {
+      if (curr_seen.count(sibling)) {
+        continue;
+      }
+
+      curr_seen.insert(sibling);
+      getNodeSet(seen_edges, sibling).insert(node_id);
+
+      edges.points.push_back(nodes.points.back());
+      edges.colors.push_back(nodes.colors.back());
+
+      const auto& other = graph.uncompressed().at(sibling);
+      geometry_msgs::msg::Point neighbor_centroid;
+      tf2::convert(other.info.position.cast<double>().eval(), neighbor_centroid);
+      edges.points.push_back(neighbor_centroid);
+      const auto sibling_color = coloring(other);
+      edges.colors.push_back(visualizer::makeColorMsg(sibling_color, config.gvd_alpha));
+    }
+  }
+
+  return marker;
 }
 
 }  // namespace
@@ -306,74 +331,29 @@ MarkerArray drawGvdGraph(const GvdGraph& graph,
                          const RangeColormap& colors,
                          const std::string& ns,
                          size_t marker_id) {
-  MarkerArray marker;
-  if (graph.uncompressed().empty()) {
-    return marker;
-  }
+  return drawWireframe(graph, config, ns, marker_id, [&](const auto& node) {
+    return getGvdColor(config, colors, node.info.distance, node.info.num_basis_points);
+  });
+}
 
-  const Eigen::Vector3d p_identity = Eigen::Vector3d::Zero();
-  const Eigen::Quaterniond q_identity = Eigen::Quaterniond::Identity();
-  {  // scope to make handling stuff a little easier
-    Marker nodes;
-    nodes.type = Marker::SPHERE_LIST;
-    nodes.id = marker_id;
-    nodes.ns = ns + "_nodes";
-    nodes.action = Marker::ADD;
-    nodes.scale.x = config.gvd_graph_scale;
-    nodes.scale.y = config.gvd_graph_scale;
-    nodes.scale.z = config.gvd_graph_scale;
-    tf2::convert(p_identity, nodes.pose.position);
-    tf2::convert(q_identity, nodes.pose.orientation);
-    marker.markers.push_back(nodes);
-  }
+MarkerArray drawGvdActive(const GvdGraph& graph,
+                          const GvdVisualizerConfig& config,
+                          const std::string& ns,
+                          size_t marker_id) {
+  return drawWireframe(graph, config, ns, marker_id, [&](const auto& node) {
+    return node.archived ? Color::black() : Color::green();
+  });
+}
 
-  {  // scope to make handling stuff a little easier
-    Marker edges;
-    edges.type = Marker::LINE_LIST;
-    edges.id = marker_id;
-    edges.ns = ns + "_edges";
-    edges.action = Marker::ADD;
-    edges.scale.x = config.gvd_graph_scale;
-    tf2::convert(p_identity, edges.pose.position);
-    tf2::convert(q_identity, edges.pose.orientation);
-    marker.markers.push_back(edges);
-  }
-
-  auto& nodes = marker.markers[0];
-  auto& edges = marker.markers[1];
-
-  EdgeMap seen_edges;
-  for (const auto& [node_id, node] : graph.uncompressed()) {
-    geometry_msgs::msg::Point node_centroid;
-    tf2::convert(node.info.position.cast<double>().eval(), node_centroid);
-    nodes.points.push_back(node_centroid);
-    const auto color =
-        getGvdColor(config, colors, node.info.distance, node.info.num_basis_points);
-    nodes.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
-
-    auto& curr_seen = getNodeSet(seen_edges, node_id);
-    for (const auto sibling : node.siblings) {
-      if (curr_seen.count(sibling)) {
-        continue;
-      }
-
-      curr_seen.insert(sibling);
-      getNodeSet(seen_edges, sibling).insert(node_id);
-
-      edges.points.push_back(nodes.points.back());
-      edges.colors.push_back(nodes.colors.back());
-
-      const auto& other = *graph.get(sibling);
-      geometry_msgs::msg::Point neighbor_centroid;
-      tf2::convert(other.position.cast<double>().eval(), neighbor_centroid);
-      edges.points.push_back(neighbor_centroid);
-      const auto sibling_color =
-          getGvdColor(config, colors, other.distance, other.num_basis_points);
-      edges.colors.push_back(visualizer::makeColorMsg(sibling_color, config.gvd_alpha));
-    }
-  }
-
-  return marker;
+MarkerArray drawGvdActiveCluster(const GvdGraph& graph,
+                                 const GvdVisualizerConfig& config,
+                                 const std::string& ns,
+                                 size_t marker_id) {
+  return drawWireframe(graph, config, ns, marker_id, [&](const auto& node) {
+    auto parent = graph.remapping().at(node.id);
+    const auto active = !graph.compressed().at(parent).archived();
+    return active ? Color::green() : Color::black();
+  });
 }
 
 MarkerArray drawGvdClusters(const GvdGraph& graph,
@@ -381,94 +361,56 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
                             const std::string& ns,
                             const DiscreteColormap& colormap,
                             size_t marker_id) {
-  MarkerArray marker;
-  if (graph.uncompressed().empty()) {
-    return marker;
-  }
-
-  const Eigen::Vector3d p_identity = Eigen::Vector3d::Zero();
-  const Eigen::Quaterniond q_identity = Eigen::Quaterniond::Identity();
-  {  // scope to make handling stuff a little easier
-    Marker nodes;
-    nodes.type = Marker::SPHERE_LIST;
-    nodes.id = marker_id;
-    nodes.ns = ns + "_nodes";
-    nodes.action = Marker::ADD;
-    nodes.scale.x = config.gvd_graph_scale;
-    nodes.scale.y = config.gvd_graph_scale;
-    nodes.scale.z = config.gvd_graph_scale;
-    tf2::convert(p_identity, nodes.pose.position);
-    tf2::convert(q_identity, nodes.pose.orientation);
-    marker.markers.push_back(nodes);
-  }
-
-  {  // scope to make handling stuff a little easier
-    Marker edges;
-    edges.type = Marker::LINE_LIST;
-    edges.id = marker_id;
-    edges.ns = ns + "_edges";
-    edges.action = Marker::ADD;
-    edges.scale.x = config.gvd_graph_scale;
-    tf2::convert(p_identity, edges.pose.position);
-    tf2::convert(q_identity, edges.pose.orientation);
-    marker.markers.push_back(edges);
-  }
-
-  auto& nodes = marker.markers[0];
-  auto& edges = marker.markers[1];
-
-  std::map<uint64_t, size_t> color_mapping;
-  const size_t num_colors = fillColors(graph.compressed(), color_mapping);
-  std::vector<std_msgs::msg::ColorRGBA> colors;
-  for (size_t i = 0; i < num_colors; ++i) {
-    colors.push_back(visualizer::makeColorMsg(colormap(i), config.gvd_alpha));
-  }
-
-  const auto& remapping = graph.remapping();
-
-  EdgeMap seen_edges;
-  for (const auto& [node_id, node] : graph.uncompressed()) {
-    geometry_msgs::msg::Point node_centroid;
-    tf2::convert(node.info.position.cast<double>().eval(), node_centroid);
-    nodes.points.push_back(node_centroid);
-    if (remapping.count(node_id)) {
-      const auto cluster_id = remapping.at(node_id);
-      const auto& cluster_color = colors.at(color_mapping.at(cluster_id));
-      nodes.colors.push_back(cluster_color);
-    } else {
-      nodes.colors.push_back(
-          visualizer::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
-    }
-
-    auto& curr_seen = getNodeSet(seen_edges, node_id);
+  std::map<uint64_t, size_t> color_indices;
+  for (const auto& [node_id, node] : graph.compressed()) {
+    size_t max_color = 0;
+    std::set<size_t> seen_colors;
     for (const auto sibling : node.siblings) {
-      if (curr_seen.count(sibling)) {
+      const auto iter = color_indices.find(sibling);
+      if (iter == color_indices.end()) {
         continue;
       }
 
-      curr_seen.insert(sibling);
-      getNodeSet(seen_edges, sibling).insert(node_id);
-
-      edges.points.push_back(nodes.points.back());
-      edges.colors.push_back(nodes.colors.back());
-
-      const auto& other = *graph.get(sibling);
-      geometry_msgs::msg::Point neighbor_centroid;
-      tf2::convert(other.position.cast<double>().eval(), neighbor_centroid);
-      edges.points.push_back(neighbor_centroid);
-
-      if (remapping.count(sibling)) {
-        const auto& neighbor_cluster = remapping.at(sibling);
-        const auto& neighbor_color = colors.at(color_mapping.at(neighbor_cluster));
-        edges.colors.push_back(neighbor_color);
-      } else {
-        edges.colors.push_back(
-            visualizer::makeColorMsg(Color(0, 0, 0), config.gvd_alpha));
+      seen_colors.insert(iter->second);
+      if (iter->second > max_color) {
+        max_color = iter->second;
       }
     }
+
+    if (seen_colors.empty()) {
+      color_indices[node_id] = 0;
+      continue;
+    }
+
+    bool found_color = false;
+    for (size_t i = 0; i < max_color; ++i) {
+      if (!seen_colors.count(i)) {
+        color_indices[node_id] = i;
+        found_color = true;
+        break;
+      }
+    }
+
+    if (found_color) {
+      continue;
+    }
+
+    color_indices[node_id] = max_color + 1;
   }
 
-  return marker;
+  std::map<uint64_t, spark_dsg::Color> colors;
+  for (const auto& [node_id, color_id] : color_indices) {
+    colors[node_id] = colormap(color_id);
+  }
+
+  return drawWireframe(graph, config, ns, marker_id, [&](const auto& node) {
+    auto iter = graph.remapping().find(node.id);
+    if (iter == graph.remapping().end()) {
+      return Color::black();
+    } else {
+      return colors.at(iter->second);
+    }
+  });
 }
 
 }  // namespace hydra

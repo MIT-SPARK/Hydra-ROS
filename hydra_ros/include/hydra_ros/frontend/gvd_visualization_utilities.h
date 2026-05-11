@@ -116,6 +116,16 @@ MarkerArrayMsg drawGvdGraph(const places::GvdGraph& graph,
                             const std::string& ns,
                             size_t marker_id = 0);
 
+MarkerArrayMsg drawGvdActive(const places::GvdGraph& graph,
+                             const GvdVisualizerConfig& config,
+                             const std::string& ns,
+                             size_t marker_id = 0);
+
+MarkerArrayMsg drawGvdActiveCluster(const places::GvdGraph& graph,
+                                    const GvdVisualizerConfig& config,
+                                    const std::string& ns,
+                                    size_t marker_id = 0);
+
 MarkerArrayMsg drawGvdClusters(const places::GvdGraph& graph,
                                const GvdVisualizerConfig& config,
                                const std::string& ns,
