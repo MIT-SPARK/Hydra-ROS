@@ -57,13 +57,14 @@ ColorSubscriber::Filter& ColorSubscriber::getFilter() const {
 
 void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
   // Allow also mono images to be converted to grayscale.
-  if (sensor_msgs::image_encodings::isColor(img.encoding)) {
+  if (sensor_msgs::image_encodings::isColor(img.encoding) ||
+      sensor_msgs::image_encodings::isBayer(img.encoding)) {
     try {
       packet.color =
           cv_bridge::toCvCopy(img, sensor_msgs::image_encodings::RGB8)->image;
       return;
     } catch (const cv_bridge::Exception& e) {
-      LOG(ERROR) << "Failed to convert mono image as color input: " << e.what();
+      LOG(ERROR) << "Failed to convert color image: " << e.what();
       return;
     }
   } else if (sensor_msgs::image_encodings::isMono(img.encoding)) {
@@ -73,7 +74,7 @@ void ColorSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
       cv::cvtColor(mono, packet.color, cv::COLOR_GRAY2RGB);
       return;
     } catch (const cv_bridge::Exception& e) {
-      LOG(ERROR) << "Failed to convert color image: " << e.what();
+      LOG(ERROR) << "Failed to convert mono image as color input: " << e.what();
       return;
     }
   }
