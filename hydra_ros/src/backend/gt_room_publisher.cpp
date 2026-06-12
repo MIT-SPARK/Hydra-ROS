@@ -1,6 +1,5 @@
 #include "hydra_ros/backend/gt_room_publisher.h"
 
-#include <Eigen/src/Geometry/Quaternion.h>
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
 #include <config_utilities/parsing/context.h>
