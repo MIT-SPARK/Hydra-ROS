@@ -3,7 +3,7 @@
 import numpy as np
 import rclpy
 import tf2_ros
-from geometry_msgs.msg import Transform, TransformStamped, Pose
+from geometry_msgs.msg import Pose, Transform, TransformStamped
 from nav_msgs.msg import Odometry
 from pose_graph_tools_msgs.msg import PoseGraph, PoseGraphEdge
 from rclpy.node import Node

@@ -33,11 +33,11 @@ launch:
           arg:
             - {name: min_period_s, value: '0.2'}
   - group:
-    - set_remap: {from: odom, to: /tesse/odom}
-    - set_remap: {from: loop_closures, to: /hydra/external_loop_closures}
-    - include:
-        if: $(not $(var use_gt_poses))
-        file: $(find-pkg-share hydra_ros)/launch/noisy_tf_publisher_node.launch.yaml
+      - set_remap: {from: odom, to: /tesse/odom}
+      - set_remap: {from: loop_closures, to: /hydra/external_loop_closures}
+      - include:
+          if: $(not $(var use_gt_poses))
+          file: $(find-pkg-share hydra_ros)/launch/noisy_tf_publisher_node.launch.yaml
   - include:
       file: $(find-pkg-share hydra_ros)/launch/hydra.launch.yaml
       arg:
