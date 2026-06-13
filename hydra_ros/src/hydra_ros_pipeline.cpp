@@ -160,7 +160,7 @@ void HydraRosPipeline::stop() {
 
 void HydraRosPipeline::initLCD() {
   // TODO(nathan) push to pipeline config?
-  auto lcd_config = config::fromContext<LoopClosureModule::Config>();
+  auto lcd_config = config::fromContext<LoopClosureConfig>();
   lcd_config.detector.num_semantic_classes = GlobalInfo::instance().getTotalLabels();
   LOG_IF(INFO, config.verbosity >= 2)
       << "Number of classes for LCD: " << lcd_config.detector.num_semantic_classes;
