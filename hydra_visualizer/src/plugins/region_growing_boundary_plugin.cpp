@@ -53,8 +53,9 @@ static const auto registration_ =
                                    std::string>("RegionGrowingBoundaryPlugin");
 
 std_msgs::msg::ColorRGBA makeBoundaryColor(const std::vector<spark_dsg::Color>& colors,
-                                           spark_dsg::TraversabilityState state) {
-  return visualizer::makeColorMsg(colors.at(static_cast<size_t>(state)));
+                                           spark_dsg::TraversabilityState state,
+                                           float alpha) {
+  return visualizer::makeColorMsg(colors.at(static_cast<size_t>(state)), alpha);
 }
 
 }  // namespace
@@ -64,6 +65,7 @@ using visualization_msgs::msg::Marker;
 void declare_config(RegionGrowingBoundaryPlugin::Config& config) {
   using namespace config;
   name("RegionGrowingBoundaryPlugin::Config");
+  field(config.use_node_color, "use_node_color");
   field(config.colors, "colors");
   field(config.line_width, "line_width");
   checkCondition(config.colors.size() == 4, "colors.size() must be 4");
@@ -113,10 +115,19 @@ void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
       auto end = attrs->getBoundaryPoint(end_idx);
       end.z() += info.z_offset;
       tf2::convert(end, marker.points.emplace_back());
-      marker.colors.emplace_back(
-          makeBoundaryColor(config.colors, attrs->states[start_idx]));
-      marker.colors.emplace_back(
-          makeBoundaryColor(config.colors, attrs->states[end_idx]));
+      if (config.use_node_color) {
+        const auto color =
+            visualizer::makeColorMsg(info.node_color(*node), info.config.nodes.alpha);
+        marker.colors.emplace_back(color);
+        marker.colors.emplace_back(color);
+      } else {
+        const auto start_color = makeBoundaryColor(
+            config.colors, attrs->states[start_idx], info.config.nodes.alpha);
+        const auto end_color = makeBoundaryColor(
+            config.colors, attrs->states[end_idx], info.config.nodes.alpha);
+        marker.colors.emplace_back(start_color);
+        marker.colors.emplace_back(end_color);
+      }
     }
   }
 
