@@ -38,8 +38,8 @@
 #include <config_utilities_ros/ros_dynamic_config_server.h>
 #include <ianvs/node_handle.h>
 
-#include <std_srvs/srv/empty.hpp>
 #include <std_msgs/msg/string.hpp>
+#include <std_srvs/srv/empty.hpp>
 
 #include "hydra_visualizer/io/graph_wrapper.h"
 #include "hydra_visualizer/plugins/visualizer_plugin.h"
