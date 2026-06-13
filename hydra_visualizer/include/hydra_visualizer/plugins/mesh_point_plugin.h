@@ -67,6 +67,8 @@ class MeshPointPlugin : public LayerPlugin {
             visualization_msgs::msg::MarkerArray& msg,
             MarkerTracker& tracker) override;
 
+  YAML::Node dumpConfig() const override;
+
  private:
   std::string ns_;
   config::DynamicConfig<Config> config_;

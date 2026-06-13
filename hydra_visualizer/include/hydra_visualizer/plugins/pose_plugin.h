@@ -60,6 +60,8 @@ class PosePlugin : public VisualizerPlugin {
 
   void reset(const std_msgs::msg::Header& header) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   size_t num_received_;
   rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr pub_;

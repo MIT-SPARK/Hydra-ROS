@@ -66,6 +66,8 @@ class FootprintPlugin : public VisualizerPlugin {
 
   void reset(const std_msgs::msg::Header& header) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr pub_;
   MarkerTracker tracker_;

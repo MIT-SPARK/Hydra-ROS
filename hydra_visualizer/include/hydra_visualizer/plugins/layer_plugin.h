@@ -59,6 +59,8 @@ struct LayerPlugin {
 
   virtual void clearChangeFlag() { has_change_ = false; }
 
+  virtual YAML::Node dumpConfig() const { return YAML::Node(); }
+
  protected:
   bool has_change_ = false;
 };

@@ -39,7 +39,11 @@
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
+#include <fstream>
+
 namespace hydra {
+
+using std_msgs::msg::String;
 
 void declare_config(DsgVisualizer::Config& config) {
   using namespace config;
@@ -67,6 +71,8 @@ DsgVisualizer::DsgVisualizer(const Config& config, ianvs::NodeHandle nh)
       "reset",
       [this](const std_srvs::srv::Empty::Request::SharedPtr&,
              std_srvs::srv::Empty::Response::SharedPtr) { reset(); });
+  save_sub_ = nh_.create_subscription<String>(
+      "save_config", 1, [this](const String& msg) { saveConfigs(msg.data); });
 }
 
 void DsgVisualizer::start() {
@@ -139,6 +145,25 @@ void DsgVisualizer::spinOnce(bool force) {
       plugin->clearChangeFlag();
     }
   }
+}
+
+void DsgVisualizer::saveConfigs(const std::filesystem::path& output) {
+  YAML::Node plugins(YAML::NodeType::Map);
+  for (const auto& plugin : plugins_) {
+    if (!plugin) {
+      continue;
+    }
+
+    plugins[plugin->name] = plugin->dumpConfig();
+  }
+
+  YAML::Node root;
+  root["renderer"] = renderer_->dumpConfig();
+  root["plugins"] = plugins;
+
+  std::ofstream fout(output);
+  fout << root;
+  LOG(INFO) << "Saved config to " << output;
 }
 
 }  // namespace hydra

@@ -35,12 +35,14 @@
 #include "hydra_visualizer/plugins/region_growing_boundary_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <spark_dsg/node_attributes.h>
 
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/color_parsing.h"
+#include "hydra_visualizer/utils/polygon_utilities.h"
 
 namespace hydra {
 namespace {
@@ -52,8 +54,9 @@ static const auto registration_ =
                                    std::string>("RegionGrowingBoundaryPlugin");
 
 std_msgs::msg::ColorRGBA makeBoundaryColor(const std::vector<spark_dsg::Color>& colors,
-                                           spark_dsg::TraversabilityState state) {
-  return visualizer::makeColorMsg(colors.at(static_cast<size_t>(state)));
+                                           spark_dsg::TraversabilityState state,
+                                           float alpha) {
+  return visualizer::makeColorMsg(colors.at(static_cast<size_t>(state)), alpha);
 }
 
 }  // namespace
@@ -63,16 +66,21 @@ using visualization_msgs::msg::Marker;
 void declare_config(RegionGrowingBoundaryPlugin::Config& config) {
   using namespace config;
   name("RegionGrowingBoundaryPlugin::Config");
+  field(config.use_node_color, "use_node_color");
   field(config.colors, "colors");
   field(config.line_width, "line_width");
+  field(config.fill_alpha, "fill_alpha");
+  field(config.fill_boundaries, "fill_boundaries");
   checkCondition(config.colors.size() == 4, "colors.size() must be 4");
   check(config.line_width, GT, 0.0f, "line_width");
+  checkInRange(config.fill_alpha, 0.0f, 1.0f, "fill_alpha", false);
 }
 
 RegionGrowingBoundaryPlugin::RegionGrowingBoundaryPlugin(const Config& config,
                                                          const std::string& ns)
     : ns_(ns),
-      config_(ns + "_mesh_point_plugin", config, [this]() { has_change_ = true; }) {}
+      config_(ns + "_region_growing_plugin", config, [this]() { has_change_ = true; }) {
+}
 
 void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
                                        const visualizer::LayerInfo& info,
@@ -92,33 +100,73 @@ void RegionGrowingBoundaryPlugin::draw(const std_msgs::msg::Header& header,
   marker.scale.x = config.line_width;
   marker.scale.y = config.line_width;
   marker.scale.z = config.line_width;
+
+  Marker fill_marker;
+  fill_marker.header = header;
+  fill_marker.ns = ns_ + "_region_growing_polygons";
+  fill_marker.id = 0;
+  fill_marker.type = Marker::TRIANGLE_LIST;
+  fill_marker.action = Marker::ADD;
+  fill_marker.pose.orientation.w = 1.0;
+  fill_marker.color.a = config.fill_alpha;
+  fill_marker.scale.x = 1.0;
+  fill_marker.scale.y = 1.0;
+  fill_marker.scale.z = 1.0;
+
   for (const auto& [node_id, node] : layer.nodes()) {
     if (info.filter && !info.filter(*node)) {
       continue;
     }
 
     auto attrs = node->tryAttributes<spark_dsg::TravNodeAttributes>();
-    if (!attrs) {
+    if (!attrs || attrs->radii.empty()) {
       continue;
     }
 
+    Eigen::MatrixXd points(3, attrs->radii.size());
+    const auto color =
+        visualizer::makeColorMsg(info.node_color(*node), info.config.nodes.alpha);
     for (size_t i = 1; i <= attrs->radii.size(); ++i) {
       const auto start_idx = i - 1;
       const auto end_idx = i % attrs->radii.size();
       auto start = attrs->getBoundaryPoint(start_idx);
       start.z() += info.z_offset;
+      points.col(start_idx) = start;
+
       tf2::convert(start, marker.points.emplace_back());
       auto end = attrs->getBoundaryPoint(end_idx);
       end.z() += info.z_offset;
       tf2::convert(end, marker.points.emplace_back());
-      marker.colors.emplace_back(
-          makeBoundaryColor(config.colors, attrs->states[start_idx]));
-      marker.colors.emplace_back(
-          makeBoundaryColor(config.colors, attrs->states[end_idx]));
+      if (config.use_node_color) {
+        marker.colors.emplace_back(color);
+        marker.colors.emplace_back(color);
+      } else {
+        const auto start_color = makeBoundaryColor(
+            config.colors, attrs->states[start_idx], info.config.nodes.alpha);
+        const auto end_color = makeBoundaryColor(
+            config.colors, attrs->states[end_idx], info.config.nodes.alpha);
+        marker.colors.emplace_back(start_color);
+        marker.colors.emplace_back(end_color);
+      }
+    }
+
+    if (config.fill_boundaries) {
+      auto mesh_color = color;
+      mesh_color.a = config.fill_alpha;
+      makeFilledPolygon(points, mesh_color, fill_marker);
     }
   }
 
   tracker.add(marker, msg);
+  if (config.fill_boundaries) {
+    tracker.add(fill_marker, msg);
+  }
+}
+
+YAML::Node RegionGrowingBoundaryPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "RegionGrowingBoundaryPlugin";
+  return root;
 }
 
 }  // namespace hydra

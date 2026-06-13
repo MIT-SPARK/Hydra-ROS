@@ -35,6 +35,7 @@
 #include "hydra_visualizer/plugins/mesh_plugin.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 
@@ -95,6 +96,12 @@ void MeshPlugin::reset(const std_msgs::msg::Header& header) {
 std::string MeshPlugin::getMsgNamespace() const {
   // TODO(lschmid): Hardcoded for now. Eventually read from scene graph or so.
   return "robot0/dsg_mesh";
+}
+
+YAML::Node MeshPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "MeshPlugin";
+  return root;
 }
 
 }  // namespace hydra

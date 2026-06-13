@@ -36,6 +36,7 @@
 
 #include <config_utilities/config_utilities.h>
 #include <config_utilities/factory.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
@@ -242,6 +243,12 @@ void BasisPointPlugin::drawBasisPoints(const Config& config,
   }
 
   tracker_.add(marker, msg);
+}
+
+YAML::Node BasisPointPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "BasisPointPlugin";
+  return root;
 }
 
 }  // namespace hydra

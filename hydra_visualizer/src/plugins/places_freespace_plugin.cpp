@@ -34,7 +34,8 @@
  * -------------------------------------------------------------------------- */
 #include "hydra_visualizer/plugins/places_freespace_plugin.h"
 
-#include <config_utilities/config_utilities.h>
+#include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
@@ -62,8 +63,6 @@ using spark_dsg::DsgLayers;
 using spark_dsg::DynamicSceneGraph;
 using spark_dsg::PlaceNodeAttributes;
 using spark_dsg::SceneGraphLayer;
-using spark_dsg::SceneGraphNode;
-using spark_dsg::SemanticNodeAttributes;
 using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 
@@ -155,6 +154,12 @@ void PlacesFreespacePlugin::drawSpheres(const Config& config,
     tracker_.add(marker, msg);
     ++id;
   }
+}
+
+YAML::Node PlacesFreespacePlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "PlacesFreespacePlugin";
+  return root;
 }
 
 }  // namespace hydra

@@ -70,6 +70,8 @@ class BasisPointPlugin : public VisualizerPlugin {
 
   void reset(const std_msgs::msg::Header& header) override;
 
+  YAML::Node dumpConfig() const override;
+
  protected:
   void fillMarkers(const std_msgs::msg::Header& header,
                    const spark_dsg::DynamicSceneGraph& graph,

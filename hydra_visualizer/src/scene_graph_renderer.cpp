@@ -35,13 +35,13 @@
 #include "hydra_visualizer/scene_graph_renderer.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/types/collections.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
 #include <spark_dsg/printing.h>
 
-#include <std_msgs/msg/string.hpp>
 #include <tf2_eigen/tf2_eigen.hpp>
 
 #include "hydra_visualizer/color/colormap_utilities.h"
@@ -175,9 +175,32 @@ void SceneGraphRenderer::reset(const std_msgs::msg::Header& header) {
   }
 }
 
-bool SceneGraphRenderer::hasChange() const { return has_change_; }
+bool SceneGraphRenderer::hasChange() const {
+  if (has_change_) {
+    return true;
+  }
 
-void SceneGraphRenderer::clearChangeFlag() { has_change_ = false; }
+  for (const auto& [key, plugins] : layer_plugins_) {
+    for (const auto& plugin : plugins) {
+      if (plugin && plugin->hasChange()) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+void SceneGraphRenderer::clearChangeFlag() {
+  has_change_ = false;
+  for (const auto& [key, plugins] : layer_plugins_) {
+    for (const auto& plugin : plugins) {
+      if (plugin) {
+        plugin->clearChangeFlag();
+      }
+    }
+  }
+}
 
 void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
                               const DynamicSceneGraph& graph) const {
@@ -204,6 +227,44 @@ void SceneGraphRenderer::draw(const std_msgs::msg::Header& header,
   }
 }
 
+YAML::Node SceneGraphRenderer::dumpConfig() const {
+  YAML::Node layers(YAML::NodeType::Map);
+  for (const auto& [key, wrapper] : layers_) {
+    layers[LayerKeySelector{key}.str()] = config::toYaml(wrapper->get());
+  }
+
+  YAML::Node layer_plugins(YAML::NodeType::Sequence);
+  for (const auto& [key, plugins] : layer_plugins_) {
+    YAML::Node plugin_configs(YAML::NodeType::Sequence);
+    for (const auto& plugin : plugins) {
+      if (!plugin) {
+        continue;
+      }
+
+      plugin_configs.push_back(plugin->dumpConfig());
+    }
+
+    YAML::Node layer_info;
+    layer_info["layer"] = LayerKeySelector{key}.str();
+    layer_info["plugins"] = plugin_configs;
+    layer_plugins.push_back(layer_info);
+  }
+
+  YAML::Node interlayer_edge_configs(YAML::NodeType::Sequence);
+  for (const auto& [_, info] : interlayer_edges_) {
+    YAML::Node this_config = config::toYaml(info.config->get());
+    this_config["from"] = LayerKeySelector{info.parent}.str();
+    this_config["to"] = LayerKeySelector{info.child}.str();
+    interlayer_edge_configs.push_back(this_config);
+  }
+
+  YAML::Node root = config::toYaml(graph_config_.get());
+  root["layers"] = layers;
+  root["layer_plugins"] = layer_plugins;
+  root["interlayer_edges"] = interlayer_edge_configs;
+  return root;
+}
+
 InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent,
                                                                  LayerKey child) const {
   const auto name = keyToLayerName(parent) + "_to_" + keyToLayerName(child);
@@ -228,10 +289,12 @@ InterlayerEdgeConfig SceneGraphRenderer::getInterlayerEdgeConfig(LayerKey parent
     const auto ns = "scene_graph_interlayer_" + name;
     auto wrapper = std::make_unique<EdgeConfigWrapper>(ns, config);
     wrapper->setCallback([this]() { has_change_ = true; });
-    iter = interlayer_edges_.emplace(name, std::move(wrapper)).first;
+    iter = interlayer_edges_
+               .emplace(name, EdgeConfigInfo{parent, child, std::move(wrapper)})
+               .first;
   }
 
-  return iter->second->get();
+  return iter->second.config->get();
 }
 
 void SceneGraphRenderer::drawInterlayerEdges(const std_msgs::msg::Header& header,

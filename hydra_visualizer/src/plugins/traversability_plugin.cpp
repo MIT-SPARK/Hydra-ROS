@@ -35,6 +35,7 @@
 #include "hydra_visualizer/plugins/traversability_plugin.h"
 
 #include <config_utilities/config_utilities.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/printing.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
@@ -234,6 +235,12 @@ void TraversabilityPlugin::addBoundaryPoint(const Config& config,
   if (!last_point) {
     marker.points.emplace_back(marker.points.back());
   }
+}
+
+YAML::Node TraversabilityPlugin::dumpConfig() const {
+  auto root = config::toYaml(config_.get());
+  root["type"] = "TraversabilityPlugin";
+  return root;
 }
 
 }  // namespace hydra

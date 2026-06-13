@@ -43,8 +43,14 @@ namespace hydra {
 class RegionGrowingBoundaryPlugin : public LayerPlugin {
  public:
   struct Config {
-    //! line width of the boundary markers
+    //! Use node color instead of boundary type
+    bool use_node_color = false;
+    //! Line width of the boundary markers
     float line_width = 0.07f;
+    //! Alpha of polygon fill
+    float fill_alpha = 0.5f;
+    //! Fill boundaries
+    bool fill_boundaries = false;
     //! Colors representing each traversability state.
     std::vector<spark_dsg::Color> colors{spark_dsg::Color::gray(),    // Unknown
                                          spark_dsg::Color::blue(),    // Traversable
@@ -62,6 +68,8 @@ class RegionGrowingBoundaryPlugin : public LayerPlugin {
                     const spark_dsg::Mesh* mesh,
                     visualization_msgs::msg::MarkerArray& msg,
                     MarkerTracker& tracker) override;
+
+  YAML::Node dumpConfig() const override;
 
  protected:
   const std::string ns_;

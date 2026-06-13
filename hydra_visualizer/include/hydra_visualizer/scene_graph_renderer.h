@@ -106,6 +106,8 @@ class SceneGraphRenderer {
 
   virtual void clearChangeFlag();
 
+  YAML::Node dumpConfig() const;
+
  protected:
   virtual void setConfigs(const spark_dsg::DynamicSceneGraph& graph) const;
 
@@ -138,7 +140,13 @@ class SceneGraphRenderer {
   mutable std::atomic<bool> has_change_;
   mutable std::map<spark_dsg::LayerKey, visualizer::LayerInfo> layer_infos_;
   mutable std::map<spark_dsg::LayerKey, std::unique_ptr<LayerConfigWrapper>> layers_;
-  mutable std::map<std::string, std::unique_ptr<EdgeConfigWrapper>> interlayer_edges_;
+
+  struct EdgeConfigInfo {
+    spark_dsg::LayerKey parent;
+    spark_dsg::LayerKey child;
+    std::unique_ptr<EdgeConfigWrapper> config;
+  };
+  mutable std::map<std::string, EdgeConfigInfo> interlayer_edges_;
 };
 
 void declare_config(SceneGraphRenderer::LayerPluginsConfig& config);

@@ -36,6 +36,7 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
+#include <config_utilities/parsing/yaml.h>
 #include <config_utilities/validation.h>
 #include <glog/logging.h>
 #include <spark_dsg/node_attributes.h>
@@ -56,7 +57,6 @@ static const auto registration_ =
                                    std::string>("FootprintPlugin");
 }
 
-using spark_dsg::DsgLayers;
 using spark_dsg::DynamicSceneGraph;
 using spark_dsg::LayerId;
 using spark_dsg::PlaceNodeAttributes;
@@ -172,6 +172,12 @@ void FootprintPlugin::reset(const std_msgs::msg::Header& header) {
   if (!msg.markers.empty()) {
     pub_->publish(msg);
   }
+}
+
+YAML::Node FootprintPlugin::dumpConfig() const {
+  auto root = config::toYaml(config);
+  root["type"] = "FootprintPlugin";
+  return root;
 }
 
 }  // namespace hydra
