@@ -235,7 +235,7 @@ YAML::Node SceneGraphRenderer::dumpConfig() const {
 
   YAML::Node layer_plugins(YAML::NodeType::Sequence);
   for (const auto& [key, plugins] : layer_plugins_) {
-    YAML::Node plugin_configs;
+    YAML::Node plugin_configs(YAML::NodeType::Sequence);
     for (const auto& plugin : plugins) {
       if (!plugin) {
         continue;
@@ -243,6 +243,11 @@ YAML::Node SceneGraphRenderer::dumpConfig() const {
 
       plugin_configs.push_back(plugin->dumpConfig());
     }
+
+    YAML::Node layer_info;
+    layer_info["layer"] = LayerKeySelector{key}.str();
+    layer_info["plugins"] = plugin_configs;
+    layer_plugins.push_back(layer_info);
   }
 
   YAML::Node interlayer_edge_configs(YAML::NodeType::Sequence);
