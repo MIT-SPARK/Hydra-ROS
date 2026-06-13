@@ -57,7 +57,6 @@ static const auto registration_ =
                                    std::string>("FootprintPlugin");
 }
 
-using spark_dsg::DsgLayers;
 using spark_dsg::DynamicSceneGraph;
 using spark_dsg::LayerId;
 using spark_dsg::PlaceNodeAttributes;

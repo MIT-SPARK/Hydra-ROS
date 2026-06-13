@@ -47,6 +47,10 @@ class RegionGrowingBoundaryPlugin : public LayerPlugin {
     bool use_node_color = false;
     //! Line width of the boundary markers
     float line_width = 0.07f;
+    //! Alpha of polygon fill
+    float fill_alpha = 0.5f;
+    //! Fill boundaries
+    bool fill_boundaries = false;
     //! Colors representing each traversability state.
     std::vector<spark_dsg::Color> colors{spark_dsg::Color::gray(),    // Unknown
                                          spark_dsg::Color::blue(),    // Traversable
