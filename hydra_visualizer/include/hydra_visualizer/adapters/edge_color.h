@@ -43,10 +43,6 @@
 
 namespace hydra {
 
-#define REGISTER_COLOR_ADAPTER(adapter)    \
-  inline static const auto registration_ = \
-      config::RegistrationWithConfig<EdgeColorAdapter, adapter, Config>(#adapter)
-
 struct EdgeColorAdapter {
   using Ptr = std::shared_ptr<EdgeColorAdapter>;
   using EdgeColor = std::pair<spark_dsg::Color, spark_dsg::Color>;
@@ -83,9 +79,6 @@ struct UniformEdgeColorAdapter : EdgeColorAdapter {
   explicit UniformEdgeColorAdapter(const Config& config);
   EdgeColor getColor(const spark_dsg::DynamicSceneGraph& graph,
                      const spark_dsg::SceneGraphEdge& edge) const override;
-
- private:
-  REGISTER_COLOR_ADAPTER(UniformEdgeColorAdapter);
 };
 
 void declare_config(UniformEdgeColorAdapter::Config& config);
@@ -121,7 +114,6 @@ struct ValueEdgeColorAdapter : EdgeColorAdapter {
   double max_value_;
   std::unique_ptr<EdgeValueFunctor> functor_;
   const visualizer::RangeColormap colormap_;
-  REGISTER_COLOR_ADAPTER(ValueEdgeColorAdapter);
 };
 
 void declare_config(ValueEdgeColorAdapter::Config& config);
@@ -145,11 +137,8 @@ struct TraversabilityEdgeColorAdapter : EdgeColorAdapter {
   double min_value_;
   double max_value_;
   const visualizer::RangeColormap colormap_;
-  REGISTER_COLOR_ADAPTER(TraversabilityEdgeColorAdapter);
 };
 
 void declare_config(TraversabilityEdgeColorAdapter::Config& config);
-
-#undef REGISTER_COLOR_ADAPTER
 
 }  // namespace hydra

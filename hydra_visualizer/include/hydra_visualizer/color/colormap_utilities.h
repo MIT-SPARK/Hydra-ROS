@@ -36,6 +36,8 @@
 #include <config_utilities/virtual_config.h>
 #include <spark_dsg/color.h>
 
+#include <filesystem>
+
 #include <std_msgs/msg/color_rgba.hpp>
 
 namespace hydra::visualizer {
@@ -65,45 +67,37 @@ std_msgs::msg::ColorRGBA makeColorMsg(const spark_dsg::Color& color,
 struct ContinuousPalette {
   virtual ~ContinuousPalette() = default;
   virtual spark_dsg::Color getColor(double value) const = 0;
-  spark_dsg::Color operator()(double value) const { return getColor(value); }
+  spark_dsg::Color operator()(double value) const;
 };
-
-#define REGISTER_CONTINUOUS(map_type, name) \
-  inline static const auto reg =            \
-      config::RegistrationWithConfig<ContinuousPalette, map_type, Config>(name)
 
 struct GrayPalette : ContinuousPalette {
   struct Config {};
-  explicit GrayPalette(const Config& = {}) {}
+  explicit GrayPalette(const Config& config = {});
   spark_dsg::Color getColor(double value) const override;
-  REGISTER_CONTINUOUS(GrayPalette, "gray");
 };
 
 void declare_config(GrayPalette::Config& config);
 
 struct QualityPalette : ContinuousPalette {
   struct Config {};
-  explicit QualityPalette(const Config& = {}) {}
+  explicit QualityPalette(const Config& config = {});
   spark_dsg::Color getColor(double value) const override;
-  REGISTER_CONTINUOUS(QualityPalette, "quality");
 };
 
 void declare_config(QualityPalette::Config& config);
 
 struct IronbowPalette : ContinuousPalette {
   struct Config {};
-  explicit IronbowPalette(const Config& = {}) {}
+  explicit IronbowPalette(const Config& config = {});
   spark_dsg::Color getColor(double value) const override;
-  REGISTER_CONTINUOUS(IronbowPalette, "ironbow");
 };
 
 void declare_config(IronbowPalette::Config& config);
 
 struct RainbowPalette : ContinuousPalette {
   struct Config {};
-  explicit RainbowPalette(const Config& = {}) {}
+  explicit RainbowPalette(const Config& config = {});
   spark_dsg::Color getColor(double value) const override;
-  REGISTER_CONTINUOUS(RainbowPalette, "rainbow");
 };
 
 void declare_config(RainbowPalette::Config& config);
@@ -113,10 +107,9 @@ struct SpectrumPalette : ContinuousPalette {
     std::vector<spark_dsg::Color> colors{spark_dsg::Color(), spark_dsg::Color::red()};
   } const config;
 
-  SpectrumPalette() : config(Config()) {}
-  explicit SpectrumPalette(const Config& config) : config(config) {}
+  SpectrumPalette();
+  explicit SpectrumPalette(const Config& config);
   spark_dsg::Color getColor(double value) const override;
-  REGISTER_CONTINUOUS(SpectrumPalette, "spectrum");
 };
 
 void declare_config(SpectrumPalette::Config& config);
@@ -127,14 +120,12 @@ struct HLSPalette : ContinuousPalette {
     spark_dsg::Color end = spark_dsg::Color::red();
   } const config;
 
-  explicit HLSPalette(const Config& config)
-      : config(config), hls_start(config.start.toHLS()), hls_end(config.end.toHLS()) {}
-  HLSPalette() : HLSPalette(Config()) {}
+  HLSPalette();
+  explicit HLSPalette(const Config& config);
   spark_dsg::Color getColor(double value) const override;
 
   const std::array<float, 3> hls_start;
   const std::array<float, 3> hls_end;
-  REGISTER_CONTINUOUS(HLSPalette, "hls");
 };
 
 void declare_config(HLSPalette::Config& config);
@@ -148,49 +139,81 @@ struct DivergentPalette : ContinuousPalette {
     bool dark = true;
   } const config;
 
-  explicit DivergentPalette(const Config& config) : config(config) {}
-  DivergentPalette() : DivergentPalette(Config()) {}
+  DivergentPalette();
+  explicit DivergentPalette(const Config& config);
   spark_dsg::Color getColor(double value) const override;
-
-  REGISTER_CONTINUOUS(DivergentPalette, "divergent");
 };
 
 void declare_config(DivergentPalette::Config& config);
 
-#undef REGISTER_CONTINUOUS
-
-/**
- * @brief Possible color palettes for unbounded discrete sets
- */
-enum class DiscretePalette {
-  COLORBREWER,
-  DISTINCT150,
-  RAINBOW,
+struct DiscretePalette {
+  virtual ~DiscretePalette() = default;
+  virtual const std::vector<spark_dsg::Color>& get() const = 0;
 };
 
-/**
- * @brief Possible color palettes for categorical colormaps
- */
-enum class CategoricalPalette {
-  COLORBREWER,
-  DISTINCT150,
-  CHESAPEAKE,
+struct ColorbrewerPalette : DiscretePalette {
+  struct Config {};
+  ColorbrewerPalette(const Config& config = {});
+  const std::vector<spark_dsg::Color>& get() const override;
 };
 
-/**
- * @brief Colormap for a continuous range of values
- */
+void declare_config(ColorbrewerPalette::Config& config);
+
+struct Distinct150Palette : DiscretePalette {
+  struct Config {};
+  Distinct150Palette(const Config& config = {});
+  const std::vector<spark_dsg::Color>& get() const override;
+};
+
+void declare_config(Distinct150Palette::Config& config);
+
+struct ChesapeakeColorPalette : DiscretePalette {
+  struct Config {};
+  ChesapeakeColorPalette(const Config& config = {});
+  const std::vector<spark_dsg::Color>& get() const override;
+};
+
+void declare_config(ChesapeakeColorPalette::Config& config);
+
+struct RainbowIdPalette : DiscretePalette {
+  struct Config {
+    size_t ids_per_revolution = 16;
+  } const config;
+
+  RainbowIdPalette();
+  RainbowIdPalette(const Config& config);
+  const std::vector<spark_dsg::Color>& get() const override;
+
+ private:
+  std::vector<spark_dsg::Color> colors_;
+};
+
+void declare_config(RainbowIdPalette::Config& config);
+
+struct PaletteFromFile : DiscretePalette {
+  struct Config {
+    std::filesystem::path filepath;
+  } const config;
+
+  PaletteFromFile(const Config& config);
+  const std::vector<spark_dsg::Color>& get() const override;
+
+ private:
+  std::vector<spark_dsg::Color> colors_;
+};
+
+void declare_config(PaletteFromFile::Config& config);
+
+///! Colormap for a continuous range of values
 struct RangeColormap {
   struct Config {
+    //! Color palette to use
     config::VirtualConfig<ContinuousPalette> palette;
   } const config;
 
-  explicit RangeColormap(const Config& config);
-
+  explicit RangeColormap(const Config& config = {});
   spark_dsg::Color getColor(double value, double min = 0.0, double max = 1.0) const;
-  spark_dsg::Color operator()(double value, double min = 0.0, double max = 1.0) const {
-    return getColor(value, min, max);
-  }
+  spark_dsg::Color operator()(double value, double min = 0.0, double max = 1.0) const;
 
  private:
   std::unique_ptr<ContinuousPalette> palette_;
@@ -198,41 +221,40 @@ struct RangeColormap {
 
 void declare_config(RangeColormap::Config& config);
 
-/**
- * @brief Colormap for a unbounded discrete set of values
- */
+//! Colormap for a unbounded discrete set of values
 struct DiscreteColormap {
   struct Config {
-    DiscretePalette palette = DiscretePalette::RAINBOW;
+    //! Color palette to use
+    config::VirtualConfig<DiscretePalette> palette;
   } const config;
 
-  DiscreteColormap();
-  explicit DiscreteColormap(const Config& config);
+  explicit DiscreteColormap(const Config& config = {});
   spark_dsg::Color getColor(size_t value) const;
-  spark_dsg::Color operator()(size_t value) const { return getColor(value); }
+  spark_dsg::Color operator()(size_t value) const;
 
-  const std::function<spark_dsg::Color(size_t)> colormap;
+ private:
+  std::unique_ptr<DiscretePalette> palette_;
 };
 
 void declare_config(DiscreteColormap::Config& config);
 
-/**
- * @brief Colormap for a fixed number of categories
- */
+//! Colormap for a fixed number of categories
 struct CategoricalColormap {
   struct Config {
-    size_t total_classes = 0;
-    CategoricalPalette palette = CategoricalPalette::DISTINCT150;
+    //! Color palette to use
+    config::VirtualConfig<DiscretePalette> palette;
+    //! Default color to use when the category is unknown or there are no more colors
     spark_dsg::Color default_color = spark_dsg::Color::gray();
+    //! Whether or not to reuse colors when there are more categories than colors
+    bool wrap_colors = false;
   } const config;
 
-  CategoricalColormap();
   explicit CategoricalColormap(const Config& config);
-  spark_dsg::Color getColor(size_t category) const;
-  spark_dsg::Color operator()(size_t category) const { return getColor(category); }
+  spark_dsg::Color getColor(size_t category, size_t total_classes = 0) const;
+  spark_dsg::Color operator()(size_t category, size_t total_classes = 0) const;
 
-  const std::vector<spark_dsg::Color>& colors;
-  const size_t total_classes;
+ private:
+  std::unique_ptr<DiscretePalette> palette_;
 };
 
 void declare_config(CategoricalColormap::Config& config);

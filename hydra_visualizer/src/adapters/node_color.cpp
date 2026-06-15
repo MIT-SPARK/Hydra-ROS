@@ -43,6 +43,39 @@
 #include "hydra_visualizer/color/color_parsing.h"
 
 namespace hydra {
+namespace {
+
+#define REGISTER_COLOR_ADAPTER(adapter)                                           \
+  static const auto adapter##registration =                                       \
+      config::RegistrationWithConfig<NodeColorAdapter, adapter, adapter::Config>( \
+          #adapter)
+
+REGISTER_COLOR_ADAPTER(AttributeColorAdapter);
+REGISTER_COLOR_ADAPTER(UniformColorAdapter);
+REGISTER_COLOR_ADAPTER(LabelColorAdapter);
+REGISTER_COLOR_ADAPTER(IdColorAdapter);
+REGISTER_COLOR_ADAPTER(ParentColorAdapter);
+REGISTER_COLOR_ADAPTER(StatusColorAdapter);
+REGISTER_COLOR_ADAPTER(FrontierColorAdapter);
+REGISTER_COLOR_ADAPTER(PartitionColorAdapter);
+REGISTER_COLOR_ADAPTER(ValueColorAdapter);
+REGISTER_COLOR_ADAPTER(LabelDistributionAdapter);
+
+static const auto is_active_reg =
+    config::Registration<StatusFunctor, IsActiveFunctor>("is_active");
+
+static const auto has_active_mesh_reg =
+    config::Registration<StatusFunctor, HasActiveMeshFunctor>("has_active_mesh");
+
+static const auto place_distance_reg =
+    config::Registration<ValueFunctor, DistanceFunctor>("place_distance");
+
+static const auto last_updated_reg =
+    config::Registration<ValueFunctor, LastUpdatedFunctor>("last_updated");
+
+#undef REGISTER_COLOR_ADAPTER
+
+}  // namespace
 
 using namespace spark_dsg;
 

@@ -43,6 +43,20 @@
 #include "hydra_visualizer/color/color_parsing.h"
 
 namespace hydra {
+namespace {
+
+#define REGISTER_COLOR_ADAPTER(adapter)                                           \
+  static const auto adapter##registration =                                       \
+      config::RegistrationWithConfig<EdgeColorAdapter, adapter, adapter::Config>( \
+          #adapter)
+
+REGISTER_COLOR_ADAPTER(UniformEdgeColorAdapter);
+REGISTER_COLOR_ADAPTER(ValueEdgeColorAdapter);
+REGISTER_COLOR_ADAPTER(TraversabilityEdgeColorAdapter);
+
+#undef REGISTER_COLOR_ADAPTER
+
+}  // namespace
 
 using namespace spark_dsg;
 using EdgeColor = EdgeColorAdapter::EdgeColor;
