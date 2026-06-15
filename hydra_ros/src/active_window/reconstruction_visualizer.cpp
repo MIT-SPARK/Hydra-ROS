@@ -114,6 +114,7 @@ ReconstructionVisualizer::ReconstructionVisualizer(const Config& config)
       image_pubs_(nh_),
       cloud_pubs_(nh_),
       colormap_(config.colormap),
+      label_colormap_(config.label_colormap),
       mesh_coloring_(config.mesh_coloring.create()) {}
 
 ReconstructionVisualizer::~ReconstructionVisualizer() {}
