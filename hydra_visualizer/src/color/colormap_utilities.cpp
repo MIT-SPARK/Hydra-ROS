@@ -42,6 +42,8 @@
 #include <glog/logging.h>
 #include <spark_dsg/colormaps.h>
 
+#include <fstream>
+
 #include "hydra_visualizer/color/color_parsing.h"
 
 #define REGISTER_CONTINUOUS(type, name) \
@@ -69,7 +71,7 @@ REGISTER_DISCRETE(ColorbrewerPalette, "colorbrewer");
 REGISTER_DISCRETE(Distinct150Palette, "distinct150");
 REGISTER_DISCRETE(ChesapeakeColorPalette, "chesapeake");
 REGISTER_DISCRETE(RainbowIdPalette, "rainbow");
-REGISTER_DISCRETE(PaletteFromFile, "from_file");
+REGISTER_DISCRETE(PaletteFromCsvFile, "csv");
 
 static const auto enum_init =
     config::Enum<NamedColors>::Initializer(std::map<NamedColors, std::string>{
@@ -276,18 +278,44 @@ void declare_config(RainbowIdPalette::Config& config) {
   check(config.ids_per_revolution, GT, 0, "ids_per_revolution");
 }
 
-PaletteFromFile::PaletteFromFile(const Config& config)
+PaletteFromCsvFile::PaletteFromCsvFile(const Config& config)
     : config(config::checkValid(config)) {
-  for (size_t i = 0; i < 255; ++i) {
-    colors_.push_back(spark_dsg::colormaps::rainbowId(i));
+  std::ifstream file(config.filepath);
+  if (!file.is_open()) {
+    LOG(ERROR) << "Could not open csv file '" << config.filepath << "'.";
+    return;
+  }
+
+  // Read all the data.
+  std::string line, word;
+  std::vector<std::string> row;
+  bool is_header = config.has_header;
+  while (std::getline(file, line)) {
+    row.clear();
+    std::stringstream str(line);
+    while (std::getline(str, word, config.separator)) {
+      row.push_back(word);
+    }
+
+    if (is_header) {
+      is_header = false;
+      continue;  // TODO(nathan) consider printing header
+    }
+
+    const auto red = std::stoi(row[config.rgb_columns[0]]);
+    const auto green = std::stoi(row[config.rgb_columns[1]]);
+    const auto blue = std::stoi(row[config.rgb_columns[2]]);
+    colors_.push_back(Color(red, green, blue));
   }
 }
 
-const std::vector<Color>& PaletteFromFile::get() const { return colors_; }
+const std::vector<Color>& PaletteFromCsvFile::get() const { return colors_; }
 
-void declare_config(PaletteFromFile::Config& config) {
+void declare_config(PaletteFromCsvFile::Config& config) {
   using namespace config;
-  name("RainbowIdPalette::Config");
+  name("PaletteFromCsvFile::Config");
+  field(config.has_header, "has_header");
+  field(config.rgb_columns, "rgb_columns");
   field<Path::Absolute>(config.filepath, "filepath");
   check<Path::Exists>(config.filepath, "filepath");
 }

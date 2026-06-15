@@ -190,19 +190,22 @@ struct RainbowIdPalette : DiscretePalette {
 
 void declare_config(RainbowIdPalette::Config& config);
 
-struct PaletteFromFile : DiscretePalette {
+struct PaletteFromCsvFile : DiscretePalette {
   struct Config {
+    bool has_header = true;
+    char separator = ',';
+    std::array<size_t, 3> rgb_columns{0, 1, 2};
     std::filesystem::path filepath;
   } const config;
 
-  PaletteFromFile(const Config& config);
+  PaletteFromCsvFile(const Config& config);
   const std::vector<spark_dsg::Color>& get() const override;
 
  private:
   std::vector<spark_dsg::Color> colors_;
 };
 
-void declare_config(PaletteFromFile::Config& config);
+void declare_config(PaletteFromCsvFile::Config& config);
 
 ///! Colormap for a continuous range of values
 struct RangeColormap {
