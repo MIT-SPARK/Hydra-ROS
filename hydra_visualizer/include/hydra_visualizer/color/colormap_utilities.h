@@ -211,7 +211,8 @@ struct RangeColormap {
     config::VirtualConfig<ContinuousPalette> palette;
   } const config;
 
-  explicit RangeColormap(const Config& config = {});
+  RangeColormap();
+  explicit RangeColormap(const Config& config);
   spark_dsg::Color getColor(double value, double min = 0.0, double max = 1.0) const;
   spark_dsg::Color operator()(double value, double min = 0.0, double max = 1.0) const;
 
@@ -228,7 +229,8 @@ struct DiscreteColormap {
     config::VirtualConfig<DiscretePalette> palette;
   } const config;
 
-  explicit DiscreteColormap(const Config& config = {});
+  DiscreteColormap();
+  explicit DiscreteColormap(const Config& config);
   spark_dsg::Color getColor(size_t value) const;
   spark_dsg::Color operator()(size_t value) const;
 
@@ -242,13 +244,14 @@ void declare_config(DiscreteColormap::Config& config);
 struct CategoricalColormap {
   struct Config {
     //! Color palette to use
-    config::VirtualConfig<DiscretePalette> palette;
+    config::VirtualConfig<DiscretePalette> palette{Distinct150Palette::Config{}};
     //! Default color to use when the category is unknown or there are no more colors
     spark_dsg::Color default_color = spark_dsg::Color::gray();
     //! Whether or not to reuse colors when there are more categories than colors
     bool wrap_colors = false;
   } const config;
 
+  CategoricalColormap();
   explicit CategoricalColormap(const Config& config);
   spark_dsg::Color getColor(size_t category, size_t total_classes = 0) const;
   spark_dsg::Color operator()(size_t category, size_t total_classes = 0) const;

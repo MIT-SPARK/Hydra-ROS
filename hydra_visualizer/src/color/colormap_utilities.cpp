@@ -59,6 +59,7 @@ using spark_dsg::Color;
 namespace {
 
 REGISTER_CONTINUOUS(GrayPalette, "gray");
+REGISTER_CONTINUOUS(QualityPalette, "quality");
 REGISTER_CONTINUOUS(IronbowPalette, "ironbow");
 REGISTER_CONTINUOUS(RainbowPalette, "rainbow");
 REGISTER_CONTINUOUS(SpectrumPalette, "spectrum");
@@ -291,6 +292,8 @@ void declare_config(PaletteFromFile::Config& config) {
   check<Path::Exists>(config.filepath, "filepath");
 }
 
+RangeColormap::RangeColormap() : RangeColormap(Config{}) {}
+
 RangeColormap::RangeColormap(const Config& config)
     : config(config::checkValid(config)), palette_(config.palette.create()) {}
 
@@ -309,6 +312,8 @@ void declare_config(RangeColormap::Config& config) {
   config.palette.setOptional();
   field(config.palette, "palette");
 }
+
+DiscreteColormap::DiscreteColormap() : DiscreteColormap(Config{}) {}
 
 DiscreteColormap::DiscreteColormap(const Config& config)
     : config(config::checkValid(config)), palette_(config.palette.create()) {}
@@ -333,11 +338,13 @@ void declare_config(DiscreteColormap::Config& config) {
   field(config.palette, "palette");
 }
 
+CategoricalColormap::CategoricalColormap() : CategoricalColormap(Config{}) {}
+
 CategoricalColormap::CategoricalColormap(const Config& config)
     : config(config::checkValid(config)), palette_(config.palette.create()) {}
 
 Color CategoricalColormap::getColor(size_t category, size_t total_classes) const {
-  if (category >= total_classes) {
+  if (total_classes && category >= total_classes) {
     return config.default_color;
   }
 
