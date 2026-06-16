@@ -174,6 +174,7 @@ enum class DiscretePalette {
 enum class CategoricalPalette {
   COLORBREWER,
   DISTINCT150,
+  CHESAPEAKE,
 };
 
 /**
