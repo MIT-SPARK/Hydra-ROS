@@ -53,6 +53,8 @@ const std::vector<Color>& lookupColormap(CategoricalPalette cmap) {
   switch (cmap) {
     case CategoricalPalette::COLORBREWER:
       return spark_dsg::colormaps::colorbrewerPalette();
+    case CategoricalPalette::CHESAPEAKE:
+      return spark_dsg::colormaps::chesapeakePalette();
     case CategoricalPalette::DISTINCT150:
     default:
       return spark_dsg::colormaps::distinct150Palette();
@@ -211,7 +213,8 @@ void declare_config(CategoricalColormap::Config& config) {
   enum_field(config.palette,
              "palette",
              {{CategoricalPalette::COLORBREWER, "colorbrewer"},
-              {CategoricalPalette::DISTINCT150, "distinct150"}});
+              {CategoricalPalette::DISTINCT150, "distinct150"},
+              {CategoricalPalette::CHESAPEAKE, "chesapeake"}});
   field(config.default_color, "default_color");
 }
 
