@@ -69,7 +69,8 @@ class TsdfGradientOccupancyPublisher
 
   void call(const hydra::places::HeightMap& height_map,
             const hydra::places::GradientMap& gradient_map,
-            const ActiveWindowOutput& output) const override;
+            const ActiveWindowOutput& output,
+            const TsdfLayer& tsdf_layer) const override;
 
  private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr pub_;
@@ -86,11 +87,13 @@ class TsdfGradientOccupancyPublisher
 
   void publishHeightMapViz(const hydra::places::HeightMap& height_map,
                            const TsdfLayer& layer,
-                           uint64_t timestamp_ns) const;
+                           uint64_t timestamp_ns,
+                           float robot_z) const;
 
   void publishGradientMapViz(const hydra::places::GradientMap& gradient_map,
                              const TsdfLayer& layer,
-                             uint64_t timestamp_ns) const;
+                             uint64_t timestamp_ns,
+                             float robot_z) const;
 
   int8_t gradientToOccupancy(float gradient, float confidence) const;
 };

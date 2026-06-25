@@ -89,18 +89,19 @@ std::string TsdfGradientOccupancyPublisher::printInfo() const {
 
 void TsdfGradientOccupancyPublisher::call(const HeightMap& height_map,
                                           const GradientMap& gradient_map,
-                                          const ActiveWindowOutput& output) const {
+                                          const ActiveWindowOutput& output,
+                                          const TsdfLayer& tsdf_layer) const {
   if (!pub_->get_subscription_count() && !height_map_pub_->get_subscription_count() &&
       !gradient_map_pub_->get_subscription_count()) {
     return;
   }
 
   const uint64_t timestamp_ns = output.timestamp_ns;
-  const auto& tsdf_layer = output.map().getTsdfLayer();
   const auto& world_T_body = output.world_T_body();
+  const float robot_z = static_cast<float>(world_T_body.translation().z());
 
-  publishHeightMapViz(height_map, tsdf_layer, timestamp_ns);
-  publishGradientMapViz(gradient_map, tsdf_layer, timestamp_ns);
+  publishHeightMapViz(height_map, tsdf_layer, timestamp_ns, robot_z);
+  publishGradientMapViz(gradient_map, tsdf_layer, timestamp_ns, robot_z);
 
   nav_msgs::msg::OccupancyGrid msg;
   msg.header.frame_id = GlobalInfo::instance().getFrames().map;
@@ -143,7 +144,9 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
   msg.info.height = std::ceil(dims.y());
   msg.info.origin.position.x = x_min.x();
   msg.info.origin.position.y = x_min.y();
-  msg.info.origin.position.z = 0.0f;
+  msg.info.origin.position.z =
+      config.use_relative_height ? static_cast<float>(world_T_sensor.translation().z())
+                                 : 0.0f;
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
@@ -277,7 +280,8 @@ int8_t TsdfGradientOccupancyPublisher::gradientToOccupancy(float gradient,
 
 void TsdfGradientOccupancyPublisher::publishHeightMapViz(const HeightMap& height_map,
                                                          const TsdfLayer& layer,
-                                                         uint64_t timestamp_ns) const {
+                                                         uint64_t timestamp_ns,
+                                                         float robot_z) const {
   if (!height_map_pub_->get_subscription_count()) {
     return;
   }
@@ -316,7 +320,7 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(const HeightMap& height
   msg.info.height = std::ceil(dims.y());
   msg.info.origin.position.x = x_min.x();
   msg.info.origin.position.y = x_min.y();
-  msg.info.origin.position.z = 0.0;
+  msg.info.origin.position.z = config.use_relative_height ? robot_z : 0.0f;
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
@@ -351,7 +355,8 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(const HeightMap& height
 void TsdfGradientOccupancyPublisher::publishGradientMapViz(
     const GradientMap& gradient_map,
     const TsdfLayer& layer,
-    uint64_t timestamp_ns) const {
+    uint64_t timestamp_ns,
+    float robot_z) const {
   if (!gradient_map_pub_->get_subscription_count()) {
     return;
   }
@@ -383,7 +388,7 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
   msg.info.height = std::ceil(dims.y());
   msg.info.origin.position.x = x_min.x();
   msg.info.origin.position.y = x_min.y();
-  msg.info.origin.position.z = 0.0;
+  msg.info.origin.position.z = config.use_relative_height ? robot_z : 0.0f;
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
