@@ -46,24 +46,10 @@
 
 namespace hydra {
 
-namespace {
-
-// 8-way neighbor offsets (cardinal + diagonal)
-const std::array<Index2D, 8> kNeighborOffsetsArray = {{
-    {0, -1},   // bottom
-    {-1, 0},   // left
-    {0, 1},    // top
-    {1, 0},    // right
-    {-1, -1},  // bottom-left
-    {-1, 1},   // top-left
-    {1, 1},    // top-right
-    {1, -1}    // bottom-right
-}};
-
-}  // namespace
-
-const std::array<Index2D, 8> TsdfGradientOccupancyPublisher::kNeighborOffsets =
-    kNeighborOffsetsArray;
+using hydra::places::GradientInfo;
+using hydra::places::GradientMap;
+using hydra::places::HeightMap;
+using hydra::places::Index2D;
 
 void declare_config(TsdfGradientOccupancyPublisher::Config& config) {
   using namespace config;
@@ -71,15 +57,11 @@ void declare_config(TsdfGradientOccupancyPublisher::Config& config) {
   field(config.ns, "ns");
   field(config.collate, "collate");
   field(config.use_relative_height, "use_relative_height");
-  field(config.slice_height, "slice_height", "m");
-  field(config.num_slices, "num_slices");
   field(config.add_robot_footprint, "add_robot_footprint");
   field(config.footprint_min, "footprint_min");
   field(config.footprint_max, "footprint_max");
   field(config.gradient_threshold, "gradient_threshold");
-  field(config.min_weight, "min_weight");
   field(config.min_confidence, "min_confidence");
-  field(config.smoothing, "smoothing");
   field(config.probabilistic, "probabilistic");
   field(config.filter_disjoint, "filter_disjoint");
 
@@ -105,43 +87,25 @@ std::string TsdfGradientOccupancyPublisher::printInfo() const {
   return config::toString(config);
 }
 
-void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
-                                          const VolumetricMap& map,
+void TsdfGradientOccupancyPublisher::call(const HeightMap& height_map,
+                                          const GradientMap& gradient_map,
                                           const ActiveWindowOutput& output) const {
   if (!pub_->get_subscription_count() && !height_map_pub_->get_subscription_count() &&
       !gradient_map_pub_->get_subscription_count()) {
     return;
   }
 
-  const auto& tsdf_layer = map.getTsdfLayer();
+  const uint64_t timestamp_ns = output.timestamp_ns;
+  const auto& tsdf_layer = output.map().getTsdfLayer();
   const auto& world_T_body = output.world_T_body();
 
-  // Compute vertical range
-  double base_z = config.slice_height;
-  if (config.use_relative_height) {
-    base_z += world_T_body.translation().z();
-  }
-
-  const float voxel_size = tsdf_layer.voxel_size;
-  const float min_z = static_cast<float>(base_z);
-  const float max_z = static_cast<float>(base_z + config.num_slices * voxel_size);
-
-  // Build height map (Pass 1)
-  Index2DMap<float> height_map;
-  buildHeightMap(tsdf_layer, min_z, max_z, height_map);
   publishHeightMapViz(height_map, tsdf_layer, timestamp_ns);
-
-  // Compute gradient map (Pass 2)
-  Index2DMap<GradientInfo> gradient_map;
-  computeGradientMap(height_map, voxel_size, gradient_map);
   publishGradientMapViz(gradient_map, tsdf_layer, timestamp_ns);
 
-  // Fill and publish occupancy grid (Pass 3)
   nav_msgs::msg::OccupancyGrid msg;
   msg.header.frame_id = GlobalInfo::instance().getFrames().map;
   msg.header.stamp = rclcpp::Time(timestamp_ns);
   msg.info.map_load_time = msg.header.stamp;
-
   fillOccupancyGrid(gradient_map, world_T_body, tsdf_layer, msg);
   if (config.filter_disjoint) {
     filterDisjointFreeSpace(msg, world_T_body);
@@ -149,143 +113,8 @@ void TsdfGradientOccupancyPublisher::call(uint64_t timestamp_ns,
   pub_->publish(msg);
 }
 
-std::optional<float> TsdfGradientOccupancyPublisher::extractSurfaceHeight(
-    const TsdfLayer& layer,
-    const BlockIndex& block_2d_index,
-    const VoxelIndex& local_2d,
-    float min_z,
-    float max_z) const {
-  // Uses block/local index access directly (same pattern as
-  // GradientTraversabilityEstimator) to avoid the signed/unsigned division bug in
-  // spatial_hash::blockIndexFromGlobalIndex, which corrupts getVoxelPtr lookups for
-  // negative world coordinates.
-  const float voxel_size = layer.voxel_size;
-  const int vps = static_cast<int>(layer.voxels_per_side);
-
-  // Get vertical range in voxel coordinates
-  const auto min_key = layer.getVoxelKey(spatial_hash::Point(0, 0, min_z));
-  const auto max_key = layer.getVoxelKey(spatial_hash::Point(0, 0, max_z));
-
-  // Scan from top to bottom to find highest surface
-  for (int block_z = max_key.first.z(); block_z >= min_key.first.z(); --block_z) {
-    const auto tsdf_block =
-        layer.getBlockPtr(BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z));
-    if (!tsdf_block) {
-      continue;
-    }
-
-    const int min_voxel_z = block_z == min_key.first.z() ? min_key.second.z() : 0;
-    const int max_voxel_z = block_z == max_key.first.z() ? max_key.second.z() : vps - 1;
-
-    for (int z = max_voxel_z; z >= min_voxel_z; --z) {
-      const auto& voxel =
-          tsdf_block->getVoxel(VoxelIndex(local_2d.x(), local_2d.y(), z));
-
-      if (voxel.weight < config.min_weight) {
-        continue;
-      }
-
-      if (voxel.distance < voxel_size) {
-        const VoxelKey key(BlockIndex(block_2d_index.x(), block_2d_index.y(), block_z),
-                           VoxelIndex(local_2d.x(), local_2d.y(), z));
-        return layer.getVoxelPosition(key).z();
-      }
-    }
-  }
-
-  return std::nullopt;
-}
-
-void TsdfGradientOccupancyPublisher::buildHeightMap(
-    const TsdfLayer& layer,
-    float min_z,
-    float max_z,
-    Index2DMap<float>& height_map) const {
-  const int vps = static_cast<int>(layer.voxels_per_side);
-
-  // Deduplicate to unique 2D blocks (exact pattern from
-  // GradientTraversabilityEstimator:293)
-  spatial_hash::IndexSet blocks_2d;
-  for (const auto& block_index : layer.allocatedBlockIndices()) {
-    blocks_2d.emplace(block_index.x(), block_index.y(), 0);
-  }
-
-  // Process each 2D column ONCE (matches GradientTraversabilityEstimator:294-307)
-  for (const auto& block_idx_2d : blocks_2d) {
-    for (int x = 0; x < vps; ++x) {
-      for (int y = 0; y < vps; ++y) {
-        std::optional<float> surface_height = extractSurfaceHeight(
-            layer, block_idx_2d, VoxelIndex(x, y, 0), min_z, max_z);
-
-        if (surface_height) {
-          const Index2D key(block_idx_2d.x() * vps + x, block_idx_2d.y() * vps + y);
-          height_map[key] = *surface_height;
-        }
-      }
-    }
-  }
-}
-
-void TsdfGradientOccupancyPublisher::computeGradientMap(
-    const Index2DMap<float>& height_map,
-    float voxel_size,
-    Index2DMap<GradientInfo>& gradient_map) const {
-  // Optional smoothing pass
-  Index2DMap<float> smoothed_height_map;
-  if (config.smoothing) {
-    smoothed_height_map.reserve(height_map.size());
-    for (const auto& [center_idx, center_height] : height_map) {
-      float height_sum = center_height;
-      int count = 1;
-
-      for (const auto& offset : kNeighborOffsets) {
-        const Index2D neighbor_idx(center_idx.x() + offset.x(),
-                                   center_idx.y() + offset.y());
-        auto it = height_map.find(neighbor_idx);
-        if (it != height_map.end()) {
-          height_sum += it->second;
-          count++;
-        }
-      }
-
-      smoothed_height_map[center_idx] = height_sum / count;
-    }
-  }
-
-  const auto& grad_height_map = config.smoothing ? smoothed_height_map : height_map;
-
-  // Compute gradients
-  gradient_map.reserve(grad_height_map.size());
-  for (const auto& [center_idx, center_height] : grad_height_map) {
-    float gradient_sum = 0.0f;
-    int num_neighbors_observed = 0;
-
-    for (const auto& offset : kNeighborOffsets) {
-      const Index2D neighbor_idx(center_idx.x() + offset.x(),
-                                 center_idx.y() + offset.y());
-
-      auto neighbor_it = grad_height_map.find(neighbor_idx);
-      if (neighbor_it == grad_height_map.end()) {
-        continue;
-      }
-
-      num_neighbors_observed++;
-
-      const float height_diff = std::abs(neighbor_it->second - center_height);
-      const float horiz_dist = computeHorizontalDistance(offset, voxel_size);
-      gradient_sum += height_diff / horiz_dist;
-    }
-
-    GradientInfo info;
-    info.gradient =
-        num_neighbors_observed > 0 ? gradient_sum / num_neighbors_observed : 0.0f;
-    info.confidence = num_neighbors_observed / 8.0f;
-    gradient_map[center_idx] = info;
-  }
-}
-
 void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
-    const Index2DMap<GradientInfo>& gradient_map,
+    const GradientMap& gradient_map,
     const Eigen::Isometry3d& world_T_sensor,
     const TsdfLayer& layer,
     nav_msgs::msg::OccupancyGrid& msg) const {
@@ -293,7 +122,7 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
     return;
   }
 
-  // Compute bounds using block origins (matches getLayerBounds pattern)
+  // Compute bounds using block origins
   Eigen::Vector2f x_min = Eigen::Vector2f::Constant(std::numeric_limits<float>::max());
   Eigen::Vector2f x_max =
       Eigen::Vector2f::Constant(std::numeric_limits<float>::lowest());
@@ -314,7 +143,7 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
   msg.info.height = std::ceil(dims.y());
   msg.info.origin.position.x = x_min.x();
   msg.info.origin.position.y = x_min.y();
-  msg.info.origin.position.z = config.slice_height;
+  msg.info.origin.position.z = 0.0f;
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
@@ -344,7 +173,6 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
       continue;
     }
 
-    // Check robot footprint
     if (config.add_robot_footprint) {
       const Eigen::Vector3f pos_3d(pos.x(), pos.y(), 0.0f);
       if (bbox.contains((sensor_T_world * pos_3d).eval())) {
@@ -353,9 +181,7 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
       }
     }
 
-    // Map gradient to occupancy
-    msg.data[index] =
-        gradientToOccupancy(gradient_info.gradient, gradient_info.confidence);
+    msg.data[index] = gradientToOccupancy(gradient_info.gradient, gradient_info.confidence);
   }
 }
 
@@ -368,7 +194,6 @@ void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
   const int width = static_cast<int>(msg.info.width);
   const int height = static_cast<int>(msg.info.height);
 
-  // Convert robot world position to grid coordinates
   const auto robot_pos_world = world_T_body.translation();
   const float rel_x =
       static_cast<float>(robot_pos_world.x() - msg.info.origin.position.x);
@@ -392,7 +217,6 @@ void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
   // BFS flood fill from robot position
   std::vector<bool> visited(msg.data.size(), false);
   std::queue<size_t> to_visit;
-
   to_visit.push(robot_index);
   visited[robot_index] = true;
 
@@ -404,18 +228,16 @@ void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
     const int c = current_index % width;
 
     // Check 4-connected neighbors (up, down, left, right)
+    // 4-way more conservative than 8-way
     const std::array<std::pair<int, int>, 4> neighbors = {
         {{r - 1, c}, {r + 1, c}, {r, c - 1}, {r, c + 1}}};
 
     for (const auto& [nr, nc] : neighbors) {
-      // Check bounds
       if (nr < 0 || nr >= height || nc < 0 || nc >= width) {
         continue;
       }
 
       const size_t neighbor_index = nr * width + nc;
-
-      // Skip if already visited
       if (visited[neighbor_index]) {
         continue;
       }
@@ -436,49 +258,25 @@ void TsdfGradientOccupancyPublisher::filterDisjointFreeSpace(
   }
 }
 
-float TsdfGradientOccupancyPublisher::computeHorizontalDistance(
-    const Index2D& offset, float voxel_size) const {
-  // Diagonal: sqrt(2) * voxel_size
-  if (offset.x() != 0 && offset.y() != 0) {
-    return voxel_size * std::sqrt(2.0f);
-  }
-
-  // Cardinal: voxel_size
-  return voxel_size;
-}
-
-float TsdfGradientOccupancyPublisher::computeTraversabilityFromGradient(
-    float gradient) const {
-  if (gradient >= config.gradient_threshold) {
-    return 0.0f;  // Intraversable
-  }
-
-  // Linear interpolation: 1.0 at gradient=0, 0.0 at gradient=threshold
-  return 1.0f - (gradient / config.gradient_threshold);
-}
-
 int8_t TsdfGradientOccupancyPublisher::gradientToOccupancy(float gradient,
                                                            float confidence) const {
-  // Check confidence threshold
   if (confidence < config.min_confidence) {
-    return -1;  // Unknown
+    return -1;
   }
 
   if (config.probabilistic) {
-    // Continuous mode: map traversability to occupancy
-    const float traversability = computeTraversabilityFromGradient(gradient);
+    const float traversability =
+        hydra::places::computeTraversabilityFromGradient(gradient, config.gradient_threshold);
     const float occupancy_float = (1.0f - traversability) * 100.0f;
     return static_cast<int8_t>(std::clamp(occupancy_float, 0.0f, 100.0f));
   } else {
-    // Binary mode: threshold-based
     return gradient >= config.gradient_threshold ? 100 : 0;
   }
 }
 
-void TsdfGradientOccupancyPublisher::publishHeightMapViz(
-    const Index2DMap<float>& height_map,
-    const TsdfLayer& layer,
-    uint64_t timestamp_ns) const {
+void TsdfGradientOccupancyPublisher::publishHeightMapViz(const HeightMap& height_map,
+                                                         const TsdfLayer& layer,
+                                                         uint64_t timestamp_ns) const {
   if (!height_map_pub_->get_subscription_count()) {
     return;
   }
@@ -487,7 +285,6 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
     return;
   }
 
-  // Find min/max heights for normalization
   float min_height = std::numeric_limits<float>::max();
   float max_height = std::numeric_limits<float>::lowest();
   for (const auto& [_, height] : height_map) {
@@ -495,7 +292,6 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
     max_height = std::max(max_height, height);
   }
 
-  // Compute bounds using block origins (matches getLayerBounds pattern)
   Eigen::Vector2f x_min = Eigen::Vector2f::Constant(std::numeric_limits<float>::max());
   Eigen::Vector2f x_max =
       Eigen::Vector2f::Constant(std::numeric_limits<float>::lowest());
@@ -510,7 +306,6 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
 
   const Eigen::Vector2f dims = (x_max - x_min) / voxel_size;
 
-  // Initialize grid
   nav_msgs::msg::OccupancyGrid msg;
   msg.header.frame_id = GlobalInfo::instance().getFrames().map;
   msg.header.stamp = rclcpp::Time(timestamp_ns);
@@ -524,10 +319,8 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
-  // Fill grid with normalized heights
   const float height_range = max_height - min_height;
   for (const auto& [global_idx, height] : height_map) {
-    // Convert global 2D index to actual voxel position
     const spatial_hash::GlobalIndex global_3d(global_idx.x(), global_idx.y(), 0);
     const VoxelKey key =
         spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
@@ -543,12 +336,11 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
       continue;
     }
 
-    // Normalize height to 0-100 range
     if (height_range > 1e-6f) {
       const float normalized = (height - min_height) / height_range * 100.0f;
       msg.data[index] = static_cast<int8_t>(std::clamp(normalized, 0.0f, 100.0f));
     } else {
-      msg.data[index] = 50;  // All same height -> mid-gray
+      msg.data[index] = 50;
     }
   }
 
@@ -556,7 +348,7 @@ void TsdfGradientOccupancyPublisher::publishHeightMapViz(
 }
 
 void TsdfGradientOccupancyPublisher::publishGradientMapViz(
-    const Index2DMap<GradientInfo>& gradient_map,
+    const GradientMap& gradient_map,
     const TsdfLayer& layer,
     uint64_t timestamp_ns) const {
   if (!gradient_map_pub_->get_subscription_count()) {
@@ -567,7 +359,6 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
     return;
   }
 
-  // Compute bounds using block origins (matches getLayerBounds pattern)
   Eigen::Vector2f x_min = Eigen::Vector2f::Constant(std::numeric_limits<float>::max());
   Eigen::Vector2f x_max =
       Eigen::Vector2f::Constant(std::numeric_limits<float>::lowest());
@@ -582,7 +373,6 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
 
   const Eigen::Vector2f dims = (x_max - x_min) / voxel_size;
 
-  // Initialize grid
   nav_msgs::msg::OccupancyGrid msg;
   msg.header.frame_id = GlobalInfo::instance().getFrames().map;
   msg.header.stamp = rclcpp::Time(timestamp_ns);
@@ -596,9 +386,7 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
   msg.info.origin.orientation.w = 1.0;
   msg.data.resize(msg.info.width * msg.info.height, -1);
 
-  // Fill grid with gradient values
   for (const auto& [global_idx, gradient_info] : gradient_map) {
-    // Convert global 2D index to actual voxel position
     const spatial_hash::GlobalIndex global_3d(global_idx.x(), global_idx.y(), 0);
     const VoxelKey key =
         spatial_hash::keyFromGlobalIndex(global_3d, layer.voxels_per_side);
@@ -614,8 +402,6 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
       continue;
     }
 
-    // Map gradient to 0-100 (using gradient_threshold as max)
-    // Low gradient (flat) -> 0 (free), high gradient (steep) -> 100 (occupied)
     const float normalized =
         std::min(gradient_info.gradient / config.gradient_threshold, 1.0f) * 100.0f;
     msg.data[index] = static_cast<int8_t>(normalized);
@@ -627,7 +413,7 @@ void TsdfGradientOccupancyPublisher::publishGradientMapViz(
 namespace {
 
 static const auto registration_ =
-    config::RegistrationWithConfig<ReconstructionModule::Sink,
+    config::RegistrationWithConfig<hydra::places::GradientTraversabilityEstimator::Sink,
                                    TsdfGradientOccupancyPublisher,
                                    TsdfGradientOccupancyPublisher::Config>(
         "TsdfGradientOccupancyPublisher");

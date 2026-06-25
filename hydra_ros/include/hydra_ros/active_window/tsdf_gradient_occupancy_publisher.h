@@ -33,12 +33,9 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/active_window/reconstruction_module.h>
-#include <hydra/places/traversability_layer.h>
+#include <hydra/places/traversability_estimator.h>
 #include <ianvs/node_handle.h>
 #include <spark_dsg/bounding_box.h>
-
-#include <optional>
 
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <rclcpp/publisher.hpp>
@@ -47,44 +44,19 @@
 
 namespace hydra {
 
-using Index2D = Eigen::Vector2i;
-
-struct Index2DHash {
-  inline static const auto s = Index2D(1, 1290);
-  int operator()(const Index2D& index) const { return index.dot(s); }
-};
-
-template <typename ValueT>
-using Index2DMap =
-    std::unordered_map<Index2D,
-                       ValueT,
-                       Index2DHash,
-                       std::equal_to<Index2D>,
-                       Eigen::aligned_allocator<std::pair<const Index2D, ValueT>>>;
-
-struct GradientInfo {
-  float gradient = 0.0f;    // mean gradient magnitude
-  float confidence = 0.0f;  // num_neighbors / 8.0
-};
-
-class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
+class TsdfGradientOccupancyPublisher
+    : public hydra::places::GradientTraversabilityEstimator::Sink {
  public:
   struct Config {
-    // Base occupancy config fields
     std::string ns = "~/tsdf_gradient";
     bool collate = false;
     bool use_relative_height = true;
-    double slice_height = -1.0;
-    size_t num_slices = 20;  // if if 10 cm, we want 2 m from -1 m to +1 m
-    bool add_robot_footprint = false;
+    bool add_robot_footprint = false; // force voxels around robot to be free
     Eigen::Vector3f footprint_min = Eigen::Vector3f::Zero();
     Eigen::Vector3f footprint_max = Eigen::Vector3f::Zero();
 
-    // Gradient-specific parameters
     float gradient_threshold = 0.5f;  // m/m - max traversable gradient
-    float min_weight = 1.0e-6f;       // min TSDF weight for observed voxel
     float min_confidence = 0.5f;      // min confidence (neighbors/8) for valid cell
-    bool smoothing = true;            // apply box filter to reduce TSDF ripple
     bool probabilistic = false;       // continuous vs binary occupancy
     bool filter_disjoint = false;     // remove free space not connected to robot
   } const config;
@@ -95,8 +67,8 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
 
   std::string printInfo() const override;
 
-  void call(uint64_t timestamp_ns,
-            const VolumetricMap& map,
+  void call(const hydra::places::HeightMap& height_map,
+            const hydra::places::GradientMap& gradient_map,
             const ActiveWindowOutput& output) const override;
 
  private:
@@ -104,23 +76,7 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr height_map_pub_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr gradient_map_pub_;
 
-  // Helper functions
-  std::optional<float> extractSurfaceHeight(const TsdfLayer& layer,
-                                            const BlockIndex& block_2d_index,
-                                            const VoxelIndex& local_2d,
-                                            float min_z,
-                                            float max_z) const;
-
-  void buildHeightMap(const TsdfLayer& layer,
-                      float min_z,
-                      float max_z,
-                      Index2DMap<float>& height_map) const;
-
-  void computeGradientMap(const Index2DMap<float>& height_map,
-                          float voxel_size,
-                          Index2DMap<GradientInfo>& gradient_map) const;
-
-  void fillOccupancyGrid(const Index2DMap<GradientInfo>& gradient_map,
+  void fillOccupancyGrid(const hydra::places::GradientMap& gradient_map,
                          const Eigen::Isometry3d& world_T_sensor,
                          const TsdfLayer& layer,
                          nav_msgs::msg::OccupancyGrid& msg) const;
@@ -128,22 +84,15 @@ class TsdfGradientOccupancyPublisher : public ReconstructionModule::Sink {
   void filterDisjointFreeSpace(nav_msgs::msg::OccupancyGrid& msg,
                                const Eigen::Isometry3d& world_T_body) const;
 
-  void publishHeightMapViz(const Index2DMap<float>& height_map,
+  void publishHeightMapViz(const hydra::places::HeightMap& height_map,
                            const TsdfLayer& layer,
                            uint64_t timestamp_ns) const;
 
-  void publishGradientMapViz(const Index2DMap<GradientInfo>& gradient_map,
+  void publishGradientMapViz(const hydra::places::GradientMap& gradient_map,
                              const TsdfLayer& layer,
                              uint64_t timestamp_ns) const;
 
-  float computeHorizontalDistance(const Index2D& offset, float voxel_size) const;
-
-  float computeTraversabilityFromGradient(float gradient) const;
-
   int8_t gradientToOccupancy(float gradient, float confidence) const;
-
-  // 8-way neighbor offsets
-  static const std::array<Index2D, 8> kNeighborOffsets;
 };
 
 void declare_config(TsdfGradientOccupancyPublisher::Config& config);
