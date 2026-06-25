@@ -181,7 +181,8 @@ void TsdfGradientOccupancyPublisher::fillOccupancyGrid(
       }
     }
 
-    msg.data[index] = gradientToOccupancy(gradient_info.gradient, gradient_info.confidence);
+    msg.data[index] =
+        gradientToOccupancy(gradient_info.gradient, gradient_info.confidence);
   }
 }
 
@@ -265,8 +266,8 @@ int8_t TsdfGradientOccupancyPublisher::gradientToOccupancy(float gradient,
   }
 
   if (config.probabilistic) {
-    const float traversability =
-        hydra::places::computeTraversabilityFromGradient(gradient, config.gradient_threshold);
+    const float traversability = hydra::places::computeTraversabilityFromGradient(
+        gradient, config.gradient_threshold);
     const float occupancy_float = (1.0f - traversability) * 100.0f;
     return static_cast<int8_t>(std::clamp(occupancy_float, 0.0f, 100.0f));
   } else {

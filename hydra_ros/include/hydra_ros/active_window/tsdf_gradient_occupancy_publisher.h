@@ -51,7 +51,7 @@ class TsdfGradientOccupancyPublisher
     std::string ns = "~/tsdf_gradient";
     bool collate = false;
     bool use_relative_height = true;
-    bool add_robot_footprint = false; // force voxels around robot to be free
+    bool add_robot_footprint = false;  // force voxels around robot to be free
     Eigen::Vector3f footprint_min = Eigen::Vector3f::Zero();
     Eigen::Vector3f footprint_max = Eigen::Vector3f::Zero();
 
