@@ -35,6 +35,7 @@ add_library(
   src/hydra_ros_pipeline.cpp
   src/active_window/reconstruction_visualizer.cpp
   src/active_window/tsdf_occupancy_publisher.cpp
+  src/active_window/tsdf_gradient_occupancy_publisher.cpp
   src/backend/ros_backend_publisher.cpp
   src/backend/gt_room_publisher.cpp
   src/frontend/gvd_occupancy_publisher.cpp

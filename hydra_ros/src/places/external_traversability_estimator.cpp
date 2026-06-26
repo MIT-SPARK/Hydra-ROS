@@ -58,7 +58,8 @@ void declare_config(ExternalTraversabilityEstimator::Config& config) {
 }
 
 ExternalTraversabilityEstimator::ExternalTraversabilityEstimator(const Config& config)
-    : config(config::checkValid(config)) {
+    : TraversabilityEstimator(TraversabilityEstimator::Config{}),
+      config(config::checkValid(config)) {
   auto nh = ianvs::NodeHandle::this_node();
   sub_ = nh.create_subscription<nav_msgs::msg::OccupancyGrid>(
       config.input_topic,
