@@ -33,6 +33,7 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
+#include <hydra/common/semantic_color_map.h>
 #include <ianvs/node_handle.h>
 #include <message_filters/subscriber.h>
 #include <message_filters/sync_policies/approximate_time.h>
@@ -101,6 +102,24 @@ struct LabelSubscriber {
   void fillInput(const sensor_msgs::msg::Image& img, ImageInputPacket& packet) const;
 
  private:
+  std::shared_ptr<FilterSub<sensor_msgs::msg::Image>> impl_;
+};
+
+struct ColormappedLabelSubscriber {
+ public:
+  using MsgType = sensor_msgs::msg::Image;
+  using Filter = message_filters::SimpleFilter<MsgType>;
+
+  ColormappedLabelSubscriber();
+  explicit ColormappedLabelSubscriber(ianvs::NodeHandle nh, uint32_t queue_size = 1);
+  virtual ~ColormappedLabelSubscriber();
+
+  Filter& getFilter() const;
+  void setColormap(const SemanticColorMap* colormap);
+  void fillInput(const sensor_msgs::msg::Image& img, ImageInputPacket& packet) const;
+
+ private:
+  const SemanticColorMap* colormap_;
   std::shared_ptr<FilterSub<sensor_msgs::msg::Image>> impl_;
 };
 
@@ -213,6 +232,8 @@ class ClosedSetImageReceiver : public ImageReceiverImpl<LabelSubscriber> {
   virtual ~ClosedSetImageReceiver() = default;
 };
 
+void declare_config(ClosedSetImageReceiver::Config& config);
+
 class OpenSetImageReceiver : public ImageReceiverImpl<FeatureSubscriber> {
  public:
   struct Config : RosDataReceiver::Config {};
@@ -221,5 +242,22 @@ class OpenSetImageReceiver : public ImageReceiverImpl<FeatureSubscriber> {
 };
 
 void declare_config(OpenSetImageReceiver::Config& config);
+
+class ColormappedLabelImageReceiver
+    : public ImageReceiverImpl<ColormappedLabelSubscriber> {
+ public:
+  struct Config : RosDataReceiver::Config {
+    std::filesystem::path colormap_path;
+  } const config;
+
+  ColormappedLabelImageReceiver(const Config& config, const std::string& sensor_name);
+  virtual ~ColormappedLabelImageReceiver() = default;
+  bool initImpl() override;
+
+ private:
+  std::unique_ptr<SemanticColorMap> colormap_;
+};
+
+void declare_config(ColormappedLabelImageReceiver::Config& config);
 
 }  // namespace hydra

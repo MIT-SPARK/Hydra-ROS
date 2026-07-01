@@ -35,6 +35,8 @@
 #include "hydra_ros/input/image_receiver.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/types/path.h>
+#include <config_utilities/validation.h>
 #include <glog/logging.h>
 
 #include <cv_bridge/cv_bridge.hpp>
@@ -120,6 +122,55 @@ void LabelSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
   }
 }
 
+ColormappedLabelSubscriber::ColormappedLabelSubscriber() : colormap_(nullptr) {}
+
+ColormappedLabelSubscriber::ColormappedLabelSubscriber(ianvs::NodeHandle nh,
+                                                       uint32_t queue_size)
+    : colormap_(nullptr),
+      impl_(std::make_shared<FilterSub<Image>>(nh, "semantic/image_raw", queue_size)) {}
+
+ColormappedLabelSubscriber::~ColormappedLabelSubscriber() = default;
+
+ColormappedLabelSubscriber::Filter& ColormappedLabelSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
+
+void ColormappedLabelSubscriber::setColormap(const SemanticColorMap* colormap) {
+  colormap_ = colormap;
+}
+
+void ColormappedLabelSubscriber::fillInput(const Image& img,
+                                           ImageInputPacket& packet) const {
+  if (!colormap_) {
+    LOG(ERROR) << "Colormap not set for subscriber!";
+    return;
+  }
+
+  cv::Mat colors;
+  try {
+    colors = cv_bridge::toCvCopy(img)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert label image: " << e.what();
+    return;
+  }
+
+  if (colors.empty() || colors.channels() != 3) {
+    LOG(ERROR) << "Failed to decode color image to semantics!";
+    return;
+  }
+
+  packet.labels = cv::Mat(colors.size(), CV_32SC1);
+  for (int r = 0; r < colors.rows; ++r) {
+    for (int c = 0; c < colors.cols; ++c) {
+      const auto& pixel = colors.at<cv::Vec3b>(r, c);
+      const spark_dsg::Color color(pixel[0], pixel[1], pixel[2]);
+      // this is lazy, but works out to the same invalid label we normally use
+      packet.labels.at<int32_t>(r, c) =
+          colormap_->getLabelFromColor(color).value_or(-1);
+    }
+  }
+}
+
 FeatureSubscriber::FeatureSubscriber() = default;
 
 FeatureSubscriber::FeatureSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
@@ -148,12 +199,6 @@ void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) 
   }
 }
 
-void declare_config(RGBDImageReceiver::Config& config) {
-  using namespace config;
-  name("RGBDImageReceiver::Config");
-  base<RosDataReceiver::Config>(config);
-}
-
 RGBDImageReceiver::RGBDImageReceiver(const Config& config,
                                      const std::string& sensor_name)
     : RosDataReceiver(config, sensor_name) {}
@@ -180,9 +225,9 @@ void RGBDImageReceiver::callback(const sensor_msgs::msg::Image::ConstSharedPtr& 
   queue.push(packet);
 }
 
-void declare_config(ClosedSetImageReceiver::Config& config) {
+void declare_config(RGBDImageReceiver::Config& config) {
   using namespace config;
-  name("ClosedSetImageReceiver::Config");
+  name("RGBDImageReceiver::Config");
   base<RosDataReceiver::Config>(config);
 }
 
@@ -190,15 +235,44 @@ ClosedSetImageReceiver::ClosedSetImageReceiver(const Config& config,
                                                const std::string& sensor_name)
     : ImageReceiverImpl<LabelSubscriber>(config, sensor_name) {}
 
+void declare_config(ClosedSetImageReceiver::Config& config) {
+  using namespace config;
+  name("ClosedSetImageReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
+
+OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
+                                           const std::string& sensor_name)
+    : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
+
 void declare_config(OpenSetImageReceiver::Config& config) {
   using namespace config;
   name("OpenSetImageReceiver::Config");
   base<hydra::RosDataReceiver::Config>(config);
 }
 
-OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
-                                           const std::string& sensor_name)
-    : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
+ColormappedLabelImageReceiver::ColormappedLabelImageReceiver(const Config& config,
+                                                             const std::string& name)
+    : ImageReceiverImpl<ColormappedLabelSubscriber>(config, name),
+      config(config::checkValid(config)),
+      colormap_(SemanticColorMap::fromCsv(config.colormap_path)) {
+  CHECK(colormap_) << "Colormap required!";
+}
+
+bool ColormappedLabelImageReceiver::initImpl() {
+  using Base = ImageReceiverImpl<ColormappedLabelSubscriber>;
+  const auto ret = Base::initImpl();
+  semantic_sub_.setColormap(colormap_.get());
+  return ret;
+}
+
+void declare_config(ColormappedLabelImageReceiver::Config& config) {
+  using namespace config;
+  name("ColormappedLabelImageReceiver::Config");
+  base<hydra::RosDataReceiver::Config>(config);
+  field<Path::Absolute>(config.colormap_path, "colormap_path");
+  check<Path::Exists>(config.colormap_path, "colormap_path");
+}
 
 namespace {
 
@@ -220,6 +294,11 @@ static const auto open_registration =
                                    OpenSetImageReceiver::Config,
                                    std::string>("OpenSetImageReceiver");
 
-}  // namespace
+static const auto color_registration =
+    config::RegistrationWithConfig<hydra::DataReceiver,
+                                   ColormappedLabelImageReceiver,
+                                   ColormappedLabelImageReceiver::Config,
+                                   std::string>("ColormappedLabelImageReceiver");
 
+}  // namespace
 }  // namespace hydra
