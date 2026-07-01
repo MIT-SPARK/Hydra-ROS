@@ -1,0 +1,46 @@
+---
+launch:
+  - arg: {name: bag_path}
+  - arg: {name: robot_name}
+  - arg: {name: delay, default: '10.0', description: bag delay amount}
+  - arg: {name: rate, default: '1.0', description: bag play rate}
+  - arg: {name: start, default: '0.0', description: bag start offset}
+  - arg: {name: duration, default: '-1.0', description: bag duration}
+  - arg: {name: add_noise, default: 'true', description: use noisy tf}
+  - arg: {name: xyz_std_dev, default: '0.001', description: position noise standard deviation}
+  - arg: {name: yaw_std_dev, default: '0.0001', description: rotation noise standard deviation}
+  - let:
+      name: robot_sub
+      value: /tesse:/$(var robot_name)  # avoids problems with escaping substitution
+  - push_ros_namespace: {namespace: $(var robot_name)}
+  - node:
+      pkg: ianvs
+      exec: play_rosbag
+      on_exit: shutdown
+      args: >
+        $(var bag_path)
+        --disable-keyboard-controls
+        --clock -d $(var delay) -r $(var rate)
+        --playback-duration $(var duration) --start-offset $(var start)
+        --exclude-topics /tf_static /tf
+        --topic-substitution $(var robot_sub)
+  - node:
+      pkg: ianvs
+      exec: transform_file_broadcaster
+      name: transform_file_broadcaster
+      param:
+        - {name: prefix, value: $(var robot_name)/}
+        - {name: filepath, value: $(find-pkg-share hydra_multi_system)/config/static_tfs/uhumans2_static_tfs.yaml}
+  - node:
+      pkg: hydra_ros
+      exec: noisy_tf_publisher
+      name: noisy_tf_publisher
+      remap:
+        - {from: ~/odom, to: odom}
+      param:
+        - {name: start_from_origin, value: true}
+        - {name: add_noise, value: $(var add_noise)}
+        - {name: parent_frame, value: $(var robot_name)/odom}
+        - {name: child_frame, value: $(var robot_name)/base_link}
+        - {name: yaw_std_dev, value: $(var yaw_std_dev)}
+        - {name: xyz_std_dev, value: $(var xyz_std_dev)}

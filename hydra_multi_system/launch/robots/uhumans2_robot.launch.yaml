@@ -1,0 +1,62 @@
+---
+launch:
+  - arg: {name: sim_time, default: 'true', description: use bag time}
+  # robot identifiers
+  - arg: {name: robot_name, description: unique robot name}
+  - arg: {name: robot_id, default: '0', description: unique robot identifier}
+  # pipeline
+  - arg: {name: optimize, default: 'true', description: run optimization in the backend upon loop closure}
+  - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
+  - arg: {name: scene, default: uhumans2_office, description: uhumans2 scene name}
+  - arg: {name: object_variant, default: crisp, description: object variant}
+  - arg: {name: log_path, default: $(env HOME)/.hydra_multi/$(var scene)/robot_$(var robot_id), description: directory to output to}
+  # crisp
+  - arg: {name: crisp_env, default: $(env CRISP_ENV), description: Path to crisp environment}
+  - arg: {name: crisp_checkpoint, default: $(env CRISP_MODEL_DIR)/202508042315_P41O3/checkpoint.pth}
+  # frames
+  - arg: {name: sensor_frame, default: $(var robot_name)/left_cam, description: camera frame}
+  - arg: {name: robot_frame, default: $(var robot_name)/base_link, description: robot body tf frame}
+  - arg: {name: odom_frame, default: $(var robot_name)/odom, description: odometry frame}
+  - arg: {name: map_frame, default: $(var robot_name)/map, description: backend scene graph frame}
+  # nodes
+  - push_ros_namespace: {namespace: $(var robot_name)}
+  - pyenv_node:
+      if: $(eval "'$(var object_variant)' == 'crisp'")
+      pkg: hydra_multi_system
+      exec: crisp_node
+      name: crisp
+      pyenv: $(var crisp_env)
+      param:
+        - {name: checkpoint, value: $(var crisp_checkpoint)}
+  - node:
+      pkg: hydra_ros
+      exec: hydra_ros_node
+      name: hydra
+      on_exit: shutdown
+      env:
+        - {name: TERM, value: xterm-256color}
+      remap:
+        - {from: hydra/input/left_cam/depth_registered/image_rect, to: /$(var robot_name)/depth_cam/mono/image_raw}
+        - {from: hydra/input/left_cam/rgb/image_raw, to: /$(var robot_name)/left_cam/rgb/image_raw}
+        - {from: hydra/input/left_cam/rgb/camera_info, to: /$(var robot_name)/left_cam/camera_info}
+        - {from: hydra/input/left_cam/semantic/image_raw, to: /$(var robot_name)/seg_cam/rgb/image_raw}
+        - {from: hydra/detect_object, to: detect_object}
+      args: >-
+        --config-utilities-var robot_name=$(var robot_name)
+        --config-utilities-var robot_frame=$(var robot_frame)
+        --config-utilities-file $(find-pkg-share hydra)/config/label_spaces/$(var scene)_label_space.yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/uhumans2.yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/variants/uhumans2_$(var object_variant).yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/input/uhumans2.yaml
+        --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
+        --config-utilities-yaml {backend: {optimize_on_lc: $(var optimize), publish_backend_tf: false}}
+        --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
+        --config-utilities-yaml {glog_verbosity: 0, config_verbosity: -1, show_run_settings: false, preprint_config: false}
+        --config-utilities-yaml {semantic_colormap_file: $(find-pkg-share hydra_ros)/config/color/$(var scene).csv}
+  - include:
+      file: $(find-pkg-share hydra_multi_system)/launch/robots/robot_visualizer.launch.yaml
+      arg:
+        - {name: use_mesh_color_adapter, value: 'false'}
+        - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/robots/uhumans2.rviz}
+  - node: {pkg: tf2_ros, exec: static_transform_publisher, args: --frame-id map --child-frame-id $(var map_frame)}
+  - node: {pkg: tf2_ros, exec: static_transform_publisher, args: --frame-id $(var map_frame) --child-frame-id $(var odom_frame)}

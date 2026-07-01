@@ -1,0 +1,34 @@
+---
+session_name: uhumans2_{{ robot_name }}
+shell_command_before:
+  - source $COLCON_WS/install/setup.{{ shell.extension }}
+options:
+  default-command: {{ shell.cmd }}
+windows:
+  - window_name: {{ robot_name }}_data
+    panes:
+      {% if run_zenoh %}
+      - ros2 run rmw_zenoh_cpp rmw_zenohd
+      {% endif %}
+      - ros2 launch hydra_multi_system play_uhumans2.launch.yaml
+          robot_name:={{ robot_name }}
+          delay:={{ delay }}
+          rate:={{ rate }}
+          start:={{ bag_start }}
+          duration:={{ bag_duration }}
+          bag_path:={{ bag_path }}
+  - window_name: {{ robot_name }}_hydra
+    focus: true
+    panes:
+      - ros2 launch hydra_multi_system uhumans2_robot.launch.yaml
+          exit_after_clock:='true'
+          robot_name:={{ robot_name }}
+          robot_id:={{ robot_id }}
+          object_variant:={{ object_variant }}
+          log_path:={{ output_path }}
+          start_visualizer:={{ visualize }}
+          start_rviz:={{ visualize }}
+          start_config_gui:={{ visualize and start_gui }}
+        {% if close_session %}
+        && tmux kill-session
+        {% endif %}

@@ -1,0 +1,4 @@
+---
+external_library_paths: [hydra_multi_system]
+plugins:
+  crisp_objects: {type: CrispMeshPlugin, layer: OBJECTS}

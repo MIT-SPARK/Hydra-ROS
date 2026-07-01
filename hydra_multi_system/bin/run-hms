@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+
+import pathlib
+import pprint
+import shutil
+import subprocess
+import sys
+import tempfile
+
+import click
+import jinja2
+import rich
+import rich.console
+import rich.panel
+import rich.syntax
+from rich.columns import Columns
+
+
+def _pkg_path():
+    return pathlib.Path(__file__).absolute().parent.parent
+
+
+def _get_session_path(session_path=None):
+    pkg_path = _pkg_path()
+    click.secho(f"Using package location '{pkg_path}'", fg="green")
+    tmux_ws_path = pkg_path / "tmux"
+    tmux_files = sorted([x for x in tmux_ws_path.rglob("*.yaml")])
+    tmux_names = [x.relative_to(tmux_ws_path) for x in tmux_files]
+
+    if session_path is None:
+        rich.print(Columns([f"({i + 1}) {x}" for i, x in enumerate(tmux_names)]))
+        session_idx = click.prompt("What session do you want to load?", default=1)
+        if session_idx <= 0 or session_idx > len(tmux_files):
+            click.secho(f"Invalid session choice: '{session_idx}'", fg="red")
+            return 1
+
+        session_path = tmux_files[session_idx - 1]
+
+    session_path = pathlib.Path(session_path).expanduser()
+    session_path = tmux_ws_path / session_path
+    if not session_path.exists():
+        click.secho(f"Invalid tmuxp session filepath: '{session_path}'!", fg="red")
+        click.echo(f"Available: {pprint.pformat(tmux_names)}")
+        return None
+
+    return session_path
+
+
+def _render_tmuxp(session_path, context):
+    with session_path.open("r") as fin:
+        env = jinja2.Environment(trim_blocks=True, lstrip_blocks=True)
+        template = env.from_string(fin.read())
+
+    return template.render(context)
+
+
+@click.command()
+@click.argument("robot_name")
+@click.argument("bag_path", type=click.Path(exists=True))
+@click.option("--session_path", "-p", type=click.Path(), help="session_path to use")
+@click.option("--output-dir", "-o", type=click.Path(), help="output directory")
+@click.option(
+    "--object-variant",
+    "-v",
+    default="crisp",
+    type=click.Choice(["crisp", "mesh_objects", "khronos"]),
+)
+@click.option(
+    "--segmentation_model",
+    default="close_set",
+    type=click.Choice(["close_set", "yolov11", "gdsam2"]),
+)
+@click.option(
+    "--sensor-type",
+    "-s",
+    default="rgbd",
+    type=click.Choice(["rgbd", "velodyne16", "ouster64", "hybrid"]),
+)
+@click.option(
+    "--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag start"
+)
+@click.option("--bag-rate", "-r", default=1.0, help="bag playback rate")
+@click.option("--bag-start", default=0.0, help="bag start offset")
+@click.option("--bag-duration", default=-1.0, help="bag duration")
+@click.option("--yes", "-y", is_flag=True, help="skip env variable check")
+@click.option("--force", "-f", is_flag=True, help="clear output if it exists")
+@click.option("--shell", default="zsh", help="shell to use")
+@click.option(
+    "--use-ground-seg/--no-use-ground-seg",
+    default=False,
+    help="use Patchwork ground segmentation",
+)
+@click.option(
+    "--ground-seg-sensor-type",
+    default="velodyne16",
+    type=click.Choice(["velodyne16", "velodyne64", "ouster64", "ouster128"]),
+    help="LiDAR type for Patchwork ground segmentation",
+)
+@click.option("--run-zenoh/--no-run-zenoh", default=True, help="start zenoh router")
+@click.option(
+    "--start-gui/--no-start-gui", default=False, help="start dynamic reconfigure gui"
+)
+@click.option("--visualize/--no-visualize", default=True, help="visualize scene graph")
+@click.option(
+    "--close-session/--no-close-session",
+    default=True,
+    help="kill tmux session after hydra exits",
+)
+@click.option(
+    "--auto-attach/--no-auto-attach",
+    default=True,
+    help="automatically attach to new tmux session",
+)
+def main(
+    robot_name,
+    bag_path,
+    session_path,
+    output_dir,
+    object_variant,
+    sensor_type,
+    segmentation_model,
+    bag_delay,
+    bag_rate,
+    bag_start,
+    bag_duration,
+    yes,
+    force,
+    shell,
+    use_ground_seg,
+    ground_seg_sensor_type,
+    run_zenoh,
+    start_gui,
+    visualize,
+    close_session,
+    auto_attach,
+):
+    session_path = _get_session_path(session_path=session_path)
+
+    print(session_path.name.split("/")[-1])
+
+    # TODO: improve automated selection
+    if segmentation_model == "yolov11" or segmentation_model == "gdsam2":
+        if session_path.name.split("/")[-1] != "kimera_multi_instance.yaml":
+            click.secho(
+                f"Segmentation model '{segmentation_model}' requires 'kimera_multi_instance.yaml' tmux session! Automatically changing the session...",
+                fg="red",
+            )
+            session_path = _get_session_path(
+                session_path="robots/kimera_multi_instance.yaml"
+            )
+            click.secho(f"Using session '{session_path}'", fg="green")
+
+    bag_path = pathlib.Path(bag_path).expanduser().absolute()
+    if not output_dir:
+        output_dir = (
+            _pkg_path()
+            / "output"
+            / bag_path.stem
+            / object_variant
+            / sensor_type
+            / robot_name
+        )
+    else:
+        output_dir = pathlib.Path(output_dir).expanduser().absolute()
+
+    if output_dir.exists():
+        if not force:
+            click.confirm(
+                f"Output directory '{output_dir}' exists! Remove?", abort=True
+            )
+
+        click.secho(f"Clearing previous output: '{output_dir}'", fg="green")
+        shutil.rmtree(output_dir)
+
+    click.secho(f"Loading {session_path}...", fg="green")
+
+    context = {
+        "robot_id": 0,
+        "robot_name": robot_name,
+        "bag_path": bag_path,
+        "bag_duration": bag_duration,
+        "bag_start": bag_start,
+        "delay": bag_delay,
+        "output_path": output_dir,
+        "rate": bag_rate,
+        "object_variant": object_variant,
+        "sensor_type": sensor_type,
+        "use_ground_seg": use_ground_seg,
+        "ground_seg_sensor_type": ground_seg_sensor_type,
+        "shell": {"extension": shell, "cmd": shutil.which(shell)},
+        "run_zenoh": run_zenoh,
+        "start_gui": start_gui,
+        "visualize": visualize,
+        "close_session": close_session,
+    }
+
+    # TODO: improve automated selection
+    match segmentation_model:
+        case "yolov11":
+            labelspace_name = "yolov11_coco"
+            context["segmentation_model"] = segmentation_model
+            context["labelspace_name"] = labelspace_name
+        case "gdsam2":
+            # labelspace_name = "gdsam2_default"
+            labelspace_name = "gdsam2_mit"
+            # TODO (multy): currenlty labelspace is not been passed to gdsam2 node
+            # and classes to be segmented is managed inside the config in semantic_inference_ros
+            context["segmentation_model"] = segmentation_model
+            context["labelspace_name"] = labelspace_name
+        case "close_set":
+            context["segmentation_model"] = segmentation_model
+            context["labelspace_name"] = "ade20k_mit"
+
+    contents = _render_tmuxp(session_path, context)
+
+    console = rich.console.Console()
+    console.print(rich.panel.Panel(rich.syntax.Syntax(contents, "yaml")))
+    if not yes:
+        click.confirm("Are the settings correct?", abort=True)
+
+    tmuxp_cmd = [shutil.which("tmuxp"), "load"]
+    if auto_attach:
+        tmuxp_cmd.append("-y")
+
+    with tempfile.NamedTemporaryFile("w+", suffix=".yaml") as fout:
+        fout.write(contents)
+        fout.flush()
+        tmuxp_cmd.append(fout.name)
+        subprocess.run(tmuxp_cmd)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

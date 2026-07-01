@@ -1,0 +1,7 @@
+---
+plugins:
+  mesh: {type: MeshPlugin, coloring: {type: SemanticMeshColoring}, use_color_adapter: $<var use_mesh_color_adapter>}
+  agent_poses: {type: PosePlugin, num_to_skip: 0}
+renderer:
+  layers:
+    2: {text: {draw: false}}

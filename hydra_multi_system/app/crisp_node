@@ -1,0 +1,186 @@
+#!/usr/bin/env python3
+"""Node that runs crisp on received masks and RGBD data."""
+
+import pathlib
+
+import ianvs
+import numpy as np
+import rclpy
+import torch
+import torch.onnx
+import torchvision.ops as tops
+from hydra_multi_system.crisp import (
+    decompose_mesh_request,
+    get_image_transform,
+    pose_from_payload,
+    reconstruct_mesh,
+    setup_pipeline,
+)
+from hydra_multi_system_msgs.srv import CrispObjectInference, CrispReconstruction
+from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+from rclpy.node import Node
+
+
+def _get_param(node, name, default):
+    node.declare_parameter(name, default)
+    value = node.get_parameter(name).get_parameter_value()
+    return value
+
+
+class CrispNode(Node):
+    """Node that exposes services to run CRISP on input images."""
+
+    def __init__(self):
+        """Load the pipeline and initialize services."""
+        super().__init__("crisp")
+
+        self.device = _get_param(self, "device", "cuda").string_value
+        self.checkpoint = _get_param(self, "checkpoint", "").string_value
+        if self.checkpoint == "":
+            self.get_logger().fatal("Model checkpoint required!")
+            raise ValueError("Missing model checkpoint")
+
+        self.checkpoint = pathlib.Path(self.checkpoint).expanduser().absolute()
+        if not self.checkpoint.exists():
+            self.get_logger().fatal(
+                f"Model checkpoint '{self.checkpoint}' does not exist!"
+            )
+            raise ValueError(f"Invalid model checkpoint {self.checkpoint}")
+
+        # TODO(nathan) figure out arbitrary width and height
+        self._img_width = _get_param(self, "width", 720).integer_value
+        self._img_height = _get_param(self, "height", 480).integer_value
+        self._cube_samples = _get_param(self, "cube_samples", 128).integer_value
+        self._cube_scale = _get_param(self, "cube_scale", 3.0).double_value
+
+        self._log_idx = 0
+        self._log_path = _get_param(self, "log_path", "").string_value
+        if self._log_path != "":
+            self.get_logger().info(f"Logging inputs to {self._log_path}")
+
+        self.get_logger().info(f"Loading model checkpoint from {self.checkpoint}...")
+        self._pipeline = setup_pipeline(
+            self.checkpoint,
+            self.device,
+            width=self._img_width,
+            height=self._img_height,
+            log_path=self._log_path,
+        )
+        self.get_logger().info("Finished loading model checkpoint and pipeline")
+
+        self._rgb_transform = get_image_transform()
+        self._inference_srv = self.create_service(
+            CrispObjectInference, "detect_object", self.detection_callback
+        )
+
+        group = MutuallyExclusiveCallbackGroup()
+        self._mesh_srv = self.create_service(
+            CrispReconstruction,
+            "reconstruct_object",
+            self.reconstruction_callback,
+            callback_group=group,
+        )
+
+    def detection_callback(self, request, response):
+        """Run inference for a given input image."""
+        intrinsics = torch.tensor(request.intrinsics.k).reshape((3, 3))
+        rgb = ianvs.get_image(request.rgb)
+        if rgb is None or len(rgb.shape) != 3:
+            self.get_logger().error("Invalid RGB image!")
+            return response
+
+        mask = torch.tensor(ianvs.get_image(request.mask), dtype=torch.float32)
+        if mask is None:
+            self.get_logger().error("Invalid mask image!")
+            return response
+
+        depth = torch.tensor(ianvs.get_image(request.depth))
+        if depth is None:
+            self.get_logger().error("Invalid depth image!")
+            return response
+
+        if self._log_path != "":
+            log_path = pathlib.Path(self._log_path).expanduser().absolute()
+            log_path.mkdir(exist_ok=True, parents=True)
+            data = {
+                "rgb": rgb,
+                "mask": mask,
+                "depth": depth,
+                "intrinsics": intrinsics,
+                "volume": request.volume,
+                "semantic_id": request.semantic_id,
+            }
+            torch.save(data, log_path / f"input_{self._log_idx:05d}.pt")
+            self.get_logger().debug(
+                f"Logged input data to {log_path / f'input_{self._log_idx:05d}.pt'}"
+            )
+            self._log_idx += 1
+
+        rgb = self._rgb_transform(rgb)
+        if depth.dtype == torch.uint16:
+            depth = depth.astype(torch.float32) * 1.0e-3
+
+        bboxes = tops.masks_to_boxes(mask.unsqueeze(0))
+        obj_info = [
+            [{"label": "1", "bbox": bboxes[0, ...].int().tolist(), "id_in_segm": 255}]
+        ]
+
+        payload = self._pipeline(
+            rgbs=rgb[None, ...].to(self.device),
+            masks=mask[None, None, ...].to(self.device),
+            depths=depth[None, None, ...].to(self.device),
+            intrinsics=intrinsics[None, None, ...].to(self.device),
+            objs=obj_info,
+            frames_info=[{"inst_count": 1}],
+        )
+
+        response.valid = payload["is_valid"]
+        if not response.valid:
+            return response  # early return to indicate this is an invalid response
+        response.scale = payload["cam_s_nocs"][0, ...].item()
+        response.pose = pose_from_payload(payload)
+        response.shape_code.frombytes(
+            payload["shape_code"][0].cpu().numpy().astype(np.float32).tobytes()
+        )
+        return response
+
+    def reconstruction_callback(self, request, response):
+        vec, scale = decompose_mesh_request(request, self.device)
+        mesh = reconstruct_mesh(
+            self._pipeline.model,
+            vec,
+            scale,
+            self._cube_samples,
+            self._cube_scale,
+        )
+        response.vertices.frombytes(
+            mesh.vertices.astype(np.float32).flatten().tobytes()
+        )
+        response.triangles.frombytes(mesh.faces.astype(np.int32).flatten().tobytes())
+        self.get_logger().debug(
+            f"sending {len(response.vertices) / 3} vertices and {len(response.triangles) / 3} faces"
+        )
+        return response
+
+
+def main(args=None):
+    """Run CRISP on images."""
+    rclpy.init()
+    try:
+        node = CrispNode()
+        executor = MultiThreadedExecutor()
+        executor.add_node(node)
+        try:
+            executor.spin()
+        finally:
+            executor.shutdown()
+            node.destroy_node()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        rclpy.try_shutdown()
+
+
+if __name__ == "__main__":
+    main()

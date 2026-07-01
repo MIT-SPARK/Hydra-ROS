@@ -1,0 +1,36 @@
+---
+active_window:
+  type: ReconstructionModule
+  tsdf:
+    sensor_map_mode: Strict
+    sensors:
+      rgbd:
+        semantic_integrator: {type: SingleLabelIntegrator}
+      velodyne16:
+        use_constant_weight: true
+        extra_integration_distance: 3.0
+        extra_integration_distance_labels: [4, 5, 6, 7, 8, 9, 10, 20, 22, 30]
+        interpolation_method: {max_depth_difference_m: 0.9}
+        semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: [-1]}
+      ouster64:
+        use_constant_weight: true
+        extra_integration_distance: 3.0
+        extra_integration_distance_labels: [4, 5, 6, 7, 8, 9, 10, 20, 22, 30]
+        interpolation_method: {max_depth_difference_m: 0.9}
+        semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: [-1]}
+  sinks:
+    - type: ReconstructionVisualizer
+      sensor_displays:
+        sensor_map_mode: Strict
+        sensors:
+          rgbd: {}
+          velodyne16: {height_scale: 32.0, overlay_alpha: 1.0}
+          ouster64: {height_scale: 8.0, overlay_alpha: 1.0}
+frontend:
+  enable_mesh_objects: true
+  objects:
+    bounding_box_type: AABB
+    min_cluster_size: 40
+    cluster_tolerance: 0.25
+    sinks:
+      - {type: ObjectVisualizer}

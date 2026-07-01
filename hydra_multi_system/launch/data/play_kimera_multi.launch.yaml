@@ -1,0 +1,38 @@
+---
+launch:
+  - arg: {name: bag_path}
+  - arg: {name: robot_name}
+  - arg: {name: sim_time, default: 'true'}
+  - arg: {name: delay, default: '10.0', description: bag delay amount}
+  - arg: {name: rate, default: '1.0', description: bag play rate}
+  - arg: {name: start, default: '0.0', description: bag start offset}
+  - arg: {name: duration, default: '-1.0', description: bag duration}
+  - executable:
+      name: $(var robot_name)_player
+      cmd: >
+        ros2 bag play $(var bag_path)
+          --disable-keyboard-controls
+          --clock -d $(var delay) -r $(var rate)
+          --playback-duration $(var duration) --start-offset $(var start)
+          --exclude-topics /tf_static /tf
+  - push_ros_namespace: {namespace: $(var robot_name)}
+  - node:
+      pkg: ianvs
+      exec: transform_file_broadcaster
+      name: transform_file_broadcaster
+      param:
+        - {name: filepath, value: $(find-pkg-share hydra_multi_system)/config/static_tfs/kimera_multi/$(var robot_name)_static_tfs.yaml}
+  - node:
+      pkg: spark_fast_lio
+      exec: spark_lio_mapping
+      name: laser_mapping
+      remap:
+        - {from: lidar, to: lidar_points}
+        - {from: imu, to: forward/imu}
+      param:
+        - from: $(find-pkg-share spark_fast_lio)/config/kimera_multi/$(var robot_name).yaml
+        - from: $(find-pkg-share hydra_multi_system)/config/robots/kimera_multi_fast_lio.yaml
+        - {name: use_sim_time, value: $(var sim_time)}
+        - {name: common.lidar_frame, value: $(var robot_name)/velodyne}
+        - {name: common.base_frame, value: $(var robot_name)/base}
+        - {name: common.map_frame, value: $(var robot_name)/odom}

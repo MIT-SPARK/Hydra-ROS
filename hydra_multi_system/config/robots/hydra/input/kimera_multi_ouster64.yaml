@@ -1,0 +1,19 @@
+---
+input:
+  type: RosInput
+  tf_lookup: {verbosity: 1}
+  clear_queue_on_fail: true
+  inputs:
+    ouster64:
+      receiver: {type: PointcloudReceiver}
+      sensor:
+        type: lidar
+        min_range: 0.4
+        max_range: 15.0
+        is_asymmetric: false
+        horizontal_resolution: 0.7  # 360 / {512, 1024, 2048} depending on the configuration
+        vertical_resolution: 0.527  # 33.2 / (64 - 1) = 0.527
+        horizontal_fov: 360.0
+        vertical_fov: 33.2  # 35.0
+        vertical_fov_top: 16.6  # 18.65
+        extrinsics: {type: ros, robot_frame: $<var robot_frame>}
