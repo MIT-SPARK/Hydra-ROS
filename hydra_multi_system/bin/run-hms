@@ -16,11 +16,11 @@ import rich.syntax
 from rich.columns import Columns
 
 
-def _pkg_path():
+def _pkg_path() -> pathlib.Path:
     return pathlib.Path(__file__).absolute().parent.parent
 
 
-def _get_session_path(session_path=None):
+def _get_session_path(session_path=None) -> pathlib.Path | None:
     pkg_path = _pkg_path()
     click.secho(f"Using package location '{pkg_path}'", fg="green")
     tmux_ws_path = pkg_path / "tmux"
@@ -32,7 +32,7 @@ def _get_session_path(session_path=None):
         session_idx = click.prompt("What session do you want to load?", default=1)
         if session_idx <= 0 or session_idx > len(tmux_files):
             click.secho(f"Invalid session choice: '{session_idx}'", fg="red")
-            return 1
+            return None
 
         session_path = tmux_files[session_idx - 1]
 
@@ -76,20 +76,14 @@ def _render_tmuxp(session_path, context):
     default="rgbd",
     type=click.Choice(["rgbd", "velodyne16", "ouster64", "hybrid"]),
 )
-@click.option(
-    "--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag start"
-)
+@click.option("--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag")
 @click.option("--bag-rate", "-r", default=1.0, help="bag playback rate")
 @click.option("--bag-start", default=0.0, help="bag start offset")
 @click.option("--bag-duration", default=-1.0, help="bag duration")
 @click.option("--yes", "-y", is_flag=True, help="skip env variable check")
 @click.option("--force", "-f", is_flag=True, help="clear output if it exists")
 @click.option("--shell", default="zsh", help="shell to use")
-@click.option(
-    "--use-ground-seg/--no-use-ground-seg",
-    default=False,
-    help="use Patchwork ground segmentation",
-)
+@click.option("--ground-seg/--no-ground-seg", default=False, help="use Patchwork")
 @click.option(
     "--ground-seg-sensor-type",
     default="velodyne16",
@@ -97,20 +91,10 @@ def _render_tmuxp(session_path, context):
     help="LiDAR type for Patchwork ground segmentation",
 )
 @click.option("--run-zenoh/--no-run-zenoh", default=True, help="start zenoh router")
-@click.option(
-    "--start-gui/--no-start-gui", default=False, help="start dynamic reconfigure gui"
-)
+@click.option("--start-gui/--no-start-gui", default=False, help="start reconfigure gui")
 @click.option("--visualize/--no-visualize", default=True, help="visualize scene graph")
-@click.option(
-    "--close-session/--no-close-session",
-    default=True,
-    help="kill tmux session after hydra exits",
-)
-@click.option(
-    "--auto-attach/--no-auto-attach",
-    default=True,
-    help="automatically attach to new tmux session",
-)
+@click.option("--close/--no-close", default=True, help="kill tmux after hydra exits")
+@click.option("--auto-attach/--no-auto-attach", default=True, help="attach to session")
 def main(
     robot_name,
     bag_path,
@@ -126,28 +110,28 @@ def main(
     yes,
     force,
     shell,
-    use_ground_seg,
+    ground_seg,
     ground_seg_sensor_type,
     run_zenoh,
     start_gui,
     visualize,
-    close_session,
+    close,
     auto_attach,
 ):
+    workspace_path = _pkg_path().parent.parent.parent / "install" / f"setup.{shell}"
     session_path = _get_session_path(session_path=session_path)
-
-    print(session_path.name.split("/")[-1])
+    if session_path is None:
+        sys.exit("Invalid session path!")
 
     # TODO: improve automated selection
+    print(session_path.name.split("/")[-1])
     if segmentation_model == "yolov11" or segmentation_model == "gdsam2":
         if session_path.name.split("/")[-1] != "kimera_multi_instance.yaml":
             click.secho(
                 f"Segmentation model '{segmentation_model}' requires 'kimera_multi_instance.yaml' tmux session! Automatically changing the session...",
                 fg="red",
             )
-            session_path = _get_session_path(
-                session_path="robots/kimera_multi_instance.yaml"
-            )
+            session_path = _get_session_path("robots/kimera_multi_instance.yaml")
             click.secho(f"Using session '{session_path}'", fg="green")
 
     bag_path = pathlib.Path(bag_path).expanduser().absolute()
@@ -160,9 +144,8 @@ def main(
             / sensor_type
             / robot_name
         )
-    else:
-        output_dir = pathlib.Path(output_dir).expanduser().absolute()
 
+    output_dir = pathlib.Path(output_dir).expanduser().absolute()
     if output_dir.exists():
         if not force:
             click.confirm(
@@ -185,13 +168,14 @@ def main(
         "rate": bag_rate,
         "object_variant": object_variant,
         "sensor_type": sensor_type,
-        "use_ground_seg": use_ground_seg,
+        "use_ground_seg": ground_seg,
         "ground_seg_sensor_type": ground_seg_sensor_type,
         "shell": {"extension": shell, "cmd": shutil.which(shell)},
         "run_zenoh": run_zenoh,
         "start_gui": start_gui,
         "visualize": visualize,
-        "close_session": close_session,
+        "close_session": close,
+        "workspace_path": workspace_path,
     }
 
     # TODO: improve automated selection
@@ -201,7 +185,6 @@ def main(
             context["segmentation_model"] = segmentation_model
             context["labelspace_name"] = labelspace_name
         case "gdsam2":
-            # labelspace_name = "gdsam2_default"
             labelspace_name = "gdsam2_mit"
             # TODO (multy): currenlty labelspace is not been passed to gdsam2 node
             # and classes to be segmented is managed inside the config in semantic_inference_ros

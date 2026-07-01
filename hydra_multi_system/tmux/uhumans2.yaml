@@ -1,7 +1,7 @@
 ---
 session_name: uhumans2_{{ robot_name }}
 shell_command_before:
-  - source $COLCON_WS/install/setup.{{ shell.extension }}
+  - source {{ workspace_path }}
 options:
   default-command: {{ shell.cmd }}
 windows:

@@ -11,8 +11,8 @@ launch:
   - arg: {name: object_variant, default: crisp, description: object variant}
   - arg: {name: log_path, default: $(env HOME)/.hydra_multi/$(var scene)/robot_$(var robot_id), description: directory to output to}
   # crisp
-  - arg: {name: crisp_env, default: $(env CRISP_ENV), description: Path to crisp environment}
-  - arg: {name: crisp_checkpoint, default: $(env CRISP_MODEL_DIR)/202508042315_P41O3/checkpoint.pth}
+  # - arg: {name: crisp_env, default: $(env CRISP_ENV), description: Path to crisp environment}
+  # - arg: {name: crisp_checkpoint, default: $(env CRISP_MODEL_DIR)/202508042315_P41O3/checkpoint.pth}
   # frames
   - arg: {name: sensor_frame, default: $(var robot_name)/left_cam, description: camera frame}
   - arg: {name: robot_frame, default: $(var robot_name)/base_link, description: robot body tf frame}
