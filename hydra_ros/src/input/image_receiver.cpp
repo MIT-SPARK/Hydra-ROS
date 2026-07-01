@@ -122,11 +122,13 @@ void LabelSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
   }
 }
 
-ColormappedLabelSubscriber::ColormappedLabelSubscriber() : colormap_(nullptr) {}
+ColormappedLabelSubscriber::ColormappedLabelSubscriber()
+    : default_label_(-1), colormap_(nullptr) {}
 
 ColormappedLabelSubscriber::ColormappedLabelSubscriber(ianvs::NodeHandle nh,
                                                        uint32_t queue_size)
-    : colormap_(nullptr),
+    : default_label_(-1),
+      colormap_(nullptr),
       impl_(std::make_shared<FilterSub<Image>>(nh, "semantic/image_raw", queue_size)) {}
 
 ColormappedLabelSubscriber::~ColormappedLabelSubscriber() = default;
@@ -135,8 +137,10 @@ ColormappedLabelSubscriber::Filter& ColormappedLabelSubscriber::getFilter() cons
   return *CHECK_NOTNULL(impl_);
 }
 
-void ColormappedLabelSubscriber::setColormap(const SemanticColorMap* colormap) {
+void ColormappedLabelSubscriber::setColormap(const SemanticColorMap* colormap,
+                                             int32_t default_label) {
   colormap_ = colormap;
+  default_label_ = default_label;
 }
 
 void ColormappedLabelSubscriber::fillInput(const Image& img,
@@ -164,9 +168,8 @@ void ColormappedLabelSubscriber::fillInput(const Image& img,
     for (int c = 0; c < colors.cols; ++c) {
       const auto& pixel = colors.at<cv::Vec3b>(r, c);
       const spark_dsg::Color color(pixel[0], pixel[1], pixel[2]);
-      // this is lazy, but works out to the same invalid label we normally use
       packet.labels.at<int32_t>(r, c) =
-          colormap_->getLabelFromColor(color).value_or(-1);
+          colormap_->getLabelFromColor(color).value_or(default_label_);
     }
   }
 }
@@ -262,7 +265,7 @@ ColormappedLabelImageReceiver::ColormappedLabelImageReceiver(const Config& confi
 bool ColormappedLabelImageReceiver::initImpl() {
   using Base = ImageReceiverImpl<ColormappedLabelSubscriber>;
   const auto ret = Base::initImpl();
-  semantic_sub_.setColormap(colormap_.get());
+  semantic_sub_.setColormap(colormap_.get(), config.default_label);
   return ret;
 }
 
@@ -271,6 +274,7 @@ void declare_config(ColormappedLabelImageReceiver::Config& config) {
   name("ColormappedLabelImageReceiver::Config");
   base<hydra::RosDataReceiver::Config>(config);
   field<Path::Absolute>(config.colormap_path, "colormap_path");
+  field(config.default_label, "default_label");
   check<Path::Exists>(config.colormap_path, "colormap_path");
 }
 

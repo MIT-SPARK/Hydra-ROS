@@ -115,10 +115,11 @@ struct ColormappedLabelSubscriber {
   virtual ~ColormappedLabelSubscriber();
 
   Filter& getFilter() const;
-  void setColormap(const SemanticColorMap* colormap);
+  void setColormap(const SemanticColorMap* colormap, int32_t default_label);
   void fillInput(const sensor_msgs::msg::Image& img, ImageInputPacket& packet) const;
 
  private:
+  int32_t default_label_;
   const SemanticColorMap* colormap_;
   std::shared_ptr<FilterSub<sensor_msgs::msg::Image>> impl_;
 };
@@ -247,7 +248,10 @@ class ColormappedLabelImageReceiver
     : public ImageReceiverImpl<ColormappedLabelSubscriber> {
  public:
   struct Config : RosDataReceiver::Config {
+    //! Path to colormap CSV to use to remap colors to labels
     std::filesystem::path colormap_path;
+    //! Label value to use when value is unknown
+    int32_t default_label = -1;
   } const config;
 
   ColormappedLabelImageReceiver(const Config& config, const std::string& sensor_name);
