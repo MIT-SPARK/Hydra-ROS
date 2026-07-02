@@ -105,6 +105,22 @@ struct LabelSubscriber {
   std::shared_ptr<FilterSub<sensor_msgs::msg::Image>> impl_;
 };
 
+struct InstanceSubscriber {
+ public:
+  using MsgType = sensor_msgs::msg::Image;
+  using Filter = message_filters::SimpleFilter<MsgType>;
+
+  InstanceSubscriber();
+  explicit InstanceSubscriber(ianvs::NodeHandle nh, uint32_t queue_size = 1);
+  virtual ~InstanceSubscriber();
+
+  Filter& getFilter() const;
+  void fillInput(const sensor_msgs::msg::Image& img, ImageInputPacket& packet) const;
+
+ private:
+  std::shared_ptr<FilterSub<sensor_msgs::msg::Image>> impl_;
+};
+
 struct ColormappedLabelSubscriber {
  public:
   using MsgType = sensor_msgs::msg::Image;
@@ -234,6 +250,15 @@ class ClosedSetImageReceiver : public ImageReceiverImpl<LabelSubscriber> {
 };
 
 void declare_config(ClosedSetImageReceiver::Config& config);
+
+class InstanceImageReceiver : public ImageReceiverImpl<InstanceSubscriber> {
+ public:
+  struct Config : RosDataReceiver::Config {};
+  InstanceImageReceiver(const Config& config, const std::string& sensor_name);
+  virtual ~InstanceImageReceiver() = default;
+};
+
+void declare_config(InstanceImageReceiver::Config& config);
 
 class OpenSetImageReceiver : public ImageReceiverImpl<FeatureSubscriber> {
  public:
