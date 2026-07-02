@@ -52,6 +52,7 @@ class MeshPlugin : public VisualizerPlugin {
 
   struct Config {
     config::VirtualConfig<MeshColoring, true> coloring;
+    double min_mesh_separation_s = 0.0;
   };
 
   MeshPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);
@@ -70,6 +71,7 @@ class MeshPlugin : public VisualizerPlugin {
 
   std::string getMsgNamespace() const;
 
+  std::optional<rclcpp::Time> last_pub_;
   rclcpp::Publisher<kimera_pgmo_msgs::msg::Mesh>::SharedPtr mesh_pub_;
 };
 

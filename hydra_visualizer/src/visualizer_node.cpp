@@ -122,21 +122,22 @@ void DsgVisualizer::spinOnce(bool force) {
     return;
   }
 
-  const auto stamped_graph = graph_->get();
-  if (!stamped_graph) {
-    return;
-  }
-
-  std_msgs::msg::Header header;
-  header.frame_id = stamped_graph.frame_id;
-  header.stamp = stamped_graph.timestamp.value_or(nh_.now());
-
-  renderer_->draw(header, *stamped_graph.graph);
-  for (const auto& plugin : plugins_) {
-    if (plugin) {
-      plugin->draw(header, *stamped_graph.graph);
+  {  // start scope for stamped graph (for optional critical region)
+    const auto stamped_graph = graph_->get();
+    if (!stamped_graph) {
+      return;
     }
-  }
+
+    std_msgs::msg::Header header;
+    header.frame_id = stamped_graph.frame_id;
+    header.stamp = stamped_graph.timestamp.value_or(nh_.now());
+    renderer_->draw(header, *stamped_graph.graph);
+    for (const auto& plugin : plugins_) {
+      if (plugin) {
+        plugin->draw(header, *stamped_graph.graph);
+      }
+    }
+  }  // end scope for stamped graph
 
   graph_->clearChangeFlag();
   renderer_->clearChangeFlag();

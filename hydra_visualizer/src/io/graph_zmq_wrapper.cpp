@@ -87,12 +87,13 @@ void GraphZmqWrapper::clearChangeFlag() {
 }
 
 StampedGraph GraphZmqWrapper::get() const {
-  std::lock_guard<std::mutex> lock(graph_mutex_);
+  std::unique_lock<std::mutex> lock(graph_mutex_);
   if (!graph_) {
     return {nullptr};
   }
 
-  return {graph_->clone(), config.frame_id};
+  // pass the lock for the visualizer to use the graph
+  return {graph_, config.frame_id, std::nullopt, std::move(lock)};
 }
 
 void GraphZmqWrapper::spin() {
@@ -106,6 +107,7 @@ void GraphZmqWrapper::spin() {
     if (receiver_->graph()) {
       graph_ = receiver_->graph()->clone();
     }
+
     has_change_ = true;
     VLOG(1) << "Got graph!";
   }
