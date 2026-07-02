@@ -12,6 +12,7 @@ endif()
 option(BUILD_SHARED_LIBS "Build shared libraries" ON)
 
 find_package(ament_cmake REQUIRED)
+find_package(CLI11 REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(gflags REQUIRED)
@@ -92,6 +93,9 @@ ament_target_dependencies(
 add_executable(hydra_ros_node app/hydra_node.cpp)
 target_link_libraries(hydra_ros_node ${PROJECT_NAME} ${gflags_LIBRARIES})
 
+add_executable(color_to_label_node app/color_to_label_node.cpp)
+target_link_libraries(color_to_label_node ${PROJECT_NAME} cv_bridge::cv_bridge CLI11::CLI11)
+
 rclcpp_components_register_node(
   ${PROJECT_NAME}
   PLUGIN
@@ -113,7 +117,7 @@ install(
   LIBRARY DESTINATION lib
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
-install(TARGETS hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
+install(TARGETS color_to_label_node hydra_ros_node RUNTIME DESTINATION lib/${PROJECT_NAME})
 install(
   PROGRAMS app/dsg_file_publisher
            app/dsg_republisher
