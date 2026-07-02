@@ -52,7 +52,7 @@ class MeshPlugin : public VisualizerPlugin {
 
   struct Config {
     config::VirtualConfig<MeshColoring, true> coloring;
-    double mesh_update_period_s = 1.0;
+    double min_mesh_separation_s = 0.0;
   };
 
   MeshPlugin(const Config& config, ianvs::NodeHandle nh, const std::string& name);

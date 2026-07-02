@@ -63,7 +63,7 @@ void declare_config(MeshPlugin::Config& config) {
   using namespace config;
   name("MeshPlugin::Config");
   field(config.coloring, "coloring");
-  field(config.mesh_update_period_s, "mesh_update_period_s", "s");
+  field(config.min_mesh_separation_s, "min_mesh_separation_s", "s");
 }
 
 MeshPlugin::MeshPlugin(const Config& config,
@@ -84,7 +84,7 @@ void MeshPlugin::draw(const std_msgs::msg::Header& header,
 
   const auto config = config_.get();
   const rclcpp::Time now(header.stamp);
-  if (last_pub_ && (now - *last_pub_).seconds() < config.mesh_update_period_s) {
+  if (last_pub_ && (now - *last_pub_).seconds() < config.min_mesh_separation_s) {
     return;
   }
 
