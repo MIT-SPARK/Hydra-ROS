@@ -104,7 +104,7 @@ launch:
       file: $(find-pkg-share hydra_multi_system)/launch/robots/robot_visualizer.launch.yaml
       arg:
         - {name: use_mesh_color_adapter, value: 'true'}
-        - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/robots/kimera_multi.rviz}
+        - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/kimera_multi.rviz}
   - node:
       pkg: tf2_ros
       exec: static_transform_publisher

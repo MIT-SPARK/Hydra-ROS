@@ -2,7 +2,7 @@
 session_name: kimera_multi_{{ robot_name }}
 shell_command_before:
   - source /opt/ros/jazzy/setup.{{ shell.extension }}
-  - source $COLCON_WS/install/setup.{{ shell.extension }}
+  - source {{ workspace_path }}
 options:
   default-command: {{ shell.cmd }}
 windows:
