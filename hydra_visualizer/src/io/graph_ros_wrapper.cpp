@@ -66,20 +66,25 @@ bool GraphRosWrapper::hasChange() const { return has_change_; }
 void GraphRosWrapper::clearChangeFlag() { has_change_ = false; }
 
 StampedGraph GraphRosWrapper::get() const {
-  return {graph_, last_frame_id_, last_time_};
+  // lock and pass information to the visualizer
+  std::unique_lock<std::mutex> lock(graph_mutex_);
+  return {graph_, last_frame_id_, last_time_, std::move(lock)};
 }
 
 void GraphRosWrapper::callback(const DsgUpdate::ConstSharedPtr& msg) {
-  // not designed to be threadsafe; should lock and clone graph on return if desired
+  // technically we shouldn't need a mutex here because the wrapper subscriber should be
+  // in the same callback group as the rest of the node, but easy enough to pass a lock
+  // to the visualizer
+  std::lock_guard<std::mutex> lock(graph_mutex_);
+
   last_time_ = msg->header.stamp;
   last_frame_id_ = msg->header.frame_id;
   if (last_frame_id_.empty()) {
-    LOG(ERROR) << "Received scene grpah with empty frame_id field!";
+    LOG(ERROR) << "Received scene graph with empty frame_id field!";
     return;
   }
 
   try {
-    std::lock_guard<std::mutex> lk(mutex);
     if (!graph_) {
       graph_ = spark_dsg::io::binary::readGraph(msg->layer_contents);
     } else {

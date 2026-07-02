@@ -42,14 +42,20 @@
 namespace hydra {
 
 struct StampedGraph {
+  //! Underlying scene graph
   spark_dsg::DynamicSceneGraph::Ptr graph;
+  //! Frame ID for scene graph
   std::string frame_id = "";
+  //! Timestamp of scene graph
   std::optional<rclcpp::Time> timestamp = std::nullopt;
+  //! Optional lock object for scene graph (for ROS and ZMQ wrappers)
+  std::unique_lock<std::mutex> lock = {};
+
+  //! Whether or not the scene graph is valid
   inline operator bool() const { return graph != nullptr; }
 };
 
 struct GraphWrapper {
-  mutable std::mutex mutex;  // protects graph_ from concurrent read/write
   using Ptr = std::shared_ptr<GraphWrapper>;
   virtual ~GraphWrapper() = default;
   virtual bool hasChange() const = 0;
