@@ -2,19 +2,13 @@
 <package format="3">
   <name>hydra_multi_system</name>
   <version>2.0.0</version>
-  <description>Hydra-Multi System Core Management Repo</description>
-
+  <description>TODO</description>
   <maintainer email="yunchang@mit.edu">Yun Chang</maintainer>
-
+  <maintainer email="na26933@mit.edu">Nathan Hughes</maintainer>
   <license>TODO</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
-  <buildtool_depend>ament_cmake_python</buildtool_depend>
-  <depend>cv_bridge</depend>
-  <depend>hydra_multi_system_msgs</depend>
-  <depend>hydra_ros</depend>
-  <depend>ianvs</depend>
-  <depend>khronos</depend>
+  <exec_depend>khronos_msgs</exec_depend>
   <exec_depend>python3-click</exec_depend>
   <exec_depend>python3-jinja2</exec_depend>
   <exec_depend>python3-rich</exec_depend>

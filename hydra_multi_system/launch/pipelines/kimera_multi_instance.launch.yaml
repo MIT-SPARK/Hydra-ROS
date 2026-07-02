@@ -10,14 +10,11 @@ launch:
   - arg: {name: segmentation_model, default: yolov11, description: segmentation model to use}
   - arg: {name: labelspace_name, default: yolov11_coco, description: semantic label space}
   - arg: {name: sensor_type, description: 'input sensor type(s) (one of [velodyne16, ouster64, rgbd, hybrid])'}
-  - arg: {name: object_variant, description: 'object extraction variant (one of [crisp, khronos, mesh_objects])'}
+  - arg: {name: object_variant, description: 'object extraction variant (one of [crisp, khronos, hydra])'}
   - arg: {name: log_path, default: $(env HOME)/.hydra_multi/kimera_multi/$(var robot_name), description: directory to output to}
   # ground segmentation
   - arg: {name: use_ground_seg, default: 'false', description: Use Patchwork ground segmentation to filter ground points}
   - arg: {name: ground_seg_sensor_type, default: velodyne16, description: 'LiDAR type for Patchwork (one of [velodyne16, velodyne64, ouster64, ouster128])'}
-  # crisp
-  - arg: {name: crisp_env, default: $(env HOME)/environments/crisp, description: Path to crisp environment}
-  - arg: {name: crisp_checkpoint, default: $(env HOME)/crisp_models/202601240250_PY271/checkpoint.pth}
   # frames
   - arg: {name: robot_frame, default: $(var robot_name)/base, description: robot body tf frame}
   - arg: {name: odom_frame, default: $(var robot_name)/odom, description: odometry frame}
@@ -64,35 +61,11 @@ launch:
             - {name: model_name, value: $(var segmentation_model)}
             - {name: run_backprojection, value: 'true'}
             - {name: backprojection_config, value: '{projection: {unknown_label: -1, instance_id: true}, camera_frame: $(var robot_name)/forward_color_optical_frame, use_image_stamp: true}'}
-            # - {name: colormap_path, value: ''} # TODO(multy) instance color is now hardcode in the instance_segmentation_node, need to make it configurable
-      # - set_remap: {from: cloud, to: /$(var robot_name)/cloud_registered_lidar}
-      #  # - set_remap: {from: cloud, to: /$(var robot_name)/lidar_points}
-      # - include:
-      #     file: $(find-pkg-share semantic_inference_ros)/launch/instance_segmentation.launch.yaml
-      #     arg:
-      #       - {name: compressed_rgb, value: 'true'}
-      #       - {name: model_name, value: $(var segmentation_model)}
-      #       - {name: run_backprojection, value: 'true'}
-      #       - {name: backprojection_config, value: '{projection: {unknown_label: -1, instance_id: true, out_of_view_alpha: 100}, camera_frame: $(var robot_name)/forward_color_optical_frame, use_image_stamp: true}'}
-      #       - {name: colormap_path, value: ''}
-  - pyenv_node:
-      if: $(eval "'$(var object_variant)' == 'crisp'")
-      pkg: hydra_multi_system
-      exec: crisp_node
-      name: crisp
-      pyenv: $(var crisp_env)
-      param:
-        - {name: checkpoint, value: $(var crisp_checkpoint)}
-        - {name: width, value: 640}
-        - {name: height, value: 480}
-        - {name: log_path, value: $(var log_path)}
   - node:
       pkg: hydra_ros
       exec: hydra_ros_node
       name: hydra
       on_exit: shutdown
-      env:
-        - {name: TERM, value: xterm-256color}
       remap:
         - {from: hydra/input/rgbd/depth_registered/image_rect, to: forward/depth/image_rect_raw}
         - {from: hydra/input/rgbd/rgb/image_raw, to: forward/color/image_raw}

@@ -1,26 +1,32 @@
 ---
 launch:
+  # required arguments
   - arg: {name: bag_path}
   - arg: {name: robot_name}
+  # playback options
   - arg: {name: sim_time, default: 'true'}
   - arg: {name: delay, default: '10.0', description: bag delay amount}
   - arg: {name: rate, default: '1.0', description: bag play rate}
   - arg: {name: start, default: '0.0', description: bag start offset}
   - arg: {name: duration, default: '-1.0', description: bag duration}
-  - executable:
-      name: $(var robot_name)_player
-      cmd: >
-        ros2 bag play $(var bag_path)
-          --disable-keyboard-controls
-          --clock -d $(var delay) -r $(var rate)
-          --playback-duration $(var duration) --start-offset $(var start)
-          --exclude-topics /tf_static /tf
+  # nodes
   - push_ros_namespace: {namespace: $(var robot_name)}
+  - node:
+      pkg: ianvs
+      exec: play_rosbag
+      on_exit: shutdown
+      args: >
+        $(var bag_path)
+        --disable-keyboard-controls
+        --clock -d $(var delay) -r $(var rate)
+        --playback-duration $(var duration) --start-offset $(var start)
+        --exclude-topics /tf_static /tf
   - node:
       pkg: ianvs
       exec: transform_file_broadcaster
       name: transform_file_broadcaster
       param:
+        - {name: use_sim_time, value: $(var sim_time)}
         - {name: filepath, value: $(find-pkg-share hydra_multi_system)/config/static_tfs/kimera_multi/$(var robot_name)_static_tfs.yaml}
   - node:
       pkg: spark_fast_lio

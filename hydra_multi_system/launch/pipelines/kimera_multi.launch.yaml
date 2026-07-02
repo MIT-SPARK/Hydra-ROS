@@ -9,23 +9,17 @@ launch:
   - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
   - arg: {name: labelspace_name, default: ade20k_mit, description: semantic label space}
   - arg: {name: sensor_type, description: 'input sensor type(s) (one of [velodyne16, ouster64, rgbd, hybrid])'}
-  - arg: {name: object_variant, description: 'object extraction variant (one of [crisp, khronos, mesh_objects])'}
+  - arg: {name: object_variant, description: 'object extraction variant (one of [crisp, khronos, hydra])'}
   - arg: {name: log_path, default: $(env HOME)/.hydra_multi/kimera_multi/$(var robot_name), description: directory to output to}
   # ground segmentation
   - arg: {name: use_ground_seg, default: 'false', description: Use Patchwork ground segmentation to filter ground points}
   - arg: {name: ground_seg_sensor_type, default: velodyne16, description: 'LiDAR type for Patchwork (one of [velodyne16, velodyne64, ouster64, ouster128])'}
-  # crisp
-  - arg: {name: crisp_env, default: $(env HOME)/environments/crisp, description: Path to crisp environment}
-  - arg: {name: crisp_checkpoint, default: $(env HOME)/crisp_models/202511201549_Z4722/checkpoint.pth}
-  # - arg: {name: crisp_checkpoint, default: $(env HOME)/crisp_models/202507141819_25Z0Q/checkpoint_epoch=300.pth}
   # frames
   - arg: {name: robot_frame, default: $(var robot_name)/base, description: robot body tf frame}
   - arg: {name: odom_frame, default: $(var robot_name)/odom, description: odometry frame}
   - arg: {name: map_frame, default: $(var robot_name)/odom, description: map frame}
   # nodes
   - push_ros_namespace: {namespace: $(var robot_name)}
-  # NOTE(hlim): When use_ground_seg is true, Patchwork outputs 'cloud_groundseg_lidar'
-  # with ground label '4' that is used for backprojection filtering.
   - node:
       if: $(var use_ground_seg)
       namespace: patchwork
@@ -40,13 +34,8 @@ launch:
   - group:
       - push_ros_namespace: {namespace: forward}
       - set_remap:
-          if: $(var use_ground_seg)
           from: cloud
-          to: /$(var robot_name)/patchwork/cloud_groundseg_lidar
-      - set_remap:
-          unless: $(var use_ground_seg)
-          from: cloud
-          to: /$(var robot_name)/cloud_registered_lidar
+          to: /$(var robot_name)/$(if use_ground_seg patchwork/cloud_groundseg_lidar cloud_registered_lidar)
       - include:
           if: $(var use_ground_seg)
           file: $(find-pkg-share semantic_inference_ros)/launch/closed_set.launch.yaml
@@ -63,24 +52,11 @@ launch:
             - {name: compressed_rgb, value: 'true'}
             - {name: run_backprojection, value: 'true'}
             - {name: backprojection_config, value: '{projection: {unknown_label: -1}, camera_frame: $(var robot_name)/forward_color_optical_frame}'}
-  - pyenv_node:
-      if: $(eval "'$(var object_variant)' == 'crisp'")
-      pkg: hydra_multi_system
-      exec: crisp_node
-      name: crisp
-      pyenv: $(var crisp_env)
-      param:
-        - {name: checkpoint, value: $(var crisp_checkpoint)}
-        - {name: width, value: 640}
-        - {name: height, value: 480}
-        - {name: log_path, value: $(var log_path)}
   - node:
       pkg: hydra_ros
       exec: hydra_ros_node
       name: hydra
       on_exit: shutdown
-      env:
-        - {name: TERM, value: xterm-256color}
       remap:
         - {from: hydra/input/rgbd/depth_registered/image_rect, to: forward/depth/image_rect_raw}
         - {from: hydra/input/rgbd/rgb/image_raw, to: forward/color/image_raw}
@@ -93,15 +69,15 @@ launch:
         --config-utilities-var robot_name=$(var robot_name)
         --config-utilities-var robot_frame=$(var robot_frame)
         --config-utilities-file $(find-pkg-share hydra)/config/label_spaces/$(var labelspace_name)_label_space.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/kimera_multi.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/variants/kimera_multi_$(var object_variant).yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/robots/hydra/input/kimera_multi_$(var sensor_type).yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/kimera_multi.yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/variants/kimera_multi_$(var object_variant).yaml
+        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/input/kimera_multi_$(var sensor_type).yaml
         --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
         --config-utilities-yaml {backend: {optimize_on_lc: $(var optimize), publish_backend_tf: false}}
         --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
         --config-utilities-yaml {glog_verbosity: 0, config_verbosity: 1, show_run_settings: false, preprint_config: false}
   - include:
-      file: $(find-pkg-share hydra_multi_system)/launch/robots/robot_visualizer.launch.yaml
+      file: $(find-pkg-share hydra_multi_system)/launch/visualizer.launch.yaml
       arg:
         - {name: use_mesh_color_adapter, value: 'true'}
         - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/kimera_multi.rviz}

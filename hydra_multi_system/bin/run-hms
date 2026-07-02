@@ -54,28 +54,20 @@ def _render_tmuxp(session_path, context):
     return template.render(context)
 
 
+VARIANTS = ["crisp", "hydra", "khronos"]
+MODELS = ["closed_set", "yolov11", "gdsam2"]
+SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
+
+
 @click.command()
 @click.argument("robot_name")
 @click.argument("bag_path", type=click.Path(exists=True))
-@click.option("--session_path", "-p", type=click.Path(), help="session_path to use")
+@click.option("--session-path", "-p", type=click.Path(), help="session_path to use")
 @click.option("--output-dir", "-o", type=click.Path(), help="output directory")
-@click.option(
-    "--object-variant",
-    "-v",
-    default="crisp",
-    type=click.Choice(["crisp", "mesh_objects", "khronos"]),
-)
-@click.option(
-    "--segmentation_model",
-    default="close_set",
-    type=click.Choice(["close_set", "yolov11", "gdsam2"]),
-)
-@click.option(
-    "--sensor-type",
-    "-s",
-    default="rgbd",
-    type=click.Choice(["rgbd", "velodyne16", "ouster64", "hybrid"]),
-)
+@click.option("--variant", "-v", default="crisp", type=click.Choice(VARIANTS))
+@click.option("--segmentation-model", default="closed_set", type=click.Choice(MODELS))
+@click.option("--sensor-type", "-s", default="rgbd", type=click.Choice(SENSORS))
+@click.option("--ground-seg/--no-ground-seg", default=False, help="use Patchwork")
 @click.option("--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag")
 @click.option("--bag-rate", "-r", default=1.0, help="bag playback rate")
 @click.option("--bag-start", default=0.0, help="bag start offset")
@@ -83,13 +75,6 @@ def _render_tmuxp(session_path, context):
 @click.option("--yes", "-y", is_flag=True, help="skip env variable check")
 @click.option("--force", "-f", is_flag=True, help="clear output if it exists")
 @click.option("--shell", default="zsh", help="shell to use")
-@click.option("--ground-seg/--no-ground-seg", default=False, help="use Patchwork")
-@click.option(
-    "--ground-seg-sensor-type",
-    default="velodyne16",
-    type=click.Choice(["velodyne16", "velodyne64", "ouster64", "ouster128"]),
-    help="LiDAR type for Patchwork ground segmentation",
-)
 @click.option("--run-zenoh/--no-run-zenoh", default=True, help="start zenoh router")
 @click.option("--start-gui/--no-start-gui", default=False, help="start reconfigure gui")
 @click.option("--visualize/--no-visualize", default=True, help="visualize scene graph")
@@ -100,9 +85,10 @@ def main(
     bag_path,
     session_path,
     output_dir,
-    object_variant,
+    variant,
     sensor_type,
     segmentation_model,
+    ground_seg,
     bag_delay,
     bag_rate,
     bag_start,
@@ -110,8 +96,6 @@ def main(
     yes,
     force,
     shell,
-    ground_seg,
-    ground_seg_sensor_type,
     run_zenoh,
     start_gui,
     visualize,
@@ -124,34 +108,22 @@ def main(
         sys.exit("Invalid session path!")
 
     # TODO: improve automated selection
-    print(session_path.name.split("/")[-1])
     if segmentation_model == "yolov11" or segmentation_model == "gdsam2":
         if session_path.name.split("/")[-1] != "kimera_multi_instance.yaml":
-            click.secho(
-                f"Segmentation model '{segmentation_model}' requires 'kimera_multi_instance.yaml' tmux session! Automatically changing the session...",
-                fg="red",
-            )
+            click.secho(f"'{segmentation_model}' requires different session!", fg="red")
             session_path = _get_session_path("robots/kimera_multi_instance.yaml")
-            click.secho(f"Using session '{session_path}'", fg="green")
+            click.secho(f"Using session '{session_path}' instead", fg="red")
 
     bag_path = pathlib.Path(bag_path).expanduser().absolute()
     if not output_dir:
-        output_dir = (
-            _pkg_path()
-            / "output"
-            / bag_path.stem
-            / object_variant
-            / sensor_type
-            / robot_name
-        )
+        name = f"{variant}_{sensor_type}_{robot_name}"
+        output_dir = _pkg_path() / "output" / bag_path.stem / name
 
     output_dir = pathlib.Path(output_dir).expanduser().absolute()
-    if output_dir.exists():
-        if not force:
-            click.confirm(
-                f"Output directory '{output_dir}' exists! Remove?", abort=True
-            )
+    if output_dir.exists() and not force:
+        click.confirm(f"Output '{output_dir}' exists! Remove?", abort=True)
 
+    if output_dir.exists():
         click.secho(f"Clearing previous output: '{output_dir}'", fg="green")
         shutil.rmtree(output_dir)
 
@@ -166,10 +138,9 @@ def main(
         "delay": bag_delay,
         "output_path": output_dir,
         "rate": bag_rate,
-        "object_variant": object_variant,
+        "object_variant": variant,
         "sensor_type": sensor_type,
         "use_ground_seg": ground_seg,
-        "ground_seg_sensor_type": ground_seg_sensor_type,
         "shell": {"extension": shell, "cmd": shutil.which(shell)},
         "run_zenoh": run_zenoh,
         "start_gui": start_gui,
