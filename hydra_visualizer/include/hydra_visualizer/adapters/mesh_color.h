@@ -92,8 +92,6 @@ void declare_config(UniformMeshColoring::Config& config);
 struct SemanticMeshColoring : public MeshColoring {
   struct Config {
     visualizer::CategoricalColormap::Config colormap;
-    //! Extract upper 16 bits as semantic category from packed (category << 16 | instance_id) labels
-    bool instance_id = false;
   } const config;
   explicit SemanticMeshColoring(const Config& config);
   virtual ~SemanticMeshColoring() = default;
