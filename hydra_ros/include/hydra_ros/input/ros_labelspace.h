@@ -41,13 +41,13 @@ class RosLabelspace : public Labelspace {
  public:
   struct Config {
     //! @brief Optional namespace to use when listening for labelspace message
-    std::string ns = "";
+    std::string ns = "~";
     //! @brief Amount of time before warning about missing labelspace (0 disables)
     double warning_timeout_s = 10.0;
     //! @brief Amount of time to wait before forcing Hydra to exit (0 disables)
     double error_timeout_s = 0.0;
     //! @brief Whether or not to use latching for subscriber
-    bool latch_info_sub = false;
+    bool latch_info_sub = true;
   } const config;
 
   explicit RosLabelspace(const Config& config);

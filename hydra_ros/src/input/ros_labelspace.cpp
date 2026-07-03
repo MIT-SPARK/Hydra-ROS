@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/common/ros_labelspace.h"
+#include "hydra_ros/input/ros_labelspace.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/parsing/yaml.h>
@@ -72,12 +72,12 @@ RosLabelspace::RosLabelspace(const Config& config) : config(config) {
   while (!maybe_msg && rclcpp::ok()) {
     maybe_msg = ianvs::getSingleMessage<MsgType>(nh, "labelspace", true, qos, timeout);
     if (!maybe_msg) {
-      LOG(WARNING) << "Waiting for CameraInfo on topic '" << resolved_topic << "'";
+      LOG(WARNING) << "Waiting for labelspace on topic '" << resolved_topic << "'";
     }
 
     const auto diff = nh.now() - start;
     if (config.error_timeout_s && (diff.seconds() > config.error_timeout_s)) {
-      LOG(ERROR) << "Sensor intrinsics lookup timed out on '" << resolved_topic << "'";
+      LOG(ERROR) << "labelspace lookup timed out on '" << resolved_topic << "'";
       break;
     }
   }
