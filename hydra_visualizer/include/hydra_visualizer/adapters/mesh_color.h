@@ -215,8 +215,9 @@ void declare_config(SplitMeshColoring::Config& config);
 /**
  * @brief Functor to color a mesh based on the fusion count of each vertex.
  * - Grey: never fused (count == 0)
- * - Green: fused once (count == 1)
- * - Rainbow (red to violet): multiple fusions, scaled to min/max range
+ * - Green -> red gradient over counts >= 1, normalized to the max fusion
+ *   count of the current mesh (recomputed per setMesh, i.e. per step):
+ *   green = 1 fusion, red = most fused this step.
  */
 struct FusionCountMeshColoring : public MeshColoring {
   struct Config {};
@@ -228,7 +229,6 @@ struct FusionCountMeshColoring : public MeshColoring {
   spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
 
  private:
-  uint32_t min_count_ = 0;
   uint32_t max_count_ = 1;
 
   inline static const auto registration_ =
@@ -258,6 +258,56 @@ struct TemporalIslandMeshColoring : public MeshColoring {
 };
 
 void declare_config(TemporalIslandMeshColoring::Config& config);
+
+/**
+ * @brief Color each vertex by which spatial-primitive (voxel) it falls into.
+ *
+ * Each voxel gets a stable hash-derived RGB color so the user can SEE how
+ * primitives partition the mesh as it grows. Matches the binning used by
+ * the new PrimitiveOverlapDetector. Default voxel size 1.0 m.
+ */
+struct PrimitiveMembershipMeshColoring : public MeshColoring {
+  struct Config {
+    float primitive_voxel_size_m = 1.0f;
+  } const config;
+
+  PrimitiveMembershipMeshColoring();
+  explicit PrimitiveMembershipMeshColoring(const Config& config);
+  virtual ~PrimitiveMembershipMeshColoring() = default;
+
+  spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<MeshColoring,
+                                     PrimitiveMembershipMeshColoring,
+                                     Config>("PrimitiveMembershipMeshColoring");
+};
+
+void declare_config(PrimitiveMembershipMeshColoring::Config& config);
+
+/**
+ * @brief Binary color: green if vertex was observed at multiple times
+ * (post-fusion identity-merged: observation_windows.size() > 1),
+ * red if exactly one window (once-observed). Quick way to see post-fusion
+ * coverage at a glance.
+ */
+struct PostFusionVsOnceObservedMeshColoring : public MeshColoring {
+  struct Config {};
+  PostFusionVsOnceObservedMeshColoring();
+  explicit PostFusionVsOnceObservedMeshColoring(const Config& config);
+  virtual ~PostFusionVsOnceObservedMeshColoring() = default;
+
+  spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
+
+ private:
+  inline static const auto registration_ =
+      config::RegistrationWithConfig<MeshColoring,
+                                     PostFusionVsOnceObservedMeshColoring,
+                                     Config>("PostFusionVsOnceObservedMeshColoring");
+};
+
+void declare_config(PostFusionVsOnceObservedMeshColoring::Config& config);
 
 /**
  * @brief Utility class to color a mesh based on a mesh coloring for visualization.

@@ -173,54 +173,35 @@ FusionCountMeshColoring::FusionCountMeshColoring() : FusionCountMeshColoring(Con
 FusionCountMeshColoring::FusionCountMeshColoring(const Config&) {}
 
 void FusionCountMeshColoring::setMesh(const Mesh& mesh) {
+  // Normalize to the max fusion count of the current mesh (per step).
+  max_count_ = 1;
   if (!mesh.has_fusion_counts || mesh.fusion_counts.empty()) {
-    min_count_ = 2;
-    max_count_ = 2;
     return;
   }
-
-  min_count_ = std::numeric_limits<uint32_t>::max();
-  max_count_ = 0;
   for (const auto count : mesh.fusion_counts) {
-    if (count > 1) {
-      if (count < min_count_) {
-        min_count_ = count;
-      }
-      if (count > max_count_) {
-        max_count_ = count;
-      }
+    if (count > max_count_) {
+      max_count_ = count;
     }
-  }
-  if (min_count_ > max_count_) {
-    min_count_ = 2;
-    max_count_ = 2;
   }
 }
 
 Color FusionCountMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const {
-  static const visualizer::RainbowPalette palette;
-
   if (!mesh.has_fusion_counts || i >= mesh.fusion_counts.size()) {
     return Color::gray();
   }
 
+  // Grey: never fused. Green (1 fusion) -> red (most fused this step).
   const uint32_t count = mesh.fusion_counts[i];
   if (count == 0) {
     return Color::gray();
   }
-  if (count == 1) {
-    return Color::green();
-  }
-
-  if (count <= min_count_) {
-    return palette(0);
-  } else if (count >= max_count_) {
-    return palette(1);
-  }
-
-  const float normalized =
-      static_cast<float>(count - min_count_) / static_cast<float>(max_count_ - min_count_);
-  return palette(normalized);
+  const float t =
+      max_count_ > 1
+          ? std::min(1.0f, static_cast<float>(count - 1) / static_cast<float>(max_count_ - 1))
+          : 0.0f;
+  return Color(static_cast<uint8_t>(255.0f * t),
+               static_cast<uint8_t>(255.0f * (1.0f - t)),
+               0);
 }
 
 void declare_config(TemporalIslandMeshColoring::Config&) {
@@ -250,6 +231,57 @@ Color TemporalIslandMeshColoring::getVertexColor(const Mesh& mesh, size_t i) con
   if (island_id >= 147) adjusted_id++;   // accounts for shift, targeting 149
 
   return spark_dsg::colormaps::distinct150Id(adjusted_id);
+}
+
+// === PrimitiveMembershipMeshColoring ===
+
+void declare_config(PrimitiveMembershipMeshColoring::Config& cfg) {
+  using namespace config;
+  name("PrimitiveMembershipMeshColoring::Config");
+  field(cfg.primitive_voxel_size_m, "primitive_voxel_size_m");
+  check(cfg.primitive_voxel_size_m, GT, 0.f, "primitive_voxel_size_m");
+}
+
+PrimitiveMembershipMeshColoring::PrimitiveMembershipMeshColoring()
+    : PrimitiveMembershipMeshColoring(Config()) {}
+
+PrimitiveMembershipMeshColoring::PrimitiveMembershipMeshColoring(const Config& cfg)
+    : config(config::checkValid(cfg)) {}
+
+Color PrimitiveMembershipMeshColoring::getVertexColor(const Mesh& mesh,
+                                                     size_t i) const {
+  const auto& p = mesh.points[i];
+  const float inv = 1.0f / config.primitive_voxel_size_m;
+  const int32_t vx = static_cast<int32_t>(std::floor(p.x() * inv));
+  const int32_t vy = static_cast<int32_t>(std::floor(p.y() * inv));
+  const int32_t vz = static_cast<int32_t>(std::floor(p.z() * inv));
+  // 3-axis spatial hash to a 32-bit color seed.
+  uint32_t h = 0x9e3779b9u;
+  h ^= static_cast<uint32_t>(vx) + 0x9e3779b9u + (h << 6) + (h >> 2);
+  h ^= static_cast<uint32_t>(vy) + 0x9e3779b9u + (h << 6) + (h >> 2);
+  h ^= static_cast<uint32_t>(vz) + 0x9e3779b9u + (h << 6) + (h >> 2);
+  const uint8_t r = (h >> 0) & 0xFF;
+  const uint8_t g = (h >> 8) & 0xFF;
+  const uint8_t b = (h >> 16) & 0xFF;
+  return Color(r, g, b, 255);
+}
+
+// === PostFusionVsOnceObservedMeshColoring ===
+
+void declare_config(PostFusionVsOnceObservedMeshColoring::Config&) {
+  config::name("PostFusionVsOnceObservedMeshColoring::Config");
+}
+
+PostFusionVsOnceObservedMeshColoring::PostFusionVsOnceObservedMeshColoring()
+    : PostFusionVsOnceObservedMeshColoring(Config()) {}
+
+PostFusionVsOnceObservedMeshColoring::PostFusionVsOnceObservedMeshColoring(
+    const Config&) {}
+
+Color PostFusionVsOnceObservedMeshColoring::getVertexColor(const Mesh& mesh,
+                                                          size_t i) const {
+  const auto windows = mesh.observationWindowsOf(i);
+  return windows.size() > 1 ? Color::green() : Color::red();
 }
 
 MeshColorAdapter::MeshColorAdapter(const Mesh& mesh, MeshColoring::ConstPtr coloring)
