@@ -1,5 +1,5 @@
 ---
-paths: [khronos, khronos_ros, hydra_multi_system]
+paths: [khronos, khronos_ros]
 _tracker_config: &tracker_config
   type: MaxIouTracker
   track_by: voxels
@@ -31,7 +31,7 @@ active_window:
       tracker: *tracker_config
       projective_integrator: *lidar_integrator
   object_extractor:
-    type: CrispObjectExtractor
+    type: ExternalObjectExtractor
     verbosity: 0
     min_object_allocation_confidence: 0.5
     excluded_labels: [2, 14, 15, 16, 18, 24, 26, 27, 29, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47]

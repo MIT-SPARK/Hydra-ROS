@@ -1,5 +1,5 @@
 ---
-paths: [khronos, khronos_ros, hydra_multi_system]
+paths: [khronos, khronos_ros]
 _tracker_config_pixels: &tracker_config_pixels
   type: MaxIouTracker
   track_by: pixels
@@ -58,7 +58,7 @@ active_window:
       tracker: *tracker_config_voxels_lidar
       projective_integrator: *lidar_integrator
   object_extractor:
-    type: CrispObjectExtractor
+    type: ExternalObjectExtractor
     min_object_allocation_confidence: 0.5
     excluded_labels:  # e.g., exclude ground and other surface/place labels from object extraction
       - 0
@@ -108,8 +108,6 @@ active_window:
       - 47
     associate_lidar_name: velodyne16
     lidar_depth_mode: 1  # 0=disabled, 1=lidar-only, 2=replace-rgbd
-    # debug_output_path: ""  #
-    # debug_output_path: "/home/multyxu/multi_ws/multi_output/crisp_track_results"  # e.g., "/tmp/crisp_debug"
     debug_output_path: ''
     verbosity: 0
     mask_from_cluster: false

@@ -2,7 +2,7 @@
 session_name: kimera_multi_{{ robot_name }}
 shell_command_before:
   - source /opt/ros/jazzy/setup.{{ shell.extension }}
-  - source $COLCON_WS/install/setup.{{ shell.extension }}
+  - source {{ workspace_path }}
 options:
   default-command: {{ shell.cmd }}
 windows:
@@ -11,7 +11,7 @@ windows:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
       {% endif %}
-      - ros2 launch hydra_multi_system play_kimera_multi.launch.yaml
+      - ros2 launch hydra_plusplus play_kimera_multi.launch.yaml
           robot_name:={{ robot_name }}
           delay:={{ delay }}
           rate:={{ rate }}
@@ -21,13 +21,11 @@ windows:
   - window_name: {{ robot_name }}_hydra
     focus: true
     panes:
-      - ros2 launch hydra_multi_system kimera_multi_instance_robot.launch.yaml
+      - ros2 launch hydra_plusplus kimera_multi_robot.launch.yaml
           exit_after_clock:='true'
           robot_name:={{ robot_name }}
           robot_id:={{ robot_id }}
           sensor_type:={{ sensor_type }}
-          segmentation_model:={{ segmentation_model }}
-          labelspace_name:={{ labelspace_name }}
           object_variant:={{ object_variant }}
           use_ground_seg:={{ use_ground_seg | lower }}
           ground_seg_sensor_type:={{ ground_seg_sensor_type }}

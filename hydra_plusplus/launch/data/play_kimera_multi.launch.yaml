@@ -27,7 +27,7 @@ launch:
       name: transform_file_broadcaster
       param:
         - {name: use_sim_time, value: $(var sim_time)}
-        - {name: filepath, value: $(find-pkg-share hydra_multi_system)/config/static_tfs/kimera_multi/$(var robot_name)_static_tfs.yaml}
+        - {name: filepath, value: $(find-pkg-share hydra_plusplus)/config/static_tfs/kimera_multi/$(var robot_name)_static_tfs.yaml}
   - node:
       pkg: spark_fast_lio
       exec: spark_lio_mapping
@@ -37,7 +37,7 @@ launch:
         - {from: imu, to: forward/imu}
       param:
         - from: $(find-pkg-share spark_fast_lio)/config/kimera_multi/$(var robot_name).yaml
-        - from: $(find-pkg-share hydra_multi_system)/config/robots/kimera_multi_fast_lio.yaml
+        - from: $(find-pkg-share hydra_plusplus)/config/robots/kimera_multi_fast_lio.yaml
         - {name: use_sim_time, value: $(var sim_time)}
         - {name: common.lidar_frame, value: $(var robot_name)/velodyne}
         - {name: common.base_frame, value: $(var robot_name)/base}

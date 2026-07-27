@@ -9,7 +9,7 @@ launch:
   - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
   - arg: {name: scene, default: uhumans2_office, description: uhumans2 scene name}
   - arg: {name: object_variant, default: crisp, description: object variant}
-  - arg: {name: log_path, default: $(env HOME)/.hydra_multi/$(var scene)/robot_$(var robot_id), description: directory to output to}
+  - arg: {name: log_path, default: $(env HOME)/.hydra/$(var scene)/robot_$(var robot_id), description: directory to output to}
   # frames
   - arg: {name: sensor_frame, default: $(var robot_name)/left_cam, description: camera frame}
   - arg: {name: robot_frame, default: $(var robot_name)/base_link, description: robot body tf frame}
@@ -33,17 +33,17 @@ launch:
         --config-utilities-var robot_frame=$(var robot_frame)
         --config-utilities-var colormap_path=$(find-pkg-share hydra_ros)/config/color/$(var scene).csv
         --config-utilities-file $(find-pkg-share hydra)/config/label_spaces/$(var scene)_label_space.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/uhumans2.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/variants/uhumans2_$(var object_variant).yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/input/uhumans2.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/uhumans2.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/variants/uhumans2_$(var object_variant).yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/input/uhumans2.yaml
         --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
         --config-utilities-yaml {backend: {optimize_on_lc: $(var optimize), publish_backend_tf: false}}
         --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
         --config-utilities-yaml {glog_verbosity: 0, config_verbosity: -1, show_run_settings: false, preprint_config: false}
   - include:
-      file: $(find-pkg-share hydra_multi_system)/launch/visualizer.launch.yaml
+      file: $(find-pkg-share hydra_plusplus)/launch/visualizer.launch.yaml
       arg:
         - {name: use_mesh_color_adapter, value: 'false'}
-        - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/uhumans2.rviz}
+        - {name: rviz_path, value: $(find-pkg-share hydra_plusplus)/rviz/uhumans2.rviz}
   - node: {pkg: tf2_ros, exec: static_transform_publisher, args: --frame-id map --child-frame-id $(var map_frame)}
   - node: {pkg: tf2_ros, exec: static_transform_publisher, args: --frame-id $(var map_frame) --child-frame-id $(var odom_frame)}

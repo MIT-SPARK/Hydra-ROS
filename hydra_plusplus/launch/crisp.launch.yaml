@@ -7,7 +7,7 @@ launch:
   - arg: {name: checkpoint, default: $(env CRISP_MODEL_DIR)/202508042315_P41O3/checkpoint.pth}
   - pyenv_node:
       pyenv: $(var env_path)
-      pkg: hydra_multi_system
+      pkg: hydra_plusplus
       exec: crisp_node
       name: crisp
       param:

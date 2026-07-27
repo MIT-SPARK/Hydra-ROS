@@ -10,7 +10,7 @@ launch:
   - arg: {name: place_instance_id, default: 'false', description: extract semantic category from packed instance labels for place node coloring}
   - arg: {name: object_variant, default: crisp, description: object variant}
   - arg: {name: visualizer_config_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_config.yaml}
-  - arg: {name: rviz_path, default: $(find-pkg-share hydra_multi_system)/rviz/uhumans2.rviz, description: rviz file to load}
+  - arg: {name: rviz_path, default: $(find-pkg-share hydra_plusplus)/rviz/uhumans2.rviz, description: rviz file to load}
   # nodes
   - set_remap: {from: hydra_visualizer/reconstruct_object, to: reconstruct_object}
   - node:
@@ -25,8 +25,8 @@ launch:
         --config-utilities-yaml {plugins: {mesh: {coloring: {instance_id: $(var mesh_instance_id)}}}}
         --config-utilities-yaml {renderer: {partitions: {3: {nodes: {color: {instance_id: $(var place_instance_id)}}}}}}
         --config-utilities-file $(var visualizer_config_path)
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/visualizer/visualizer_overrides.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/visualizer/$(var object_variant)_visualizer_plugins.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/visualizer/visualizer_overrides.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/visualizer/$(var object_variant)_visualizer_plugins.yaml
       remap:
         - {from: hydra_visualizer/dsg, to: hydra/backend/dsg}
   - node: {if: $(var start_rviz), name: rviz, pkg: rviz2, exec: rviz2, args: -d $(var rviz_path)}

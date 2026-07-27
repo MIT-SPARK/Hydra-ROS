@@ -18,7 +18,7 @@ windows:
         -r {{ rate }}
         --start-offset {{ bag_start }}
         --playback-duration {{ bag_duration }}
-      - ros2 launch hydra_multi_system uhumans2_robot.launch.yaml
+      - ros2 launch hydra_plusplus uhumans2_robot.launch.yaml
           exit_after_clock:='true'
           robot_name:={{ robot_name }}
           robot_id:={{ robot_id }}

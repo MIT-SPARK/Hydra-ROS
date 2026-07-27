@@ -10,7 +10,7 @@ launch:
   - arg: {name: labelspace_name, default: ade20k_mit, description: semantic label space}
   - arg: {name: sensor_type, description: 'input sensor type(s) (one of [velodyne16, ouster64, rgbd, hybrid])'}
   - arg: {name: object_variant, description: 'object extraction variant (one of [crisp, khronos, hydra])'}
-  - arg: {name: log_path, default: $(env HOME)/.hydra_multi/kimera_multi/$(var robot_name), description: directory to output to}
+  - arg: {name: log_path, default: $(env HOME)/.hydra/kimera_multi/$(var robot_name), description: directory to output to}
   # ground segmentation
   - arg: {name: use_ground_seg, default: 'false', description: Use Patchwork ground segmentation to filter ground points}
   - arg: {name: ground_seg_sensor_type, default: velodyne16, description: 'LiDAR type for Patchwork (one of [velodyne16, velodyne64, ouster64, ouster128])'}
@@ -69,18 +69,18 @@ launch:
         --config-utilities-var robot_name=$(var robot_name)
         --config-utilities-var robot_frame=$(var robot_frame)
         --config-utilities-file $(find-pkg-share hydra)/config/label_spaces/$(var labelspace_name)_label_space.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/kimera_multi.yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/variants/kimera_multi_$(var object_variant).yaml
-        --config-utilities-file $(find-pkg-share hydra_multi_system)/config/pipelines/input/kimera_multi_$(var sensor_type).yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/kimera_multi.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/variants/kimera_multi_$(var object_variant).yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/input/kimera_multi_$(var sensor_type).yaml
         --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
         --config-utilities-yaml {backend: {optimize_on_lc: $(var optimize), publish_backend_tf: false}}
         --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
         --config-utilities-yaml {glog_verbosity: 0, config_verbosity: 1, show_run_settings: false, preprint_config: false}
   - include:
-      file: $(find-pkg-share hydra_multi_system)/launch/visualizer.launch.yaml
+      file: $(find-pkg-share hydra_plusplus)/launch/visualizer.launch.yaml
       arg:
         - {name: use_mesh_color_adapter, value: 'true'}
-        - {name: rviz_path, value: $(find-pkg-share hydra_multi_system)/rviz/kimera_multi.rviz}
+        - {name: rviz_path, value: $(find-pkg-share hydra_plusplus)/rviz/kimera_multi.rviz}
   - node:
       pkg: tf2_ros
       exec: static_transform_publisher

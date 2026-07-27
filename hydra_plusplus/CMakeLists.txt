@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(hydra_multi_system)
+project(hydra_plusplus)
 
 find_package(ament_cmake REQUIRED)
 
