@@ -50,6 +50,7 @@ add_library(
   src/input/pointcloud_adaptor.cpp
   src/input/pointcloud_receiver.cpp
   src/input/ros_data_receiver.cpp
+  src/input/ros_labelspace.cpp
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
   src/places/external_traversability_estimator.cpp
