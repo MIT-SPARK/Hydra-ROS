@@ -122,6 +122,41 @@ void LabelSubscriber::fillInput(const Image& img, ImageInputPacket& packet) cons
   }
 }
 
+InstanceSubscriber::InstanceSubscriber() = default;
+
+InstanceSubscriber::InstanceSubscriber(ianvs::NodeHandle nh, uint32_t queue_size)
+    : impl_(std::make_shared<FilterSub<Image>>(nh, "semantic/image_raw", queue_size)) {}
+
+InstanceSubscriber::~InstanceSubscriber() = default;
+
+InstanceSubscriber::Filter& InstanceSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
+
+void InstanceSubscriber::fillInput(const Image& img, ImageInputPacket& packet) const {
+  cv::Mat mat;
+  try {
+    mat = cv_bridge::toCvCopy(img)->image;
+  } catch (const cv_bridge::Exception& e) {
+    LOG(ERROR) << "Failed to convert label image: " << e.what();
+  }
+
+  if (mat.type() != CV_32SC1) {
+    LOG(ERROR) << "Invalid encoding for instance+label image";
+    return;
+  }
+
+  packet.labels = cv::Mat(mat.size(), CV_32SC1);
+  packet.instances = cv::Mat(mat.size(), CV_16SC1);
+  for (int r = 0; r < mat.rows; ++r) {
+    for (int c = 0; c < mat.cols; ++c) {
+      const auto original = mat.at<int32_t>(r, c);
+      packet.labels.at<int32_t>(r, c) = original >> 16;
+      packet.instances.at<int16_t>(r, c) = original & 0xFFFF;
+    }
+  }
+}
+
 ColormappedLabelSubscriber::ColormappedLabelSubscriber()
     : default_label_(-1), colormap_(nullptr) {}
 
@@ -244,6 +279,16 @@ void declare_config(ClosedSetImageReceiver::Config& config) {
   base<RosDataReceiver::Config>(config);
 }
 
+InstanceImageReceiver::InstanceImageReceiver(const Config& config,
+                                             const std::string& sensor_name)
+    : ImageReceiverImpl<InstanceSubscriber>(config, sensor_name) {}
+
+void declare_config(InstanceImageReceiver::Config& config) {
+  using namespace config;
+  name("InstanceImageReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
+
 OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
                                            const std::string& sensor_name)
     : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
@@ -291,6 +336,12 @@ static const auto closed_registration =
                                    ClosedSetImageReceiver,
                                    ClosedSetImageReceiver::Config,
                                    std::string>("ClosedSetImageReceiver");
+
+static const auto instance_registration =
+    config::RegistrationWithConfig<DataReceiver,
+                                   InstanceImageReceiver,
+                                   InstanceImageReceiver::Config,
+                                   std::string>("InstanceImageReceiver");
 
 static const auto open_registration =
     config::RegistrationWithConfig<hydra::DataReceiver,
