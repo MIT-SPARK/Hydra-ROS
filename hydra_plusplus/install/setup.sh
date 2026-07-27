@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-dir="$(dirname $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd))"
-pkg_dir="${dir}/hydra_plusplus"
+pkg_dir="$(dirname $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd))"
 shell="$(basename ${SHELL})"
 
 install_crisp=true
@@ -25,7 +24,7 @@ if [ "$install_crisp" = true ]; then
     echo "Package: ${pkg_dir}"
     python3 -m virtualenv --clear --system-site-packages "${pkg_dir}/environments/crisp"
     source "${pkg_dir}/environments/crisp/bin/activate"
-    pip install -r "${dir}/install/crisp_requirements.txt"
+    pip install -r "${pkg_dir}/install/crisp_requirements.txt"
     pip install -e "${pkg_dir}/crisp"
     deactivate
 fi
@@ -46,6 +45,5 @@ case $shell in
 esac
 
 echo "export PATH="'$PATH:'"${pkg_dir}/bin" >> "$user_config"
-echo "export COLCON_WS=$(dirname $(dirname ${dir}))" >> "$user_config"
 echo "export CRISP_ENV=${pkg_dir}/environments/crisp" >> "$user_config"
 echo "export CRISP_MODEL_DIR=${pkg_dir}/models/" >> "$user_config"

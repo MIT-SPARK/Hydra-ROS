@@ -60,8 +60,8 @@ SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
 
 
 @click.command()
-@click.argument("robot_name")
 @click.argument("bag_path", type=click.Path(exists=True))
+@click.argument("robot_name", nargs=-1)
 @click.option("--session-path", "-p", type=click.Path(), help="session_path to use")
 @click.option("--output-dir", "-o", type=click.Path(), help="output directory")
 @click.option("--variant", "-v", default="crisp", type=click.Choice(VARIANTS))
@@ -81,8 +81,8 @@ SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
 @click.option("--close/--no-close", default=True, help="kill tmux after hydra exits")
 @click.option("--auto-attach/--no-auto-attach", default=True, help="attach to session")
 def main(
-    robot_name,
     bag_path,
+    robot_name,
     session_path,
     output_dir,
     variant,
@@ -102,6 +102,7 @@ def main(
     close,
     auto_attach,
 ):
+    robot_name = robot_name[0] if len(robot_name) else None
     workspace_path = _pkg_path().parent.parent.parent / "install" / f"setup.{shell}"
     session_path = _get_session_path(session_path=session_path)
     if session_path is None:

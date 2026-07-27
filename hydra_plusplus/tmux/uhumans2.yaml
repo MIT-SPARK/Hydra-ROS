@@ -1,5 +1,5 @@
 ---
-session_name: uhumans2_{{ robot_name }}
+session_name: uhumans2
 shell_command_before:
   - source /opt/ros/jazzy/setup.{{ shell.extension }}
   - source {{ workspace_path }}
@@ -8,6 +8,7 @@ options:
 windows:
   - window_name: hydra
     focus: true
+    layout: main-horizontal
     panes:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
@@ -18,9 +19,8 @@ windows:
         -r {{ rate }}
         --start-offset {{ bag_start }}
         --playback-duration {{ bag_duration }}
-      - ros2 launch hydra_plusplus uhumans2_robot.launch.yaml
+      - ros2 launch hydra_plusplus uhumans2.launch.yaml
           exit_after_clock:='true'
-          robot_name:={{ robot_name }}
           robot_id:={{ robot_id }}
           object_variant:={{ object_variant }}
           log_path:={{ output_path }}
