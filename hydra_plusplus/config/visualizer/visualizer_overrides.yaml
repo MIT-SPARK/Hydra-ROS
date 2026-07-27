@@ -1,6 +1,6 @@
 ---
 plugins:
-  mesh: {type: MeshPlugin, coloring: {type: SemanticMeshColoring}, use_color_adapter: $<var use_mesh_color_adapter>}
+  mesh: {type: MeshPlugin, coloring: {type: ''}}
   agent_poses: {type: PosePlugin, num_to_skip: 0}
 renderer:
   layers:

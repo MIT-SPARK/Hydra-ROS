@@ -5,9 +5,6 @@ launch:
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
   - arg: {name: start_config_gui, default: 'true', description: automatically start gui}
   # visualizer configuration
-  - arg: {name: use_mesh_color_adapter, default: 'false'}
-  - arg: {name: mesh_instance_id, default: 'false', description: extract semantic category from packed instance labels for mesh coloring}
-  - arg: {name: place_instance_id, default: 'false', description: extract semantic category from packed instance labels for place node coloring}
   - arg: {name: object_variant, default: crisp, description: object variant}
   - arg: {name: visualizer_config_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_config.yaml}
   - arg: {name: rviz_path, default: $(find-pkg-share hydra_plusplus)/rviz/uhumans2.rviz, description: rviz file to load}
@@ -19,11 +16,7 @@ launch:
       exec: hydra_visualizer_node
       name: hydra_visualizer
       args: >
-        --config-utilities-var use_mesh_color_adapter=$(var use_mesh_color_adapter)
-        --config-utilities-yaml {graph: {type: GraphFromRos}}
-        --config-utilities-yaml {glog_verbosity: 0, glog_level: 1}
-        --config-utilities-yaml {plugins: {mesh: {coloring: {instance_id: $(var mesh_instance_id)}}}}
-        --config-utilities-yaml {renderer: {partitions: {3: {nodes: {color: {instance_id: $(var place_instance_id)}}}}}}
+        --config-utilities-yaml {graph: {type: GraphFromRos}, glog_verbosity: 0, glog_level: 1}
         --config-utilities-file $(var visualizer_config_path)
         --config-utilities-file $(find-pkg-share hydra_plusplus)/config/visualizer/visualizer_overrides.yaml
         --config-utilities-file $(find-pkg-share hydra_plusplus)/config/visualizer/$(var object_variant)_visualizer_plugins.yaml

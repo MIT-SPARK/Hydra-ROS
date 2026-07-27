@@ -1,19 +1,20 @@
 ---
 launch:
-  - arg: {name: sim_time, default: 'true', description: use bag time}
-  # robot identifiers
+  # required args
+  - arg: {name: log_path}
+  - arg: {name: object_variant}
+  # options
   - arg: {name: robot_id, default: '0', description: unique robot identifier}
-  # pipeline
-  - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
   - arg: {name: scene, default: uhumans2_office, description: uhumans2 scene name}
-  - arg: {name: object_variant, default: crisp, description: object variant}
-  - arg: {name: log_path, default: $(env HOME)/.hydra/$(var scene)/robot_$(var robot_id), description: directory to output to}
+  - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
   # nodes
   - node:
       pkg: hydra_ros
       exec: hydra_ros_node
       name: hydra
       on_exit: shutdown
+      param:
+        - {name: use_sim_time, value: true}
       remap:
         - {from: hydra/input/left_cam/depth_registered/image_rect, to: /tesse/depth_cam/mono/image_raw}
         - {from: hydra/input/left_cam/rgb/image_raw, to: /tesse/left_cam/rgb/image_raw}

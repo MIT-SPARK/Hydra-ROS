@@ -108,16 +108,10 @@ def main(
     if session_path is None:
         sys.exit("Invalid session path!")
 
-    # TODO: improve automated selection
-    if segmentation_model == "yolov11" or segmentation_model == "gdsam2":
-        if session_path.name.split("/")[-1] != "kimera_multi_instance.yaml":
-            click.secho(f"'{segmentation_model}' requires different session!", fg="red")
-            session_path = _get_session_path("robots/kimera_multi_instance.yaml")
-            click.secho(f"Using session '{session_path}' instead", fg="red")
-
     bag_path = pathlib.Path(bag_path).expanduser().absolute()
     if not output_dir:
-        name = f"{variant}_{sensor_type}_{robot_name}"
+        name = f"{variant}_{sensor_type}"
+        name = name if robot_name is None else f"{name}_{robot_name}"
         output_dir = _pkg_path() / "output" / bag_path.stem / name
 
     output_dir = pathlib.Path(output_dir).expanduser().absolute()
@@ -149,23 +143,6 @@ def main(
         "close_session": close,
         "workspace_path": workspace_path,
     }
-
-    # TODO: improve automated selection
-    match segmentation_model:
-        case "yolov11":
-            labelspace_name = "yolov11_coco"
-            context["segmentation_model"] = segmentation_model
-            context["labelspace_name"] = labelspace_name
-        case "gdsam2":
-            labelspace_name = "gdsam2_mit"
-            # TODO (multy): currenlty labelspace is not been passed to gdsam2 node
-            # and classes to be segmented is managed inside the config in semantic_inference_ros
-            context["segmentation_model"] = segmentation_model
-            context["labelspace_name"] = labelspace_name
-        case "close_set":
-            context["segmentation_model"] = segmentation_model
-            context["labelspace_name"] = "ade20k_mit"
-
     contents = _render_tmuxp(session_path, context)
 
     console = rich.console.Console()
