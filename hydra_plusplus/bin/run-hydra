@@ -59,14 +59,27 @@ MODELS = ["closed_set", "yolov11", "gdsam2"]
 SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
 
 
+# @click.command(context_settings={"max_content_width": 120})
 @click.command()
 @click.argument("bag_path", type=click.Path(exists=True))
 @click.argument("robot_name", nargs=-1)
 @click.option("--session-path", "-p", type=click.Path(), help="session_path to use")
 @click.option("--output-dir", "-o", type=click.Path(), help="output directory")
-@click.option("--variant", "-v", default="crisp", type=click.Choice(VARIANTS))
-@click.option("--segmentation-model", default="closed_set", type=click.Choice(MODELS))
-@click.option("--sensor-type", "-s", default="rgbd", type=click.Choice(SENSORS))
+@click.option(
+    "--variant",
+    "-v",
+    default="crisp",
+    type=click.Choice(VARIANTS),
+    help="Object variant",
+)
+@click.option("--segmentation-model", type=click.Choice(MODELS))
+@click.option(
+    "--sensor-type",
+    "-s",
+    default="rgbd",
+    type=click.Choice(SENSORS),
+    help="Input sensor configuration",
+)
 @click.option("--ground-seg/--no-ground-seg", default=False, help="use Patchwork")
 @click.option("--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag")
 @click.option("--bag-rate", "-r", default=1.0, help="bag playback rate")
@@ -142,6 +155,7 @@ def main(
         "visualize": visualize,
         "close_session": close,
         "workspace_path": workspace_path,
+        "segmentation_model": segmentation_model,
     }
     contents = _render_tmuxp(session_path, context)
 
@@ -162,4 +176,4 @@ def main(
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(max_content_width=120))

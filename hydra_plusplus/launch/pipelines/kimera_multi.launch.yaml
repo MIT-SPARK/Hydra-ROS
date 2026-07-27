@@ -74,16 +74,16 @@ launch:
       args: >-
         --config-utilities-var robot_name=$(var robot_name)
         --config-utilities-var robot_frame=$(var robot_frame)
-        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/robots/hydra/kimera_multi.yaml
-        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/robots/hydra/variants/kimera_multi_$(var object_variant)_instance.yaml
-        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/robots/hydra/input/kimera_multi_$(var sensor_type).yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/kimera_multi.yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/variants/kimera_multi_$(var object_variant).yaml
+        --config-utilities-file $(find-pkg-share hydra_plusplus)/config/pipelines/input/kimera_multi_$(var sensor_type).yaml
         --config-utilities-yaml {robot_id: $(var robot_id), odom_frame: $(var odom_frame), robot_frame: $(var robot_frame), map_frame: $(var map_frame)}
         --config-utilities-yaml {exit_after_clock: $(var exit_after_clock), log_path: $(var log_path)}
         --config-utilities-yaml {glog_verbosity: 0, config_verbosity: 1, show_run_settings: false, preprint_config: false}
   - include:
-      file: $(find-pkg-share hydra_plusplus)/launch/robots/robot_visualizer.launch.yaml
+      file: $(find-pkg-share hydra_plusplus)/launch/visualizer.launch.yaml
       arg:
-        - {name: rviz_path, value: $(find-pkg-share hydra_plusplus)/rviz/robots/kimera_multi.rviz}
+        - {name: rviz_path, value: $(find-pkg-share hydra_plusplus)/rviz/kimera_multi.rviz}
   - node:
       pkg: tf2_ros
       exec: static_transform_publisher

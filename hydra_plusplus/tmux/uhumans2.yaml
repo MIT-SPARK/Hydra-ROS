@@ -7,7 +7,6 @@ options:
   default-command: {{ shell.cmd }}
 windows:
   - window_name: hydra
-    focus: true
     layout: main-horizontal
     panes:
       {% if run_zenoh %}
