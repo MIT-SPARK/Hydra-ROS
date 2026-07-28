@@ -1,0 +1,9 @@
+---
+show_config: true
+camera_frame: $<var robot_name>/forward_color_optical_frame
+use_image_stamp: true
+projection:
+  unknown_label: -1
+  instance_id: true
+  allowed_labels: [4]
+  override_labels: []

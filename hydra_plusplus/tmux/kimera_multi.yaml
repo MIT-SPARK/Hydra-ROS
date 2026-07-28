@@ -12,25 +12,26 @@ windows:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
       {% endif %}
-      - ros2 launch hydra_plusplus play_kimera_multi.launch.yaml
-          robot_name:={{ robot_name | default('', true) }}
-          delay:={{ delay }}
-          rate:={{ rate }}
-          start:={{ bag_start }}
-          duration:={{ bag_duration }}
-          bag_path:={{ bag_path }}
+      - ros2 run ianvs play_rosbag {{ bag_path }}
+        --clock
+        -d {{ delay }}
+        -r {{ rate }}
+        --start-offset {{ bag_start }}
+        --playback-duration {{ bag_duration }}
+        --exclude-topics /tf_static /tf
+      - ros2 launch hydra_plusplus play_kimera_multi.launch.yaml robot_name:={{ robot_name | default('', true) }}
       - ros2 launch hydra_plusplus kimera_multi.launch.yaml
           exit_after_clock:='true'
           robot_name:={{ robot_name | default('', true) }}
           robot_id:={{ robot_id }}
           sensor_type:={{ sensor_type }}
-          segmentation_model:={{ segmentation_model }}
+          segmentation_model:={{ segmentation_model | default('yolov11', true) }}
           object_variant:={{ object_variant }}
           use_ground_seg:={{ use_ground_seg | lower }}
           log_path:={{ output_path }}
-          start_visualizer:={{ visualize }}
-          start_rviz:={{ visualize }}
-          start_config_gui:={{ visualize and start_gui }}
+          start_visualizer:={{ visualize | lower }}
+          start_rviz:={{ visualize | lower }}
+          start_config_gui:={{ visualize and start_gui | lower }}
         {% if close_session %}
         && tmux kill-session
         {% endif %}

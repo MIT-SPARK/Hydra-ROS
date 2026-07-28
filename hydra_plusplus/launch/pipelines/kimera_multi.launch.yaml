@@ -16,6 +16,9 @@ launch:
   - arg: {name: robot_frame, default: $(var robot_name)/base, description: robot body tf frame}
   - arg: {name: odom_frame, default: $(var robot_name)/odom, description: odometry frame}
   - arg: {name: map_frame, default: $(var robot_name)/odom, description: map frame}
+  # segmentation configuration
+  - arg: {name: env_path, default: $(env HOME)/.semantic_inference/env, description: Path to semantic_inference python environment}
+  - arg: {name: config_path, default: $(find-pkg-share semantic_inference_ros)/config/instance_segmentation/$(var segmentation_model).yaml, description: Configuration file for model}
   # nodes
   - push_ros_namespace: {namespace: $(var robot_name)}
   - node:
@@ -27,37 +30,29 @@ launch:
       output: screen
       remap:
         - {from: /patchwork/input_cloud, to: /$(var robot_name)/cloud_registered_lidar}
+        - {from: patchwork/cloud_groundseg_lidar, to: /$(var robot_name)/cloud_groundseg}
       param:
         - from: $(find-pkg-share patchwork)/config/$(var ground_seg_sensor_type).yaml
-  - group:
+  - group:  # TODO(nathan) think about dropping forward namespace
       - push_ros_namespace: {namespace: forward}
-      - set_remap:
-          if: $(var use_ground_seg)
-          from: cloud
-          to: /$(var robot_name)/patchwork/cloud_groundseg_lidar
-      - set_remap:
-          unless: $(var use_ground_seg)
-          from: cloud
-          to: /$(var robot_name)/cloud_registered_lidar
-      - include:
-          if: $(var use_ground_seg)
-          file: $(find-pkg-share semantic_inference_ros)/launch/instance_segmentation.launch.yaml
-          arg:
-            - {name: show_configs, value: 'false'}
-            - {name: compressed_rgb, value: 'true'}
-            - {name: model_name, value: $(var segmentation_model)}
-            - {name: run_backprojection, value: 'true'}
-            - {name: backprojection_config, value: '{projection: {unknown_label: -1, instance_id: true, input_label_fieldname: label, allowed_labels: [4], override_labels: []}, camera_frame: $(var robot_name)/forward_color_optical_frame,
-                use_image_stamp: true}'}
-      - include:
-          unless: $(var use_ground_seg)
-          file: $(find-pkg-share semantic_inference_ros)/launch/instance_segmentation.launch.yaml
-          arg:
-            - {name: show_configs, value: 'false'}
-            - {name: compressed_rgb, value: 'true'}
-            - {name: model_name, value: $(var segmentation_model)}
-            - {name: run_backprojection, value: 'true'}
-            - {name: backprojection_config, value: '{projection: {unknown_label: -1, instance_id: true}, camera_frame: $(var robot_name)/forward_color_optical_frame, use_image_stamp: true}'}
+      - pyenv_node:  # 2D instance segmentation
+          pkg: semantic_inference_ros
+          exec: instance_segmentation_node
+          name: semantic_inference
+          pyenv: $(var env_path)
+          on_exit: shutdown
+          param:
+            - {name: config_path, value: $(var config_path), type: str}
+      - node:  # point cloud backprojection
+          pkg: semantic_inference_ros
+          exec: backprojection_node
+          name: semantic_projector
+          remap:
+            - {from: cloud, to: /$(var robot_name)/$(if $(var use_ground_seg) cloud_groundseg cloud_registered_lidar)}
+          args: |
+            --config-utilities-var robot_name=$(var robot_name)
+            --config-utilities-yaml {projection: {input_label_fieldname: $(if $(var use_ground_seg) label '""')}}
+            --config-utilities-file $(find-pkg-share hydra_plusplus)/config/data/kimera_multi_backprojection.yaml
   - node:
       pkg: hydra_ros
       exec: hydra_ros_node

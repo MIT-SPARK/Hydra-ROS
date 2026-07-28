@@ -23,9 +23,9 @@ windows:
           robot_id:={{ robot_id }}
           object_variant:={{ object_variant }}
           log_path:={{ output_path }}
-          start_visualizer:={{ visualize }}
-          start_rviz:={{ visualize }}
-          start_config_gui:={{ visualize and start_gui }}
+          start_visualizer:={{ visualize | lower }}
+          start_rviz:={{ visualize | lower }}
+          start_config_gui:={{ visualize and start_gui | lower }}
         {% if close_session %}
         && tmux kill-session
         {% endif %}
