@@ -1,20 +1,6 @@
 - git:
-    local-name: config_utilities
-    uri: git@github.com:MIT-SPARK/config_utilities.git
+    local-name: spark_fast_lio
+    uri: git@github.com:MIT-SPARK/spark-fast-lio.git
 - git:
-    local-name: pose_graph_tools
-    uri: git@github.com:MIT-SPARK/pose_graph_tools.git
-    version: ros2
-- git:
-    local-name: spatial_hash
-    uri: git@github.com:MIT-SPARK/Spatial-Hash.git
-- git:
-    local-name: teaser_plusplus
-    uri: git@github.com:MIT-SPARK/TEASER-plusplus.git
-- git:
-    local-name: kimera_rpgo
-    uri: git@github.com:MIT-SPARK/Kimera-RPGO.git
-    version: develop
-- git:
-    local-name: ianvs
-    uri: git@github.com:MIT-SPARK/Ianvs.git
+    local-name: patchwork
+    uri: git@github.com:LimHyungTae/patchwork.git

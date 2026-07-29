@@ -19,13 +19,11 @@ windows:
         --start-offset {{ bag_start }}
         --playback-duration {{ bag_duration }}
       - ros2 launch hydra_plusplus uhumans2.launch.yaml
-          exit_after_clock:='true'
           robot_id:={{ robot_id }}
           object_variant:={{ object_variant }}
           log_path:={{ output_path }}
           start_visualizer:={{ visualize | lower }}
           start_rviz:={{ visualize | lower }}
-          start_config_gui:={{ visualize and start_gui | lower }}
         {% if close_session %}
         && tmux kill-session
         {% endif %}

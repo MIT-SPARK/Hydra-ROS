@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-pkg_dir="$(dirname $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd))"
-shell="$(basename ${SHELL})"
+pkg_dir="$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)")"
+shell="$(basename "${SHELL}")"
 
 install_crisp=true
 
@@ -21,12 +21,10 @@ while :; do
 done
 
 if [ "$install_crisp" = true ]; then
-    echo "Package: ${pkg_dir}"
-    python3 -m virtualenv --clear --system-site-packages "${pkg_dir}/environments/crisp"
-    source "${pkg_dir}/environments/crisp/bin/activate"
-    pip install -r "${pkg_dir}/install/crisp_requirements.txt"
-    pip install -e "${pkg_dir}/crisp"
-    deactivate
+    echo "Installing crisp in: ${pkg_dir}"
+    python3 -m virtualenv --clear --system-site-packages "${pkg_dir}/env"
+    "${pkg_dir}/env/bin/python3" -m pip install -r "${pkg_dir}/install/crisp_requirements.txt"
+    "${pkg_dir}/env/bin/python3" -m pip install git+https://github.com/MIT-SPARK/CRISP
 fi
 
 user_config="$HOME/.bashrc"
@@ -45,5 +43,5 @@ case $shell in
 esac
 
 echo "export PATH="'$PATH:'"${pkg_dir}/bin" >> "$user_config"
-echo "export CRISP_ENV=${pkg_dir}/environments/crisp" >> "$user_config"
-echo "export CRISP_MODEL_DIR=${pkg_dir}/models/" >> "$user_config"
+echo "export HYDRAPP_ENV=${pkg_dir}/env" >> "$user_config"
+echo "export HYDRAPP_MODEL_DIR=${pkg_dir}/models/" >> "$user_config"

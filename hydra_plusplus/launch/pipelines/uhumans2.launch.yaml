@@ -6,7 +6,7 @@ launch:
   # options
   - arg: {name: robot_id, default: '0', description: unique robot identifier}
   - arg: {name: scene, default: uhumans2_office, description: uhumans2 scene name}
-  - arg: {name: exit_after_clock, default: 'false', description: shutdown hydra node after a rosbag finishes playing}
+  - arg: {name: exit_after_clock, default: 'true', description: shutdown hydra node after a rosbag finishes playing}
   # nodes
   - node:
       pkg: hydra_ros

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import pathlib
 import pprint
 import shutil
@@ -54,12 +55,16 @@ def _render_tmuxp(session_path, context):
     return template.render(context)
 
 
+def _resolve_zenoh_arg(run_zenoh):
+    rmw_impl = os.getenv("RMW_IMPLEMENTATION")
+    no_zenoh = rmw_impl is None or rmw_impl != "rmw_zenoh_cpp"
+    return not no_zenoh and run_zenoh
+
+
 VARIANTS = ["crisp", "hydra", "khronos"]
-MODELS = ["closed_set", "yolov11", "gdsam2"]
-SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
+MODELS = ["yolov11", "gdsam2"]
 
 
-# @click.command(context_settings={"max_content_width": 120})
 @click.command()
 @click.argument("bag_path", type=click.Path(exists=True))
 @click.argument("robot_name", nargs=-1)
@@ -73,14 +78,6 @@ SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
     help="Object variant",
 )
 @click.option("--segmentation-model", type=click.Choice(MODELS))
-@click.option(
-    "--sensor-type",
-    "-s",
-    default="rgbd",
-    type=click.Choice(SENSORS),
-    help="Input sensor configuration",
-)
-@click.option("--ground-seg/--no-ground-seg", default=False, help="use Patchwork")
 @click.option("--bag-delay", "-d", default=10.0, help="amount of time to delay rosbag")
 @click.option("--bag-rate", "-r", default=1.0, help="bag playback rate")
 @click.option("--bag-start", default=0.0, help="bag start offset")
@@ -89,7 +86,6 @@ SENSORS = ["rgbd", "velodyne16", "ouster64", "hybrid"]
 @click.option("--force", "-f", is_flag=True, help="clear output if it exists")
 @click.option("--shell", default="zsh", help="shell to use")
 @click.option("--run-zenoh/--no-run-zenoh", default=True, help="start zenoh router")
-@click.option("--start-gui/--no-start-gui", default=False, help="start reconfigure gui")
 @click.option("--visualize/--no-visualize", default=True, help="visualize scene graph")
 @click.option("--close/--no-close", default=True, help="kill tmux after hydra exits")
 @click.option("--auto-attach/--no-auto-attach", default=True, help="attach to session")
@@ -99,9 +95,7 @@ def main(
     session_path,
     output_dir,
     variant,
-    sensor_type,
     segmentation_model,
-    ground_seg,
     bag_delay,
     bag_rate,
     bag_start,
@@ -110,11 +104,11 @@ def main(
     force,
     shell,
     run_zenoh,
-    start_gui,
     visualize,
     close,
     auto_attach,
 ):
+    run_zenoh = _resolve_zenoh_arg(run_zenoh)
     robot_name = robot_name[0] if len(robot_name) else None
     workspace_path = _pkg_path().parent.parent.parent / "install" / f"setup.{shell}"
     session_path = _get_session_path(session_path=session_path)
@@ -123,8 +117,7 @@ def main(
 
     bag_path = pathlib.Path(bag_path).expanduser().absolute()
     if not output_dir:
-        name = f"{variant}_{sensor_type}"
-        name = name if robot_name is None else f"{name}_{robot_name}"
+        name = variant if robot_name is None else f"{variant}_{robot_name}"
         output_dir = _pkg_path() / "output" / bag_path.stem / name
 
     output_dir = pathlib.Path(output_dir).expanduser().absolute()
@@ -147,11 +140,8 @@ def main(
         "output_path": output_dir,
         "rate": bag_rate,
         "object_variant": variant,
-        "sensor_type": sensor_type,
-        "use_ground_seg": ground_seg,
         "shell": {"extension": shell, "cmd": shutil.which(shell)},
         "run_zenoh": run_zenoh,
-        "start_gui": start_gui,
         "visualize": visualize,
         "close_session": close,
         "workspace_path": workspace_path,

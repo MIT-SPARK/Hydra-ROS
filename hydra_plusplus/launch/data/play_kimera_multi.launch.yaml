@@ -37,3 +37,13 @@ launch:
         - {name: common.lidar_frame, value: $(var robot_name)/velodyne}
         - {name: common.base_frame, value: $(var robot_name)/base}
         - {name: common.map_frame, value: $(var robot_name)/odom}
+  - node:
+      namespace: patchwork
+      pkg: patchwork
+      exec: run_patchwork
+      name: patchwork
+      remap:
+        - {from: /patchwork/input_cloud, to: /$(var robot_name)/cloud_registered_lidar}
+        - {from: patchwork/cloud_groundseg_lidar, to: /$(var robot_name)/cloud_groundseg}
+      param:
+        - from: $(find-pkg-share patchwork)/config/velodyne16.yaml

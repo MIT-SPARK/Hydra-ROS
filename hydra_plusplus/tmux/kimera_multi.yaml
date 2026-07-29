@@ -7,7 +7,7 @@ options:
   default-command: {{ shell.cmd }}
 windows:
   - window_name: hydra
-    layout: main-horizontal
+    layout: main-vertical
     panes:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
@@ -21,17 +21,13 @@ windows:
         --exclude-topics /tf_static /tf
       - ros2 launch hydra_plusplus play_kimera_multi.launch.yaml robot_name:={{ robot_name | default('', true) }}
       - ros2 launch hydra_plusplus kimera_multi.launch.yaml
-          exit_after_clock:='true'
-          robot_name:={{ robot_name | default('', true) }}
           robot_id:={{ robot_id }}
-          sensor_type:={{ sensor_type }}
-          segmentation_model:={{ segmentation_model | default('yolov11', true) }}
+          robot_name:={{ robot_name | default('', true) }}
           object_variant:={{ object_variant }}
-          use_ground_seg:={{ use_ground_seg | lower }}
           log_path:={{ output_path }}
+          segmentation_model:={{ segmentation_model | default('yolov11', true) }}
           start_visualizer:={{ visualize | lower }}
           start_rviz:={{ visualize | lower }}
-          start_config_gui:={{ visualize and start_gui | lower }}
         {% if close_session %}
         && tmux kill-session
         {% endif %}

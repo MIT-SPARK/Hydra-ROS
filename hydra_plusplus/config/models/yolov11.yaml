@@ -1,0 +1,6 @@
+---
+model:
+  instance_model:
+    type: yolo-seg
+    model_name: yolo11n-seg.pt
+    confidence_threshold: 0.25
