@@ -12,6 +12,9 @@ windows:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
       {% endif %}
+      {% if object_variant is equalto 'crisp' %}
+      - ros2 launch hydra_plusplus crisp.launch.yaml config:=crisp_uhumans2
+      {% endif %}
       - ros2 run ianvs play_rosbag {{ bag_path }}
         --clock
         -d {{ delay }}
