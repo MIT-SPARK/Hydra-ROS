@@ -17,7 +17,7 @@ from crisp.models.pipeline import Pipeline
 from crisp.models.rmcc import ReprojectionMaskConsistencyChecker
 from crisp.utils.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from crisp.utils.sdf import convert_sdf_samples_to_mesh, create_sdf_samples_generic
-from khronos_msgs.srv import CrispObjectInference, CrispReconstruction
+from khronos_msgs.srv import ExtractImplicitObject, ReconstructImplicitObject
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
@@ -217,12 +217,12 @@ class CrispNode(Node):
 
         self._rgb_transform = get_image_transform()
         self._inference_srv = self.create_service(
-            CrispObjectInference, "detect_object", self.detection_callback
+            ExtractImplicitObject, "detect_object", self.detection_callback
         )
 
         group = MutuallyExclusiveCallbackGroup()
         self._mesh_srv = self.create_service(
-            CrispReconstruction,
+            ReconstructImplicitObject,
             "reconstruct_object",
             self.reconstruction_callback,
             callback_group=group,

@@ -1,3 +1,6 @@
-width: 720
-height: 480
-checkpoint: $(env HYDRAPP_MODEL_DIR)/202511201549_Z4722/checkpoint.pth}
+---
+/**:
+  ros__parameters:
+    width: 720
+    height: 480
+    checkpoint: $(env HYDRAPP_MODEL_DIR)/202511201549_Z4722/checkpoint.pth
