@@ -20,7 +20,7 @@ launch:
         - {from: hydra/input/left_cam/rgb/image_raw, to: /tesse/left_cam/rgb/image_raw}
         - {from: hydra/input/left_cam/rgb/camera_info, to: /tesse/left_cam/camera_info}
         - {from: hydra/input/left_cam/semantic/image_raw, to: /tesse/seg_cam/rgb/image_raw}
-        - {from: hydra/extract_object, to: extract_object}
+        - {from: hydra/detect_object, to: detect_object}
       args: >-
         --config-utilities-var colormap_path=$(find-pkg-share hydra_ros)/config/color/$(var scene).csv
         --config-utilities-file $(find-pkg-share hydra)/config/label_spaces/$(var scene)_label_space.yaml@labelspace

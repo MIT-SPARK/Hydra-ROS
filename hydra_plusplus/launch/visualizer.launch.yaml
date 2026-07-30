@@ -3,7 +3,7 @@ launch:
   # node controls
   - arg: {name: start_visualizer, default: 'true'}
   - arg: {name: start_rviz, default: 'true', description: automatically start rviz}
-  - arg: {name: start_config_gui, default: 'true', description: automatically start gui}
+  - arg: {name: start_config_gui, default: 'false', description: automatically start gui}
   # visualizer configuration
   - arg: {name: object_variant, default: crisp, description: object variant}
   - arg: {name: visualizer_config_path, default: $(find-pkg-share hydra_visualizer)/config/visualizer_config.yaml}
