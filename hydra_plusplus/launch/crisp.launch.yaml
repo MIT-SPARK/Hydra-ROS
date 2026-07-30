@@ -1,16 +1,12 @@
 ---
 launch:
+  - arg: {name: config}
   - arg: {name: env_path, default: $(env CRISP_ENV), description: Path to crisp environment}
-  # - arg: {name: checkpoint, default: $(env HOME)/crisp_models/202511201549_Z4722/checkpoint.pth}
-  # - arg: {name: checkpoint, default: $(env HOME)/crisp_models/202507141819_25Z0Q/checkpoint_epoch=300.pth}
-  # - arg: {name: crisp_checkpoint, default: $(env HOME)/crisp_models/202601240250_PY271/checkpoint.pth}
-  - arg: {name: checkpoint, default: $(env CRISP_MODEL_DIR)/202508042315_P41O3/checkpoint.pth}
+  - arg: {name: config_path, default: $(find-pkg-share hydra_plusplus)/config/models/$(var config).yaml}
   - pyenv_node:
       pyenv: $(var env_path)
       pkg: hydra_plusplus
       exec: crisp_node
       name: crisp
       param:
-        - {name: checkpoint, value: $(var checkpoint)}
-        # - {name: width, value: 640}
-        # - {name: height, value: 480}
+        - {from: $(var config_path)}

@@ -1,0 +1,3 @@
+width: 640
+height: 480
+checkpoint: $(env HYDRAPP_MODEL_DIR)/202601240250_PY271/checkpoint.pth
