@@ -223,7 +223,7 @@ FeatureSubscriber::Filter& FeatureSubscriber::getFilter() const {
 
 void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) const {
   try {
-    packet.labels = cv_bridge::toCvCopy(msg.image)->image;
+    packet.instances = cv_bridge::toCvCopy(msg.image)->image;
   } catch (const cv_bridge::Exception& e) {
     LOG(ERROR) << "Failed to convert depth image: " << e.what();
   }
