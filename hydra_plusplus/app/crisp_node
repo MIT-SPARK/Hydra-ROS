@@ -230,6 +230,14 @@ class CrispNode(Node):
 
     def detection_callback(self, request, response):
         """Run inference for a given input image."""
+        try:
+            return self._detect(request, response)
+        except Exception as e:
+            self.get_logger().error(f"Detection failed: {e}")
+            response.valid = False
+            return response
+
+    def _detect(self, request, response):
         intrinsics = torch.tensor(request.intrinsics.k).reshape((3, 3))
         rgb = ianvs.get_image(request.rgb)
         if rgb is None or len(rgb.shape) != 3:
@@ -292,22 +300,28 @@ class CrispNode(Node):
         return response
 
     def reconstruction_callback(self, request, response):
-        vec, scale = decompose_mesh_request(request, self.device)
-        mesh = reconstruct_mesh(
-            self._pipeline.model,
-            vec,
-            scale,
-            self._cube_samples,
-            self._cube_scale,
-        )
-        response.vertices.frombytes(
-            mesh.vertices.astype(np.float32).flatten().tobytes()
-        )
-        response.triangles.frombytes(mesh.faces.astype(np.int32).flatten().tobytes())
-        self.get_logger().debug(
-            f"sending {len(response.vertices) / 3} vertices and {len(response.triangles) / 3} faces"
-        )
-        return response
+        try:
+            vec, scale = decompose_mesh_request(request, self.device)
+            mesh = reconstruct_mesh(
+                self._pipeline.model,
+                vec,
+                scale,
+                self._cube_samples,
+                self._cube_scale,
+            )
+            response.vertices.frombytes(
+                mesh.vertices.astype(np.float32).flatten().tobytes()
+            )
+            response.triangles.frombytes(
+                mesh.faces.astype(np.int32).flatten().tobytes()
+            )
+            self.get_logger().debug(
+                f"sending {len(response.vertices) / 3} vertices and {len(response.triangles) / 3} faces"
+            )
+            return response
+        except Exception as e:
+            self.get_logger().error(f"Mesh reconstruction failed: {e}")
+            return response
 
 
 def main(args=None):
