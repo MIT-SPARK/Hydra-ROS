@@ -4,3 +4,4 @@ model:
     type: yolo-seg
     model_name: yolo11n-seg.pt
     confidence_threshold: 0.25
+invalid_ids: [1, 5, 9, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 81]
