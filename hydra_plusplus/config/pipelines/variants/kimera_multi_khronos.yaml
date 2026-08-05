@@ -1,36 +1,4 @@
 ---
-_tracker_config_pixels:
-  type: MaxIouTracker
-  track_by: pixels
-  min_semantic_iou: 0.1
-  min_cross_iou: 0.3
-  voxel_size: 0.2
-  temporal_window: 5.0
-  min_num_observations: 10
-  verbosity: 0
-_tracker_config_voxels: &tracker_config_voxels_rgbd
-  type: MaxIouTracker
-  track_by: voxels
-  min_semantic_iou: 0.1
-  min_cross_iou: 0.3
-  voxel_size: 0.2
-  temporal_window: 5.0
-  min_num_observations: 10
-_tracker_config_lidar: &tracker_config_voxels_lidar
-  type: MaxIouTracker
-  track_by: voxels
-  min_semantic_iou: 0.1
-  min_cross_iou: 0.3
-  voxel_size: 0.2
-  temporal_window: 5.0
-  min_num_observations: 5
-  verbosity: 0
-_lidar_integrator_config: &lidar_integrator
-  use_constant_weight: true
-  extra_integration_distance: 3.0
-  extra_integration_distance_labels: [4, 5, 6, 7, 8, 9, 10, 20, 22, 30]
-  interpolation_method: {max_depth_difference_m: 0.9}
-  semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: [-1]}
 paths: [khronos, khronos_ros]
 active_window:
   type: ActiveWindow
@@ -38,24 +6,43 @@ active_window:
   verbosity: 0
   sensors:
     rgbd:
-      object_detector: {type: InstanceForwarding, min_cluster_size: 30, min_object_volume: 0.1, max_range: 7.0, min_range: 0.05, verbosity: 0}
-      tracker: *tracker_config_voxels_rgbd
+      object_detector: {type: InstanceForwarding, min_cluster_size: 30, max_range: 7.0, min_range: 0.05, verbosity: 0}
+      tracker:
+        type: MaxIouTracker
+        track_by: voxels
+        min_semantic_iou: 0.1
+        min_cross_iou: 0.3
+        voxel_size: 0.2
+        temporal_window: 5.0
+        min_num_observations: 10
       projective_integrator: {semantic_integrator: {type: SingleLabelIntegrator}}
     velodyne16:
-      object_detector: {type: InstanceForwarding, min_cluster_size: 10, min_object_volume: 0.1, max_range: 15.0, min_range: 0.05, verbosity: 0}
-      tracker: *tracker_config_voxels_lidar
-      projective_integrator: *lidar_integrator
+      object_detector: {type: InstanceForwarding, min_cluster_size: 10, max_range: 15.0, min_range: 0.05, verbosity: 0}
+      tracker:
+        type: MaxIouTracker
+        track_by: voxels
+        min_semantic_iou: 0.1
+        min_cross_iou: 0.3
+        voxel_size: 0.2
+        temporal_window: 5.0
+        min_num_observations: 5
+        verbosity: 0
+      projective_integrator:
+        use_constant_weight: true
+        extra_integration_distance: 3.0
+        extra_integration_distance_labels: [4, 5, 6, 7, 8, 9, 10, 20, 22, 30]
+        interpolation_method: {max_depth_difference_m: 0.9}
+        semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: [-1]}
   object_extractor:
     type: MeshObjectExtractor
     min_object_allocation_confidence: 0.5
-    min_object_volume: 0.005  # m^3
-    max_object_volume: 100.0  # m^3
+    min_object_volume: 0.005
+    max_object_volume: 100.0
     only_extract_reconstructed_objects: true
     min_object_reconstruction_confidence: 0.0
     min_object_reconstruction_observations: 10
     visualize_classification: false
-    object_reconstruction_resolution: -0.02  # Positive: voxel size in meters.
-    # object_reconstruction_resolution: 0.05
+    object_reconstruction_resolution: -0.02
     projective_integrator:
       sensor_map_mode: Strict
       sensors:

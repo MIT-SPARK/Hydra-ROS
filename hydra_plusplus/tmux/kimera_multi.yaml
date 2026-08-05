@@ -27,6 +27,7 @@ windows:
           robot_id:={{ robot_id }}
           robot_name:={{ robot_name | default('', true) }}
           object_variant:={{ object_variant }}
+          sensor_type:=rgbd
           log_path:={{ output_path }}
           segmentation_model:={{ segmentation_model | default('yolov11', true) }}
           start_visualizer:={{ visualize | lower }}

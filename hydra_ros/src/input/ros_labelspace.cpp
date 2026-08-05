@@ -110,6 +110,9 @@ RosLabelspace::RosLabelspace(const Config& config) : config(config) {
   if (metadata.count("surface_places_labels")) {
     metadata.at("surface_places_labels").get_to(surface_places_labels);
   }
+
+  LOG(INFO) << "Loaded labelspace from ros:\n"
+            << config::toString(static_cast<const Labelspace&>(*this));
 }
 
 void declare_config(RosLabelspace::Config& config) {
