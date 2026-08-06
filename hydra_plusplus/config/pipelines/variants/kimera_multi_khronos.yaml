@@ -6,7 +6,7 @@ active_window:
   verbosity: 0
   sensors:
     rgbd:
-      object_detector: {type: InstanceForwarding, min_cluster_size: 30, max_range: 7.0, min_range: 0.05, verbosity: 0}
+      object_detector: {type: InstanceForwarding, min_cluster_size: 30, max_range: 7.0, min_range: 0.05, verbosity: 0, instance_filter: {type: CategoryFilter}}
       tracker:
         type: MaxIouTracker
         track_by: voxels
@@ -15,7 +15,7 @@ active_window:
         voxel_size: 0.2
         temporal_window: 5.0
         min_num_observations: 10
-      projective_integrator: {semantic_integrator: {type: SingleLabelIntegrator}}
+      projective_integrator: {semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: []}}
     velodyne16:
       object_detector: {type: InstanceForwarding, min_cluster_size: 10, max_range: 15.0, min_range: 0.05, verbosity: 0}
       tracker:
