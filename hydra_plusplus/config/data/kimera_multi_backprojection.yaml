@@ -2,8 +2,8 @@
 show_config: true
 use_image_stamp: true
 projection:
-  input_label_fieldname: label
-  unknown_label: -1
+  # input_label_fieldname: label
+  unknown_label: 0
   instance_id: true
-  allowed_labels: [4]
+  # allowed_labels: [4]
   override_labels: []

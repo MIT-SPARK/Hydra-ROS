@@ -33,7 +33,6 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <config_utilities/factory.h>
 
 #include <rclcpp/subscription.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
@@ -45,6 +44,8 @@ namespace hydra {
 class PointcloudReceiver : public RosDataReceiver {
  public:
   struct Config : RosDataReceiver::Config {
+    bool in_world_frame = false;
+    bool instance_ids = false;
   } const config;
 
   PointcloudReceiver(const Config& config, const std::string& sensor_name);
@@ -57,12 +58,6 @@ class PointcloudReceiver : public RosDataReceiver {
   void callback(const sensor_msgs::msg::PointCloud2::ConstSharedPtr& cloud);
 
   rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr sub_;
-
-  inline static const auto registration_ =
-      config::RegistrationWithConfig<DataReceiver,
-                                     PointcloudReceiver,
-                                     PointcloudReceiver::Config,
-                                     std::string>("PointcloudReceiver");
 };
 
 void declare_config(PointcloudReceiver::Config& config);

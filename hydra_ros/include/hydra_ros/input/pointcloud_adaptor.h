@@ -65,6 +65,6 @@ class PointcloudAdaptor {
 
 bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
                           CloudInputPacket& packet,
-                          bool labels_required);
+                          bool instance_ids);
 
 }  // namespace hydra

@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /Hydra Mesh1
         - /Hydra Mesh1/Topic1
       Splitter Ratio: 0.5
     Tree Height: 605
@@ -454,25 +453,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 35.91326141357422
+      Distance: 17.884258270263672
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.5168161988258362
-        Y: -1.9045302867889404
-        Z: -2.3135159015655518
+        X: 1.4224214553833008
+        Y: -0.5351258516311646
+        Z: -0.5041149854660034
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8553978204727173
+      Pitch: 0.7703976035118103
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.5203977823257446
+      Yaw: 1.8153905868530273
     Saved: ~
 Window Geometry:
   Displays:

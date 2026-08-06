@@ -239,9 +239,9 @@ uint32_t PointcloudAdaptor::label(const uint8_t* point_ptr) const {
 
 bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
                           CloudInputPacket& packet,
-                          bool labels_required) {
+                          bool instance_ids) {
   PointcloudAdaptor adaptor(msg);
-  if (!adaptor.valid() || (!adaptor.hasLabels() && labels_required)) {
+  if (!adaptor.valid() || !adaptor.hasLabels()) {
     return false;
   }
 
@@ -249,6 +249,9 @@ bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
   packet.colors = cv::Mat(msg.height, msg.width, CV_8UC3);
   if (adaptor.hasLabels()) {
     packet.labels = cv::Mat(msg.height, msg.width, CV_32SC1);
+    if (instance_ids) {
+      packet.instances = cv::Mat(msg.height, msg.width, CV_16SC1);
+    }
   }
 
   for (uint32_t row = 0; row < msg.height; ++row) {
@@ -257,7 +260,15 @@ bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
       const auto point_ptr = &msg.data[offset];
       packet.points.at<cv::Vec3f>(row, col) = adaptor.position(point_ptr);
       packet.colors.at<cv::Vec3b>(row, col) = adaptor.color(point_ptr);
-      if (adaptor.hasLabels()) {
+      if (!adaptor.hasLabels()) {
+        continue;
+      }
+
+      if (instance_ids) {
+        const auto label = adaptor.label(point_ptr);
+        packet.labels.at<int32_t>(row, col) = label >> 16;
+        packet.instances.at<int16_t>(row, col) = label & 0xFFFF;
+      } else {
         packet.labels.at<int32_t>(row, col) = adaptor.label(point_ptr);
       }
     }
