@@ -6,6 +6,15 @@ launch:
   - arg: {name: labelspace, default: $(if $(var use_gt_semantics) uhumans2_$(var scene) ade20k_full)}
   - arg: {name: log_prefix, default: uhumans2_$(var scene)}
   - arg: {name: label_remap_path, default: $(find-pkg-share hydra)/config/label_remaps/uhumans2_$(var scene).yaml}
+  # Forwarded to hydra.launch.yaml so a Khronos-matched run (sim time, auto-exit +
+  # timing dump when the bag clock stops) is settable from the CLI without
+  # bypassing this launch file. Defaults preserve prior behavior.
+  - arg: {name: use_sim_time, default: 'false'}
+  - arg: {name: exit_after_clock, default: 'false'}
+  - arg: {name: start_visualizer, default: 'true'}
+  # Output under the hydra_ros install tree (mirrors Khronos's
+  # $(find-pkg-share khronos_ros)/../output/tmp) instead of cluttering $HOME/.hydra
+  - arg: {name: log_path, default: $(find-pkg-share hydra_ros)/../output/tmp}
   - set_remap: {from: hydra/input/left_cam/depth_registered/image_rect, to: /tesse/depth_cam/mono/image_raw}
   - set_remap: {from: hydra/input/left_cam/rgb/image_raw, to: /tesse/left_cam/rgb/image_raw}
   - set_remap: {from: hydra/input/left_cam/rgb/camera_info, to: /tesse/left_cam/camera_info}
@@ -38,6 +47,10 @@ launch:
         - {name: map_frame, value: map}
         - {name: lcd_config_path, value: $(find-pkg-share hydra)/config/lcd/uhumans2.yaml}
         - {name: extra_yaml, value: $(if $(var use_gt_semantics) $(var extra_yaml_gt) $(var extra_yaml_no_gt))}
+        - {name: use_sim_time, value: $(var use_sim_time)}
+        - {name: exit_after_clock, value: $(var exit_after_clock)}
+        - {name: start_visualizer, value: $(var start_visualizer)}
+        - {name: log_path, value: $(var log_path)}
   - node:
       pkg: tf2_ros
       name: world_to_map
