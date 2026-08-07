@@ -45,6 +45,7 @@
 #include <hydra/common/global_info.h>
 #include <hydra/frontend/graph_builder.h>
 #include <hydra/loop_closure/loop_closure_module.h>
+#include <hydra/utils/timing_utilities.h>
 #include <pose_graph_tools_ros/conversions.h>
 
 #include <cstdint>
@@ -110,9 +111,15 @@ void HydraRosPipeline::init() {
   external_loop_closure_sub_.reset(new ExternalLoopClosureSubscriber(nh));
 
   auto bnh = nh / "backend";
-  backend_->addSink(std::make_shared<RosBackendPublisher>(bnh));
+  auto ros_backend_pub = std::make_shared<RosBackendPublisher>(bnh);
+  backend_->addSink(BackendModule::Sink::fromCallback(
+      [ros_backend_pub](uint64_t timestamp_ns, const auto& graph, const auto& dgraph) {
+        hydra::timing::ScopedTimer st("backend/sinks/ros_publisher", timestamp_ns);
+        ros_backend_pub->call(timestamp_ns, graph, dgraph);
+      }));
   backend_->addSink(BackendModule::Sink::fromCallback(
       [this](uint64_t timestamp_ns, const auto&, const auto&) {
+        hydra::timing::ScopedTimer st("backend/sinks/status_monitor", timestamp_ns);
         status_monitor_->recordModuleCallback("backend",
                                               std::chrono::nanoseconds(timestamp_ns));
       }));
