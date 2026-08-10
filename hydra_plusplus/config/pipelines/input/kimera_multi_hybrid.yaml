@@ -5,18 +5,14 @@ input:
   clear_queue_on_fail: true
   inputs:
     rgbd:
-      receiver:
-        type: ClosedSetImageReceiver
-        input_separation_s: 0.1
+      receiver: {type: InstanceImageReceiver, input_separation_s: 0.1}
       sensor:
         type: camera_info
         min_range: 0.1
         max_range: 5.0
         extrinsics: {type: ros, robot_frame: $<var robot_frame>, sensor_frame: $<var robot_name>/forward_color_optical_frame}
     velodyne16:
-      receiver:
-        type: PointcloudReceiver
-        input_separation_s: 0.5
+      receiver: {type: PointcloudReceiver, input_separation_s: 0.5, instance_ids: true, discard_transparent_color: true}
       sensor:
         type: lidar
         min_range: 0.1
@@ -27,7 +23,6 @@ input:
         horizontal_fov: 360.0
         vertical_fov: 30.0
         vertical_fov_top: 15.0
-        # extrinsics: {type: identity}  # probably don't change that
         extrinsics: {type: ros, robot_frame: $<var robot_frame>, sensor_frame: $<var robot_name>/velodyne}
         # extrinsics:
         #   type: param

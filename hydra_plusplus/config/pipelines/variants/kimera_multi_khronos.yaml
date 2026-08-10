@@ -1,10 +1,10 @@
 ---
 paths: [khronos, khronos_ros]
+map_window: {type: temporal, window_sec: 5.0}
 active_window:
   type: ActiveWindow
-  map_window: {type: temporal, window_sec: 5.0}
-  sensor_map_mode: Strict
   verbosity: 0
+  sensor_map_mode: Strict
   sensors:
     rgbd:
       object_detector: {type: InstanceForwarding, min_cluster_size: 30, max_range: 7.0, min_range: 0.05, verbosity: 0, instance_filter: {type: CategoryFilter}}
@@ -29,7 +29,6 @@ active_window:
         use_constant_weight: true
         extra_integration_distance: 3.0
         extra_integration_distance_labels: [1]
-        interpolation_method: {max_depth_difference_m: 0.9}
         semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: []}
   object_extractor:
     type: MeshObjectExtractor
