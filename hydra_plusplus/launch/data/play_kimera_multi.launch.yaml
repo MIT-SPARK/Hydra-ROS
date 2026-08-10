@@ -44,6 +44,6 @@ launch:
       name: patchwork
       remap:
         - {from: /patchwork/input_cloud, to: /$(var robot_name)/cloud_registered_lidar}
-        - {from: patchwork/cloud_groundseg_lidar, to: /$(var robot_name)/cloud_groundseg}
+        - {from: cloud_groundseg_lidar, to: /$(var robot_name)/cloud_groundseg}
       param:
         - from: $(find-pkg-share patchwork)/config/velodyne16.yaml

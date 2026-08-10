@@ -30,7 +30,7 @@ launch:
           exec: backprojection_node
           name: semantic_projector
           remap:
-            - {from: cloud, to: /$(var robot_name)/cloud_registered_lidar}
+            - {from: cloud, to: /$(var robot_name)/cloud_groundseg}
           args: |
             --config-utilities-yaml {camera_frame: $(var robot_name)/forward_color_optical_frame}
             --config-utilities-file $(find-pkg-share hydra_plusplus)/config/data/kimera_multi_backprojection.yaml

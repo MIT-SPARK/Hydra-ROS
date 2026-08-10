@@ -7,7 +7,6 @@ options:
   default-command: {{ shell.cmd }}
 windows:
   - window_name: hydra
-    layout: main-horizontal
     panes:
       {% if run_zenoh %}
       - ros2 run rmw_zenoh_cpp rmw_zenohd
