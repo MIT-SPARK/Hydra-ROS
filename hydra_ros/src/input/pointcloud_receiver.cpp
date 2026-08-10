@@ -27,6 +27,7 @@ void declare_config(PointcloudReceiver::Config& config) {
   base<RosDataReceiver::Config>(config);
   field(config.in_world_frame, "in_world_frame");
   field(config.instance_ids, "instance_ids");
+  field(config.discard_transparent_color, "discard_transparent_color");
 }
 
 PointcloudReceiver::PointcloudReceiver(const Config& config,
@@ -49,7 +50,8 @@ void PointcloudReceiver::callback(const PointCloud2::ConstSharedPtr& msg) {
   }
 
   auto packet = std::make_shared<CloudInputPacket>(stamp, sensor_name_);
-  fillPointcloudPacket(*msg, *packet, config.instance_ids);
+  fillPointcloudPacket(
+      *msg, *packet, config.instance_ids, config.discard_transparent_color);
   packet->in_world_frame = config.in_world_frame;
   queue.push(packet);
 }

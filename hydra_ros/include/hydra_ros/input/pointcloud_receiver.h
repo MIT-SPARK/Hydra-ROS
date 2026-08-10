@@ -44,8 +44,12 @@ namespace hydra {
 class PointcloudReceiver : public RosDataReceiver {
  public:
   struct Config : RosDataReceiver::Config {
+    //! Whether or not the pointcloud is already in the world frame
     bool in_world_frame = false;
+    //! Whether or not the label field also contains instance IDs
     bool instance_ids = false;
+    //! Whether or not to mask colors with 0 alpha values
+    bool discard_transparent_color = false;
   } const config;
 
   PointcloudReceiver(const Config& config, const std::string& sensor_name);

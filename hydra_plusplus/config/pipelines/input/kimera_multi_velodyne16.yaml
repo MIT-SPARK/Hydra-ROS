@@ -5,7 +5,7 @@ input:
   clear_queue_on_fail: true
   inputs:
     velodyne16:
-      receiver: {type: PointcloudReceiver, instance_ids: true}
+      receiver: {type: PointcloudReceiver, instance_ids: true, discard_transparent_color: true}
       sensor:
         type: lidar
         min_range: 0.1
