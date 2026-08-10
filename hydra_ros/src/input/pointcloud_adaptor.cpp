@@ -266,8 +266,8 @@ bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
 
       if (instance_ids) {
         const auto label = adaptor.label(point_ptr);
-        packet.labels.at<int32_t>(row, col) = label >> 16;
-        packet.instances.at<int16_t>(row, col) = label & 0xFFFF;
+        packet.labels.at<int32_t>(row, col) = label & 0xFFFF;
+        packet.instances.at<int16_t>(row, col) = label >> 16;
       } else {
         packet.labels.at<int32_t>(row, col) = adaptor.label(point_ptr);
       }

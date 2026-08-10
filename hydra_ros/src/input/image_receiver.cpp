@@ -151,8 +151,8 @@ void InstanceSubscriber::fillInput(const Image& img, ImageInputPacket& packet) c
   for (int r = 0; r < mat.rows; ++r) {
     for (int c = 0; c < mat.cols; ++c) {
       const auto original = mat.at<int32_t>(r, c);
-      packet.labels.at<int32_t>(r, c) = original >> 16;
-      packet.instances.at<int16_t>(r, c) = original & 0xFFFF;
+      packet.labels.at<int32_t>(r, c) = original & 0xFFFF;
+      packet.instances.at<int16_t>(r, c) = original >> 16;
     }
   }
 }
