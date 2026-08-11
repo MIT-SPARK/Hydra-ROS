@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Node that runs crisp on received masks and RGBD data with paper-quality visualization."""
 
-import torch
-import numpy as np
-import click
 import pathlib
 
-import viser
+import click
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+import viser
 
 
 def depth_to_pointcloud(depth, intrinsics, mask=None):
@@ -123,7 +123,9 @@ def visualize(rgb, depth, mask, intrinsics, port=8080):
 
 @click.command()
 @click.argument("input_path", type=click.Path(exists=True))
-@click.option("--use-viser/--no-use-viser", default=True, help="run viser visualization")
+@click.option(
+    "--use-viser/--no-use-viser", default=True, help="run viser visualization"
+)
 @click.option("--viser-port", default=8080, type=int, help="Port for viser server")
 def main(input_path, use_viser, viser_port):
     """Run CRISP on images with paper-quality visualization."""
