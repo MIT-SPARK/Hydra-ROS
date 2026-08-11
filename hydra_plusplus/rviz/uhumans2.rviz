@@ -49,11 +49,15 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: false
-    - Class: kimera_pgmo_rviz/MeshDisplay
+    - Ambient: 230; 230; 230
+      Class: kimera_pgmo_rviz/MeshDisplay
       Cull Backfaces: true
+      Diffuse: 13; 13; 13
+      Emissive: 26; 26; 26
       Enable Lighting: false
       Enabled: true
       Name: Mesh
+      Specular: 0; 0; 0
       Toggle Visibility All: true
       Topic:
         Depth: 5
@@ -74,16 +78,16 @@ Visualization Manager:
       Namespaces:
         interlayer_edges_3_2: true
         interlayer_edges_4_3: true
-        layer_2_bounding_boxes: true
-        layer_2_nodes: true
-        layer_2p97_edges: true
-        layer_2p97_nodes: true
-        layer_2p97_text: true
-        layer_3_edges: true
-        layer_3_nodes: true
-        layer_4_edges: true
-        layer_4_nodes: true
-        layer_4_text: true
+        layer2_bounding_boxes: true
+        layer2_nodes: true
+        layer2_text: true
+        layer2p97_edges: true
+        layer2p97_nodes: true
+        layer2p97_text: true
+        layer3_edges: true
+        layer3_nodes: true
+        layer4_nodes: true
+        layer4_text: true
       Topic:
         Depth: 5
         Durability Policy: Transient Local
@@ -112,11 +116,15 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: hydra_visualizer/agent_poses
       Value: true
-    - Class: kimera_pgmo_rviz/MeshDisplay
+    - Ambient: 230; 230; 230
+      Class: kimera_pgmo_rviz/MeshDisplay
       Cull Backfaces: true
+      Diffuse: 13; 13; 13
+      Emissive: 26; 26; 26
       Enable Lighting: false
       Enabled: true
       Name: CRISP Objects
+      Specular: 0; 0; 0
       Toggle Visibility All: true
       Topic:
         Depth: 5
@@ -142,23 +150,13 @@ Visualization Manager:
           Value: true
         map:
           Value: true
+        odom:
+          Value: true
         rear_lidar:
           Value: true
         right_cam:
           Value: true
-        robot0/base_link:
-          Value: true
-        robot0/front_lidar:
-          Value: true
-        robot0/left_cam:
-          Value: true
-        robot0/map:
-          Value: true
-        robot0/odom:
-          Value: true
-        robot0/rear_lidar:
-          Value: true
-        robot0/right_cam:
+        world:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -166,18 +164,19 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        map:
-          robot0/map:
-            robot0/odom:
-              robot0/base_link:
-                robot0/front_lidar:
-                  {}
-                robot0/left_cam:
-                  {}
-                robot0/rear_lidar:
-                  {}
-                robot0/right_cam:
-                  {}
+        world:
+          base_link_gt:
+            front_lidar:
+              {}
+            left_cam:
+              {}
+            rear_lidar:
+              {}
+            right_cam:
+              {}
+          map:
+            odom:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -226,25 +225,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 71.32658386230469
+      Distance: 89.4720687866211
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 18.194955825805664
-        Y: -1.8137602806091309
-        Z: -5.75848388671875
+        X: 17.749631881713867
+        Y: 3.130560874938965
+        Z: -9.413416862487793
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.6753981113433838
+      Pitch: 0.665398120880127
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.510396957397461
+      Yaw: 2.615398406982422
     Saved: ~
 Window Geometry:
   Displays:
