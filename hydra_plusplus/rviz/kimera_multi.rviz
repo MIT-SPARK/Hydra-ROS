@@ -6,7 +6,6 @@ Panels:
       Expanded:
         - /Global Options1
         - /TF1/Frames1
-        - /Hydra Mesh1/Topic1
       Splitter Ratio: 0.5
     Tree Height: 605
   - Class: rviz_common/Selection
@@ -177,39 +176,6 @@ Visualization Manager:
                         {}
       Update Interval: 0
       Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: RGB8
-      Decay Time: 1
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: LiDAR Input
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.029999999329447746
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: forward/labeled_cloud
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
     - Class: rviz_default_plugins/Image
       Enabled: true
       Max Value: 1
@@ -224,34 +190,20 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: forward/semantic_overlay/image_raw
       Value: true
-    - Ambient: 230; 230; 230
-      Class: kimera_pgmo_rviz/MeshDisplay
-      Cull Backfaces: true
-      Diffuse: 13; 13; 13
-      Emissive: 26; 26; 26
-      Enable Lighting: false
-      Enabled: true
-      Name: Hydra Mesh
-      Specular: 0; 0; 0
-      Toggle Visibility All: true
-      Topic:
-        Depth: 5
-        Durability Policy: System Default
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal2/hydra/backend/dsg_mesh
-      Value: true
-      Visible:
-        0: true
-        Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
       Name: Hydra Scene Graph
       Namespaces:
+        interlayer_edges_3[1]_2: true
+        layer2_bounding_boxes: true
+        layer2_nodes: true
+        layer2_text: true
         layer2p97_edges: true
         layer2p97_nodes: true
         layer2p97_text: true
+        layer3p1_edges: true
+        layer3p1_nodes: true
+        layer3p1_polygon_boundaries: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -266,7 +218,7 @@ Visualization Manager:
       Emissive: 26; 26; 26
       Enable Lighting: true
       Enabled: true
-      Name: Khronos Objects
+      Name: Object Meshes
       Specular: 0; 0; 0
       Toggle Visibility All: true
       Topic:
@@ -278,135 +230,26 @@ Visualization Manager:
         Value: /acl_jackal/hydra_visualizer/crisp_meshes
       Value: true
       Visible: true
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
-      Name: TrackVoxel
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/active_window_visualizer/tracking/voxels
-      Value: false
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
-      Name: TrackBbox
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/active_window_visualizer/tracking/bounding_box
-      Value: false
-    - Class: rviz_default_plugins/MarkerArray
-      Enabled: false
-      Name: TrackPixel
-      Namespaces:
-        {}
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/active_window_visualizer/tracking/pixels
-      Value: false
-    - Class: rviz_default_plugins/Marker
-      Enabled: false
-      Name: TrackSlice
-      Namespaces:
-        {}
+    - Ambient: 230; 230; 230
+      Class: kimera_pgmo_rviz/MeshDeltaDisplay
+      Cull Backfaces: true
+      Default Color: 102; 102; 102
+      Diffuse: 13; 13; 13
+      Emissive: 26; 26; 26
+      Enable Lighting: false
+      Enabled: true
+      Label Alpha: 0
+      Name: Background Mesh
+      Specular: 0; 0; 0
       Topic:
         Depth: 5
         Durability Policy: Volatile
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /acl_jackal/active_window_visualizer/tracking_slice
-      Value: false
-    - Class: rviz_default_plugins/Image
-      Enabled: false
-      Max Value: 1
-      Median window: 5
-      Min Value: 0
-      Name: Image
-      Normalize Range: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/active_window_visualizer/object_image/rgbd
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 255
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: PointCloud2
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/cloud_registered
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 222
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: PointCloud2
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Flat Squares
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /acl_jackal/lidar_points
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
+        Value: /acl_jackal2/hydra/frontend/full_mesh_update
+      Value: true
+      Visible: true
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -453,25 +296,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 17.884258270263672
+      Distance: 53.76949691772461
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.4224214553833008
-        Y: -0.5351258516311646
-        Z: -0.5041149854660034
+        X: 21.086652755737305
+        Y: -3.987429618835449
+        Z: 2.972672462463379
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.7703976035118103
+      Pitch: 0.4753977656364441
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 1.8153905868530273
+      Yaw: 0.8653913140296936
     Saved: ~
 Window Geometry:
   Displays:
@@ -479,9 +322,7 @@ Window Geometry:
   Height: 1356
   Hide Left Dock: false
   Hide Right Dock: false
-  Image:
-    collapsed: false
-  QMainWindow State: 000000ff00000000fd00000004000000000000015700000488fc020000000bfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000004000000329000000ce00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000002000530065006d0061006e0074006900630020004f007600650072006c00610079010000036f000001590000001800fffffffb0000000a0049006d0061006700650000000b95000001070000001800fffffffb0000000a0049006d0061006700650100000b3e0000015e0000000000000000000000010000010000000488fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000004000000488000000ac00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006ac0000005efc0100000002fb0000000800540069006d00650100000000000006ac000002b200fffffffb0000000800540069006d00650100000000000004500000000000000000000004490000048800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000004000000000000015700000488fc020000000bfb0000001200530065006c0065006300740069006f006e00000001e10000009b0000005e00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007302000001ed000001df00000185000000a3fb000000120056006900650077007300200054006f006f02000001df000002110000018500000122fb000000200054006f006f006c002000500072006f0070006500720074006900650073003203000002880000011d000002210000017afb000000100044006900730070006c006100790073010000004000000329000000ce00fffffffb0000002000730065006c0065006300740069006f006e00200062007500660066006500720200000138000000aa0000023a00000294fb00000014005700690064006500530074006500720065006f02000000e6000000d2000003ee0000030bfb0000000c004b0069006e0065006300740200000186000001060000030c00000261fb0000002000530065006d0061006e0074006900630020004f007600650072006c00610079010000036f000001590000001800fffffffb0000000a0049006d0061006700650000000b95000001070000000000000000fb0000000a0049006d0061006700650100000b3e0000015e0000000000000000000000010000010000000488fc0200000003fb0000001e0054006f006f006c002000500072006f00700065007200740069006500730100000041000000780000000000000000fb0000000a00560069006500770073010000004000000488000000ac00fffffffb0000001200530065006c0065006300740069006f006e010000025a000000b200000000000000000000000200000490000000a9fc0100000001fb0000000a00560069006500770073030000004e00000080000002e10000019700000003000006ac0000005efc0100000002fb0000000800540069006d00650100000000000006ac000002b200fffffffb0000000800540069006d00650100000000000004500000000000000000000004490000048800000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Semantic Overlay:
@@ -493,5 +334,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1708
-  X: 1724
-  Y: 76
+  X: 730
+  Y: 242

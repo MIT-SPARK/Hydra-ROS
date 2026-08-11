@@ -62,7 +62,7 @@ def _resolve_zenoh_arg(run_zenoh):
 
 
 VARIANTS = ["crisp", "hydra", "khronos"]
-MODELS = ["yolov11", "gdsam2"]
+MODELS = ["yoloe", "yolov11", "gdsam2"]
 
 
 @click.command()

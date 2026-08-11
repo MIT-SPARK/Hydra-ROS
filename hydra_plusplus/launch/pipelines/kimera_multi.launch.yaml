@@ -8,7 +8,7 @@ launch:
   - arg: {name: robot_id, default: '0', description: Robot ID}
   - arg: {name: exit_after_clock, default: 'true', description: shutdown hydra node after a rosbag finishes playing}
   - arg: {name: sensor_type, default: hybrid}
-  - arg: {name: segmentation_model, default: yolov11, description: segmentation model to use}
+  - arg: {name: segmentation_model, default: yoloe, description: segmentation model to use}
   # frames
   - arg: {name: robot_frame, default: $(var robot_name)/base, description: robot body tf frame}
   - arg: {name: odom_frame, default: $(var robot_name)/odom, description: odometry frame}

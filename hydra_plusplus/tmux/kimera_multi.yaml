@@ -12,7 +12,7 @@ windows:
       - ros2 run rmw_zenoh_cpp rmw_zenohd
       {% endif %}
       {% if object_variant is equalto 'crisp' %}
-      - ros2 launch hydra_plusplus crisp.launch.yaml config:=crisp_kimera_multi
+      - ros2 launch hydra_plusplus crisp.launch.yaml config:=crisp_kimera_multi ns:={{ robot_name | default('', true) }}
       {% endif %}
       - ros2 run ianvs play_rosbag {{ bag_path }}
         --clock
@@ -27,7 +27,7 @@ windows:
           robot_name:={{ robot_name | default('', true) }}
           object_variant:={{ object_variant }}
           log_path:={{ output_path }}
-          segmentation_model:={{ segmentation_model | default('yolov11', true) }}
+          segmentation_model:={{ segmentation_model | default('yoloe', true) }}
           start_visualizer:={{ visualize | lower }}
           start_rviz:={{ visualize | lower }}
         {% if close_session %}
