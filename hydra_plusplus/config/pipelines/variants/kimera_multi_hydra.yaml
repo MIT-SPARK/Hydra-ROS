@@ -9,9 +9,8 @@ active_window:
       velodyne16:
         use_constant_weight: true
         extra_integration_distance: 3.0
-        extra_integration_distance_labels: [4, 5, 6, 7, 8, 9, 10, 20, 22, 30]
-        interpolation_method: {max_depth_difference_m: 0.9}
-        semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: [-1]}
+        extra_integration_distance_labels: [1]
+        semantic_integrator: {type: SingleLabelIntegrator, labels_to_ignore: []}
   sinks:
     - type: ReconstructionVisualizer
       sensor_displays:
