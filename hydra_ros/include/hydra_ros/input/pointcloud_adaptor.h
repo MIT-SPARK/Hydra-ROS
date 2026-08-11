@@ -43,6 +43,7 @@ namespace hydra {
 
 class PointcloudAdaptor {
  public:
+  using ColorValue = std::array<uint8_t, 4>;
   explicit PointcloudAdaptor(const sensor_msgs::msg::PointCloud2& cloud);
 
   bool valid() const;
@@ -51,7 +52,7 @@ class PointcloudAdaptor {
 
   cv::Vec3f position(const uint8_t* point_ptr) const;
 
-  cv::Vec3b color(const uint8_t* point_ptr) const;
+  ColorValue color(const uint8_t* point_ptr) const;
 
   uint32_t label(const uint8_t* point_ptr) const;
 
@@ -60,11 +61,12 @@ class PointcloudAdaptor {
   std::function<double(const uint8_t*)> y_parser_;
   std::function<double(const uint8_t*)> z_parser_;
   std::function<uint32_t(const uint8_t*)> label_parser_;
-  std::function<cv::Vec3b(const uint8_t*)> color_parser_;
+  std::function<ColorValue(const uint8_t*)> color_parser_;
 };
 
 bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
                           CloudInputPacket& packet,
-                          bool labels_required);
+                          bool instance_ids,
+                          bool discard_by_alpha);
 
 }  // namespace hydra

@@ -57,14 +57,15 @@ void parseField(const uint8_t* point_ptr, const uint32_t offset, T& value) {
     return static_cast<double>(value);                                            \
   }
 
-#define DECLARE_COLOR_PARSER(type)                                                   \
-  cv::Vec3b parseColorFrom_##type(const uint8_t* point_ptr, const uint32_t offset) { \
-    type value;                                                                      \
-    parseField(point_ptr, offset, value);                                            \
-                                                                                     \
-    uint8_t color[4];                                                                \
-    std::memcpy(color, &value, sizeof(color));                                       \
-    return cv::Vec3b(color[2], color[1], color[0]);                                  \
+#define DECLARE_COLOR_PARSER(type)                                       \
+  std::array<uint8_t, 4> parseColorFrom_##type(const uint8_t* point_ptr, \
+                                               const uint32_t offset) {  \
+    type value;                                                          \
+    parseField(point_ptr, offset, value);                                \
+                                                                         \
+    uint8_t color[4];                                                    \
+    std::memcpy(color, &value, sizeof(color));                           \
+    return {color[2], color[1], color[0], color[3]};                     \
   }
 
 DECLARE_INT_PARSER(int8_t)
@@ -156,7 +157,8 @@ std::function<double(const uint8_t*)> initIntParser(const PointField& field) {
   return {};
 }
 
-std::function<cv::Vec3b(const uint8_t*)> initColorParser(const PointField& field) {
+std::function<std::array<uint8_t, 4>(const uint8_t*)> initColorParser(
+    const PointField& field) {
   using namespace std::placeholders;
   if (field.datatype == PointField::INT8) {
     LOG(ERROR) << "cannot parse color from " << sensor_msgs::msg::to_yaml(field);
@@ -225,9 +227,9 @@ cv::Vec3f PointcloudAdaptor::position(const uint8_t* point_ptr) const {
   return cv::Vec3f(x_parser_(point_ptr), y_parser_(point_ptr), z_parser_(point_ptr));
 }
 
-cv::Vec3b PointcloudAdaptor::color(const uint8_t* point_ptr) const {
+std::array<uint8_t, 4> PointcloudAdaptor::color(const uint8_t* point_ptr) const {
   if (!color_parser_) {
-    return cv::Vec3b(0, 0, 0);
+    return {0, 0, 0, 0};
   }
 
   return color_parser_(point_ptr);
@@ -239,25 +241,49 @@ uint32_t PointcloudAdaptor::label(const uint8_t* point_ptr) const {
 
 bool fillPointcloudPacket(const sensor_msgs::msg::PointCloud2& msg,
                           CloudInputPacket& packet,
-                          bool labels_required) {
+                          bool instance_ids,
+                          bool discard_transparent) {
   PointcloudAdaptor adaptor(msg);
-  if (!adaptor.valid() || (!adaptor.hasLabels() && labels_required)) {
+  if (!adaptor.valid() || !adaptor.hasLabels()) {
     return false;
   }
 
   packet.points = cv::Mat(msg.height, msg.width, CV_32FC3);
   packet.colors = cv::Mat(msg.height, msg.width, CV_8UC3);
+  if (discard_transparent) {
+    packet.color_mask = cv::Mat(msg.height, msg.width, InputData::MaskMatType);
+  }
+
   if (adaptor.hasLabels()) {
     packet.labels = cv::Mat(msg.height, msg.width, CV_32SC1);
+    if (instance_ids) {
+      packet.instances = cv::Mat(msg.height, msg.width, CV_16SC1);
+    }
   }
 
   for (uint32_t row = 0; row < msg.height; ++row) {
     for (uint32_t col = 0; col < msg.width; ++col) {
       const auto offset = row * msg.row_step + col * msg.point_step;
       const auto point_ptr = &msg.data[offset];
+      const auto color = adaptor.color(point_ptr);
       packet.points.at<cv::Vec3f>(row, col) = adaptor.position(point_ptr);
-      packet.colors.at<cv::Vec3b>(row, col) = adaptor.color(point_ptr);
-      if (adaptor.hasLabels()) {
+      auto& color_vec = packet.colors.at<cv::Vec3b>(row, col);
+      color_vec[0] = color[0];
+      color_vec[1] = color[1];
+      color_vec[2] = color[2];
+      if (discard_transparent) {
+        packet.color_mask.at<InputData::MaskType>(row, col) = color_vec[3] > 0;
+      }
+
+      if (!adaptor.hasLabels()) {
+        continue;
+      }
+
+      if (instance_ids) {
+        const auto label = adaptor.label(point_ptr);
+        packet.labels.at<int32_t>(row, col) = label & 0xFFFF;
+        packet.instances.at<int16_t>(row, col) = label >> 16;
+      } else {
         packet.labels.at<int32_t>(row, col) = adaptor.label(point_ptr);
       }
     }

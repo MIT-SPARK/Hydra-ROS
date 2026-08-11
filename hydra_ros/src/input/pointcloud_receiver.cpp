@@ -1,6 +1,7 @@
 #include "hydra_ros/input/pointcloud_receiver.h"
 
 #include <config_utilities/config.h>
+#include <config_utilities/factory.h>
 #include <glog/logging.h>
 #include <hydra/common/global_info.h>
 #include <ianvs/node_handle.h>
@@ -8,6 +9,15 @@
 #include "hydra_ros/input/pointcloud_adaptor.h"
 
 namespace hydra {
+namespace {
+
+static const auto registration_ =
+    config::RegistrationWithConfig<DataReceiver,
+                                   PointcloudReceiver,
+                                   PointcloudReceiver::Config,
+                                   std::string>("PointcloudReceiver");
+
+}
 
 using sensor_msgs::msg::PointCloud2;
 
@@ -15,6 +25,9 @@ void declare_config(PointcloudReceiver::Config& config) {
   using namespace config;
   name("PointcloudReceiver::Config");
   base<RosDataReceiver::Config>(config);
+  field(config.in_world_frame, "in_world_frame");
+  field(config.instance_ids, "instance_ids");
+  field(config.discard_transparent_color, "discard_transparent_color");
 }
 
 PointcloudReceiver::PointcloudReceiver(const Config& config,
@@ -29,19 +42,17 @@ bool PointcloudReceiver::initImpl() {
 }
 
 void PointcloudReceiver::callback(const PointCloud2::ConstSharedPtr& msg) {
-  const auto timestamp_ns = rclcpp::Time(msg->header.stamp).nanoseconds();
-  VLOG(5) << "[Hydra Reconstruction] Got raw pointcloud input @ " << timestamp_ns
-          << " [ns]";
+  const auto stamp = rclcpp::Time(msg->header.stamp).nanoseconds();
+  VLOG(5) << "[Hydra Reconstruction] Got raw pointcloud input @ " << stamp << " [ns]";
 
-  if (!checkInputTimestamp(timestamp_ns)) {
+  if (!checkInputTimestamp(stamp)) {
     return;
   }
 
-  auto packet = std::make_shared<CloudInputPacket>(timestamp_ns, sensor_name_);
-  fillPointcloudPacket(*msg, *packet, false);
-  // TODO(nathan) this is brittle, but at least handles kitti
-  packet->in_world_frame =
-      msg->header.frame_id == GlobalInfo::instance().getFrames().odom;
+  auto packet = std::make_shared<CloudInputPacket>(stamp, sensor_name_);
+  fillPointcloudPacket(
+      *msg, *packet, config.instance_ids, config.discard_transparent_color);
+  packet->in_world_frame = config.in_world_frame;
   queue.push(packet);
 }
 
