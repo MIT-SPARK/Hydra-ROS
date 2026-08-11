@@ -49,7 +49,7 @@ if [ "$install_models" = true ]; then
     echo "Downloading models to: ${pkg_dir}/models"
     python3 -m virtualenv --system-site-packages "${pkg_dir}/env"
     "${pkg_dir}/env/bin/python3" -m pip install gdown
-    download_model "${pkg_dir}/models/202511201549_Z4722/checkpoint.pth" https://drive.google.com/file/d/1xHvoSCOlTEX-pweAtjoaiRlM74YK5sgA/view?usp=sharing
+    download_model "${pkg_dir}/models/202508042315_P41O3/checkpoint.pth" https://drive.google.com/file/d/1WBXGpNs7nUR4baonH85kP4eoFSeCAb_R/view?usp=sharing
     download_model "${pkg_dir}/models/202601240250_PY271/checkpoint.pth" https://drive.google.com/file/d/1a5oFGUhVpxTc54Ej7TR7AYJQOoUMMWlW/view?usp=sharing
 fi
 

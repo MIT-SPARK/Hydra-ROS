@@ -86,6 +86,7 @@ Visualization Manager:
         layer2p97_text: true
         layer3_edges: true
         layer3_nodes: true
+        layer4_edges: true
         layer4_nodes: true
         layer4_text: true
       Topic:
@@ -134,51 +135,99 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: hydra_visualizer/crisp_meshes
       Value: true
-      Visible: true
+      Visible:
+        Value: true
+        crisp_mesh_O0: true
+        crisp_mesh_O1: true
+        crisp_mesh_O10: true
+        crisp_mesh_O12: true
+        crisp_mesh_O13: true
+        crisp_mesh_O14: true
+        crisp_mesh_O17: true
+        crisp_mesh_O18: true
+        crisp_mesh_O2: true
+        crisp_mesh_O22: true
+        crisp_mesh_O24: true
+        crisp_mesh_O25: true
+        crisp_mesh_O26: true
+        crisp_mesh_O28: true
+        crisp_mesh_O29: true
+        crisp_mesh_O3: true
+        crisp_mesh_O30: true
+        crisp_mesh_O31: true
+        crisp_mesh_O32: true
+        crisp_mesh_O33: true
+        crisp_mesh_O34: true
+        crisp_mesh_O35: true
+        crisp_mesh_O36: true
+        crisp_mesh_O37: true
+        crisp_mesh_O38: true
+        crisp_mesh_O39: true
+        crisp_mesh_O4: true
+        crisp_mesh_O40: true
+        crisp_mesh_O41: true
+        crisp_mesh_O42: true
+        crisp_mesh_O43: true
+        crisp_mesh_O44: true
+        crisp_mesh_O45: true
+        crisp_mesh_O46: true
+        crisp_mesh_O47: true
+        crisp_mesh_O48: true
+        crisp_mesh_O49: true
+        crisp_mesh_O5: true
+        crisp_mesh_O50: true
+        crisp_mesh_O51: true
+        crisp_mesh_O52: true
+        crisp_mesh_O53: true
+        crisp_mesh_O55: true
+        crisp_mesh_O56: true
+        crisp_mesh_O57: true
+        crisp_mesh_O58: true
+        crisp_mesh_O59: true
+        crisp_mesh_O6: true
+        crisp_mesh_O60: true
+        crisp_mesh_O61: true
+        crisp_mesh_O62: true
+        crisp_mesh_O63: true
+        crisp_mesh_O64: true
+        crisp_mesh_O65: true
+        crisp_mesh_O66: true
+        crisp_mesh_O67: true
+        crisp_mesh_O68: true
+        crisp_mesh_O69: true
+        crisp_mesh_O7: true
+        crisp_mesh_O70: true
+        crisp_mesh_O73: true
+        crisp_mesh_O74: true
+        crisp_mesh_O75: true
+        crisp_mesh_O76: true
+        crisp_mesh_O77: true
+        crisp_mesh_O78: true
+        crisp_mesh_O79: true
+        crisp_mesh_O8: true
+        crisp_mesh_O80: true
+        crisp_mesh_O81: true
+        crisp_mesh_O82: true
+        crisp_mesh_O83: true
+        crisp_mesh_O84: true
+        crisp_mesh_O85: true
+        crisp_mesh_O9: true
     - Class: rviz_default_plugins/TF
-      Enabled: true
+      Enabled: false
       Filter (blacklist): ""
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        base_link_gt:
-          Value: true
-        front_lidar:
-          Value: true
-        left_cam:
-          Value: true
-        map:
-          Value: true
-        odom:
-          Value: true
-        rear_lidar:
-          Value: true
-        right_cam:
-          Value: true
-        world:
-          Value: true
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        world:
-          base_link_gt:
-            front_lidar:
-              {}
-            left_cam:
-              {}
-            rear_lidar:
-              {}
-            right_cam:
-              {}
-          map:
-            odom:
-              {}
+        {}
       Update Interval: 0
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 255; 255; 255
@@ -225,25 +274,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 89.4720687866211
+      Distance: 97.18473052978516
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 17.749631881713867
-        Y: 3.130560874938965
-        Z: -9.413416862487793
+        X: 20.50954246520996
+        Y: 20.572458267211914
+        Z: -18.35944175720215
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.665398120880127
+      Pitch: 0.7503980398178101
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.615398406982422
+      Yaw: 3.1554014682769775
     Saved: ~
 Window Geometry:
   Displays:
