@@ -40,9 +40,7 @@ add_library(
   src/backend/ros_backend_publisher.cpp
   src/backend/gt_room_publisher.cpp
   src/frontend/gvd_occupancy_publisher.cpp
-  src/frontend/gvd_visualization_utilities.cpp
   src/frontend/object_visualizer.cpp
-  src/frontend/places_visualizer.cpp
   src/frontend/ros_frontend_publisher.cpp
   src/frontend/traversability_visualizer.cpp
   src/input/feature_receiver.cpp
@@ -54,6 +52,8 @@ add_library(
   src/input/ros_input_module.cpp
   src/input/ros_sensors.cpp
   src/places/external_traversability_estimator.cpp
+  src/places/gvd_places_visualizer.cpp
+  src/places/gvd_visualization_utilities.cpp
   src/odometry/ros_pose_graph_tracker.cpp
   src/openset/ros_embedding_group.cpp
   src/utils/bow_subscriber.cpp

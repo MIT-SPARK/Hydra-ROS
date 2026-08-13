@@ -40,24 +40,25 @@
 #include <hydra_visualizer/utils/marker_group_pub.h>
 #include <ianvs/node_handle.h>
 
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
+#include "hydra_ros/places/gvd_visualization_utilities.h"
 
 namespace hydra {
 
-class PlacesVisualizer : public GvdPlaceExtractor::Sink {
+class GvdPlacesVisualizer : public GvdPlaceExtractor::Sink {
  public:
-  using PlacesGraph = PartialGraph<spark_dsg::PlaceNodeAttributes>;
-
-  // TODO(nathan) initialize configs
   struct Config {
     std::string ns = "~/places";
+    GvdVisualizerConfig gvd;
     visualizer::RangeColormap::Config colormap;
+    double compressed_node_scale = 0.2;
+    double compressed_edge_scale = 0.01;
+    double compressed_alpha = 1.0;
     spark_dsg::Color block_color = spark_dsg::Color::purple();
-  } const config;
+  };
 
-  explicit PlacesVisualizer(const Config& config);
+  explicit GvdPlacesVisualizer(const Config& config);
 
-  virtual ~PlacesVisualizer() = default;
+  virtual ~GvdPlacesVisualizer() = default;
 
   std::string printInfo() const override;
 
@@ -67,23 +68,20 @@ class PlacesVisualizer : public GvdPlaceExtractor::Sink {
             const places::GraphExtractor& extractor) const override;
 
  private:
-  void visualizeGvd(const std_msgs::msg::Header& header,
+  void visualizeGvd(const Config& config,
+                    const std_msgs::msg::Header& header,
                     const places::GvdLayer& gvd) const;
 
-  void visualizeExtractor(const std_msgs::msg::Header& header,
+  void visualizeExtractor(const Config& config,
+                          const std_msgs::msg::Header& header,
                           const places::GraphExtractor& extractor) const;
-
-  void visualizeGraph(const std_msgs::msg::Header& header,
-                      const PlacesGraph& graph) const;
 
  protected:
   ianvs::NodeHandle nh_;
   MarkerGroupPub pubs_;
-  config::DynamicConfig<GvdVisualizerConfig> gvd_config_;
-  config::DynamicConfig<visualizer::LayerConfig> layer_config_;
-  const visualizer::RangeColormap colormap_;
+  config::DynamicConfig<Config> config_;
 };
 
-void declare_config(PlacesVisualizer::Config& config);
+void declare_config(GvdPlacesVisualizer::Config& config);
 
 }  // namespace hydra

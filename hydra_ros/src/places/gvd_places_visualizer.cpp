@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/frontend/places_visualizer.h"
+#include "hydra_ros/places/gvd_places_visualizer.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/factory.h>
@@ -45,7 +45,6 @@
 
 #include <rclcpp/time.hpp>
 
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
 #include "hydra_ros/visualizer/voxel_drawing.h"
 
 namespace hydra {
@@ -53,8 +52,8 @@ namespace {
 
 static const auto registration =
     config::RegistrationWithConfig<GvdPlaceExtractor::Sink,
-                                   PlacesVisualizer,
-                                   PlacesVisualizer::Config>("PlacesVisualizer");
+                                   GvdPlacesVisualizer,
+                                   GvdPlacesVisualizer::Config>("GvdPlacesVisualizer");
 
 }
 
@@ -64,80 +63,99 @@ using visualization_msgs::msg::Marker;
 using visualization_msgs::msg::MarkerArray;
 using visualizer::RangeColormap;
 
-void declare_config(PlacesVisualizer::Config& config) {
+void declare_config(GvdPlacesVisualizer::Config& config) {
   using namespace config;
-  name("PlacesVisualizerConfig");
+  name("GvdPlacesVisualizer::Config");
   field(config.ns, "ns");
+  field(config.gvd, "gvd");
+  field(config.compressed_node_scale, "compressed_node_scale");
+  field(config.compressed_edge_scale, "compressed_edge_scale");
+  field(config.compressed_alpha, "compressed_alpha");
   field(config.colormap, "colormap");
   field(config.block_color, "block_color");
+
+  check(config.compressed_node_scale, GT, 0.0, "compressed_node_scale");
+  check(config.compressed_edge_scale, GT, 0.0, "compressed_edge_scale");
+  checkInRange(config.compressed_alpha, 0.0, 1.0, "compressed_alpha", false, true);
 }
 
-PlacesVisualizer::PlacesVisualizer(const Config& config)
-    : config(config),
-      nh_(ianvs::NodeHandle::this_node(config.ns)),
+GvdPlacesVisualizer::GvdPlacesVisualizer(const Config& config)
+    : nh_(ianvs::NodeHandle::this_node(config.ns)),
       pubs_(nh_),
-      gvd_config_("gvd"),
-      layer_config_("graph"),
-      colormap_(config.colormap) {}
+      config_("gvd_places_visualizer", config) {}
 
-std::string PlacesVisualizer::printInfo() const { return config::toString(config); }
+std::string GvdPlacesVisualizer::printInfo() const {
+  return config::toString(config_.get());
+}
 
-void PlacesVisualizer::call(uint64_t timestamp_ns,
-                            const Eigen::Isometry3d& pose,
-                            const GvdLayer& gvd,
-                            const GraphExtractor& extractor) const {
+void GvdPlacesVisualizer::call(uint64_t timestamp_ns,
+                               const Eigen::Isometry3d& pose,
+                               const GvdLayer& gvd,
+                               const GraphExtractor& extractor) const {
   std_msgs::msg::Header header;
   header.frame_id = GlobalInfo::instance().getFrames().map;
   header.stamp = rclcpp::Time(timestamp_ns);
 
-  const RangeColormap sdf_cmap(RangeColormap::Config{});
+  const auto config = config_.get();
+  const RangeColormap sdf_cmap(config.colormap);
   pubs_.publish("esdf_viz", header, [&]() -> Marker {
-    return drawEsdf(gvd_config_.get(), sdf_cmap, pose, gvd, "esdf");
+    return drawEsdf(config.gvd, sdf_cmap, pose, gvd, "esdf");
   });
 
-  visualizeGvd(header, gvd);
-  visualizeExtractor(header, extractor);
+  visualizeGvd(config, header, gvd);
+  visualizeExtractor(config, header, extractor);
 }
 
-void PlacesVisualizer::visualizeGvd(const std_msgs::msg::Header& header,
-                                    const GvdLayer& gvd) const {
-  pubs_.publish("gvd_viz", header, [&]() -> Marker {
-    return drawGvd(gvd_config_.get(), colormap_, gvd, "gvd");
+void GvdPlacesVisualizer::visualizeGvd(const Config& config,
+                                       const std_msgs::msg::Header& header,
+                                       const GvdLayer& gvd) const {
+  const RangeColormap cmap(config.colormap);
+  pubs_.publish("gvd_voxels", header, [&]() -> Marker {
+    return drawGvd(config.gvd, cmap, gvd, "gvd_voxels");
   });
 
-  pubs_.publish("surface_viz", header, [&]() -> Marker {
-    return drawGvdSurface(gvd_config_.get(), colormap_, gvd, "surface");
+  pubs_.publish("surface_voxels", header, [&]() -> Marker {
+    return drawGvdSurface(config.gvd, cmap, gvd, "surface_voxels");
   });
 
   ActiveBlockColoring block_cmap(config.block_color);
-  pubs_.publish("voxel_block_viz", header, [&]() -> Marker {
+  pubs_.publish("active_gvd_blocks", header, [&]() -> Marker {
     return drawSpatialGrid(gvd,
-                           gvd_config_.get().block_outline_scale,
-                           "blocks",
+                           config.gvd.block_outline_scale,
+                           "active_gvd_blocks",
                            1.0,
                            block_cmap.getCallback<places::GvdBlock>());
   });
 }
 
-void PlacesVisualizer::visualizeExtractor(const std_msgs::msg::Header& header,
-                                          const GraphExtractor& extractor) const {
-  // TODO(nathan) visualize partial graph
-
-  pubs_.publish("gvd_graph_viz", header, [&]() -> MarkerArray {
-    return drawGvdGraph(extractor.gvd(), gvd_config_.get(), colormap_, "gvd_graph");
+void GvdPlacesVisualizer::visualizeExtractor(const Config& config,
+                                             const std_msgs::msg::Header& header,
+                                             const GraphExtractor& extractor) const {
+  const RangeColormap cmap(config.colormap);
+  pubs_.publish("compressed_graph", header, [&]() -> MarkerArray {
+    return drawCompressedGraph(extractor.graph(),
+                               config.gvd,
+                               cmap,
+                               "compressed_graph",
+                               config.compressed_node_scale,
+                               config.compressed_edge_scale,
+                               config.compressed_alpha);
   });
 
-  pubs_.publish("gvd_active_viz", header, [&]() -> MarkerArray {
-    return drawGvdActive(extractor.gvd(), gvd_config_.get(), "gvd_graph_active");
+  pubs_.publish("gvd_wireframe", header, [&]() -> MarkerArray {
+    return drawGvdWireframe(extractor.gvd(), config.gvd, cmap, "gvd_wireframe");
   });
 
-  pubs_.publish("gvd_active_cluster_viz", header, [&]() -> MarkerArray {
-    return drawGvdActiveCluster(
-        extractor.gvd(), gvd_config_.get(), "gvd_graph_active_cluster");
+  pubs_.publish("gvd_active", header, [&]() -> MarkerArray {
+    return drawGvdActive(extractor.gvd(), config.gvd, "gvd_active");
   });
 
-  pubs_.publish("gvd_cluster_viz", header, [&]() -> MarkerArray {
-    return drawGvdClusters(extractor.gvd(), gvd_config_.get(), "gvd_cluster_graph");
+  pubs_.publish("gvd_active_cluster", header, [&]() -> MarkerArray {
+    return drawGvdActiveCluster(extractor.gvd(), config.gvd, "gvd_active_cluster");
+  });
+
+  pubs_.publish("gvd_clusters", header, [&]() -> MarkerArray {
+    return drawGvdClusters(extractor.gvd(), config.gvd, "gvd_clusters");
   });
 }
 

@@ -32,7 +32,7 @@
  * Government is authorized to reproduce and distribute reprints for Government
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
+#include "hydra_ros/places/gvd_visualization_utilities.h"
 
 #include <config_utilities/config.h>
 #include <config_utilities/types/enum.h>
@@ -160,10 +160,8 @@ MarkerArray drawWireframe(const GvdGraph& graph,
 void declare_config(GvdVisualizerConfig& config) {
   using namespace config;
   name("GvdVisualizerConfig");
-  field(config.show_block_outlines, "show_block_outlines");
   field(config.block_outline_scale, "block_outline_scale");
   field(config.gvd_alpha, "gvd_alpha");
-  field(config.gvd_min_alpha, "gvd_min_alpha");
   field(config.gvd_min_distance, "gvd_min_distance");
   field(config.gvd_max_distance, "gvd_max_distance");
   field(config.basis_threshold, "basis_threshold");
@@ -175,7 +173,6 @@ void declare_config(GvdVisualizerConfig& config) {
               {GvdVisualizationMode::DISTANCE, "DISTANCE"},
               {GvdVisualizationMode::BASIS_POINTS, "BASIS_POINTS"}});
   field(config.gvd_graph_scale, "gvd_graph_scale");
-  field(config.freespace_sphere_alpha, "freespace_sphere_alpha");
   field(config.esdf_alpha, "esdf_alpha");
   field(config.slice_height, "slice_height");
   field(config.esdf_distance, "esdf_distance");
@@ -278,59 +275,11 @@ Marker drawGvdSurface(const GvdVisualizerConfig& config,
   return marker;
 }
 
-Marker drawGvdError(const GvdVisualizerConfig& config,
-                    const RangeColormap& colors,
-                    const GvdLayer& lhs,
-                    const GvdLayer& rhs,
-                    double threshold) {
-  Marker marker;
-  marker.type = Marker::CUBE_LIST;
-  marker.action = Marker::ADD;
-  marker.id = 0;
-  marker.ns = "error_locations";
-
-  Eigen::Vector3d identity_pos = Eigen::Vector3d::Zero();
-  tf2::convert(identity_pos, marker.pose.position);
-  tf2::convert(Eigen::Quaterniond::Identity(), marker.pose.orientation);
-
-  marker.scale.x = lhs.voxel_size;
-  marker.scale.y = lhs.voxel_size;
-  marker.scale.z = lhs.voxel_size;
-
-  for (const auto& lhs_block : lhs) {
-    const auto& rhs_block = rhs.getBlock(lhs_block.index);
-
-    for (size_t i = 0; i < lhs_block.numVoxels(); ++i) {
-      const auto& lvoxel = lhs_block.getVoxel(i);
-      const auto& rvoxel = rhs_block.getVoxel(i);
-
-      if (!lvoxel.observed || !rvoxel.observed) {
-        continue;
-      }
-
-      const double error = std::abs(lvoxel.distance - rvoxel.distance);
-      if (error <= threshold) {
-        continue;
-      }
-
-      const Eigen::Vector3d voxel_pos = lhs_block.getVoxelPosition(i).cast<double>();
-      geometry_msgs::msg::Point marker_pos;
-      tf2::convert(voxel_pos, marker_pos);
-      marker.points.push_back(marker_pos);
-
-      const auto color = colors(error, 0.0, 10.0);
-      marker.colors.push_back(visualizer::makeColorMsg(color, config.gvd_alpha));
-    }
-  }
-
-  return marker;
-}
-
-MarkerArray drawGvdGraph(const GvdGraph& graph,
-                         const GvdVisualizerConfig& config,
-                         const RangeColormap& colors,
-                         const std::string& ns,
-                         size_t marker_id) {
+MarkerArray drawGvdWireframe(const GvdGraph& graph,
+                             const GvdVisualizerConfig& config,
+                             const RangeColormap& colors,
+                             const std::string& ns,
+                             size_t marker_id) {
   return drawWireframe(graph, config, ns, marker_id, [&](const auto& node) {
     return getGvdColor(config, colors, node.info.distance, node.info.num_basis_points);
   });
@@ -411,6 +360,70 @@ MarkerArray drawGvdClusters(const GvdGraph& graph,
       return colors.at(iter->second);
     }
   });
+}
+
+MarkerArray drawCompressedGraph(const places::GraphExtractor::LocalGraph& graph,
+                                const GvdVisualizerConfig& config,
+                                const visualizer::RangeColormap& cmap,
+                                const std::string& ns,
+                                double node_scale,
+                                double edge_scale,
+                                double alpha,
+                                size_t marker_id) {
+  MarkerArray marker;
+  if (!graph.num_nodes()) {
+    return marker;
+  }
+
+  marker.markers.reserve(2);
+
+  {  // scope limiting node marker validity
+    auto& nodes = marker.markers.emplace_back();
+    nodes.type = Marker::CUBE_LIST;
+    nodes.id = marker_id;
+    nodes.ns = ns + "_nodes";
+    nodes.action = Marker::ADD;
+    nodes.scale.x = node_scale;
+    nodes.scale.y = node_scale;
+    nodes.scale.z = node_scale;
+
+    for (const auto& [node_id, node] : graph) {
+      const auto& attrs = node.attributes();
+      geometry_msgs::msg::Point node_centroid;
+      tf2::convert(attrs.position.cast<double>().eval(), nodes.points.emplace_back());
+
+      const auto dist = attrs.distance;
+      const auto color = cmap(dist, config.gvd_min_distance, config.gvd_max_distance);
+      nodes.colors.push_back(visualizer::makeColorMsg(color, alpha));
+    }
+  }  // end scope limiting node marker validity
+
+  if (!graph.num_edges()) {
+    return marker;
+  }
+
+  auto& edges = marker.markers.emplace_back();
+  edges.type = Marker::LINE_LIST;
+  edges.id = marker_id;
+  edges.ns = ns + "_edges";
+  edges.action = Marker::ADD;
+  edges.scale.x = edge_scale;
+
+  for (const auto& [key, info] : graph.edges()) {
+    const auto [source, target] = key;
+    const auto& source_pos = graph.at(source).position;
+    const auto& target_pos = graph.at(target).position;
+    tf2::convert(source_pos, edges.points.emplace_back());
+    tf2::convert(target_pos, edges.points.emplace_back());
+
+    const auto dist = info ? info->weight : 0.0;
+    const auto color = cmap(dist, config.gvd_min_distance, config.gvd_max_distance);
+    const auto color_msg = visualizer::makeColorMsg(color, alpha);
+    edges.colors.push_back(color_msg);
+    edges.colors.push_back(color_msg);
+  }
+
+  return marker;
 }
 
 }  // namespace hydra
