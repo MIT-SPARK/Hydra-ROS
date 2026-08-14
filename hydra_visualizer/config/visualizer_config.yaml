@@ -6,10 +6,6 @@ plugins:
       type: SemanticMeshColoring
   places_basis_points:
     type: BasisPointPlugin
-    show_voxblox_connections: false
-    draw_basis_points: true
-    basis_point_scale: 0.1
-    places_node_scale: 0.1
   khronos_objects:
     type: KhronosObjectPlugin
     dynamic_color_mode: CONSTANT  # ID, SEMANTIC, CONSTANT
@@ -17,7 +13,6 @@ plugins:
     type: TraversabilityPlugin
   agent_poses:
     type: PosePlugin
-    num_to_skip: 0
 renderer:
   layer_z_step: 5.5  # unit separation between layers
   collapse_layers: false  # whether or not to apply offsets to each of the layers
@@ -25,20 +20,20 @@ renderer:
     2:
       z_offset_scale: 2.0
       visualize: true
-      nodes: {draw: true, scale: 0.40, color: {type: LabelColorAdapter}, alpha: 0.8, use_sphere: false}
+      nodes: {scale: 0.40, color: {type: LabelColorAdapter}, alpha: 0.8}
       text: {draw: true, collapse: true, adapter: {type: LabelTextAdapter}, height: 0.5, scale: 0.45}
-      bounding_boxes: {draw: true, collapse: true, scale: 0.05, edge_scale: 0.05, alpha: 0.9, edge_break_ratio: 0.5}
+      bounding_boxes: {draw: true, collapse: true, scale: 0.05, edge_scale: 0.05, alpha: 0.9}
     3:
       z_offset_scale: 3.0
       visualize: true
-      nodes: {scale: 0.2, color: {type: ParentColorAdapter, colormap: {palette: colorbrewer}}, alpha: 0.9, use_sphere: true}
-      edges: {scale: 0.01, alpha: 0.5, color: {type: UniformEdgeColorAdapter}}
+      nodes: {scale: 0.2, color: {type: ParentColorAdapter, colormap: {palette: {type: colorbrewer}}}, alpha: 0.9, use_sphere: true}
+      edges: {scale: 0.01, alpha: 0.5}
     4:
       z_offset_scale: 4.2
       visualize: true
-      nodes: {scale: 0.6, color: {type: IdColorAdapter, colormap: {palette: colorbrewer}}, alpha: 0.8, use_sphere: false}
+      nodes: {scale: 0.6, color: {type: IdColorAdapter, colormap: {palette: {type: colorbrewer}}}, alpha: 0.8}
       text: {draw: true, height: 1.25, scale: 1.0}
-      edges: {scale: 0.1, alpha: 0.2, color: {type: UniformEdgeColorAdapter}}
+      edges: {scale: 0.1, alpha: 0.2}
     2p*:
       z_offset_scale: 0.0
       visualize: true
@@ -50,7 +45,7 @@ renderer:
       visualize: true
       nodes: {scale: 0.2, color: {type: LabelColorAdapter}, alpha: 0.9, use_sphere: true}
       boundaries: {draw: true, collapse: false, wireframe_scale: 0.1, use_node_color: true, alpha: 1.0}
-      edges: {scale: 0.01, alpha: 0.5, color: {type: UniformEdgeColorAdapter}}
+      edges: {scale: 0.01, alpha: 0.5}
     3p2:
       z_offset_scale: 3.0
       visualize: true

@@ -36,12 +36,23 @@
 
 #include <config_utilities/config.h>
 #include <config_utilities/types/enum.h>
+#include <config_utilities/types/path.h>
 #include <config_utilities/validation.h>
 #include <config_utilities/virtual_config.h>
 #include <glog/logging.h>
 #include <spark_dsg/colormaps.h>
 
+#include <fstream>
+
 #include "hydra_visualizer/color/color_parsing.h"
+
+#define REGISTER_CONTINUOUS(type, name) \
+  static const auto type##reg =         \
+      config::RegistrationWithConfig<ContinuousPalette, type, type::Config>(name)
+
+#define REGISTER_DISCRETE(type, name) \
+  static const auto type##reg =       \
+      config::RegistrationWithConfig<DiscretePalette, type, type::Config>(name)
 
 namespace hydra::visualizer {
 
@@ -49,29 +60,18 @@ using spark_dsg::Color;
 
 namespace {
 
-const std::vector<Color>& lookupColormap(CategoricalPalette cmap) {
-  switch (cmap) {
-    case CategoricalPalette::COLORBREWER:
-      return spark_dsg::colormaps::colorbrewerPalette();
-    case CategoricalPalette::CHESAPEAKE:
-      return spark_dsg::colormaps::chesapeakePalette();
-    case CategoricalPalette::DISTINCT150:
-    default:
-      return spark_dsg::colormaps::distinct150Palette();
-  }
-}
-
-std::function<Color(size_t)> lookupColormap(DiscretePalette cmap) {
-  switch (cmap) {
-    case DiscretePalette::COLORBREWER:
-      return [](size_t id) { return spark_dsg::colormaps::colorbrewerId(id); };
-    case DiscretePalette::DISTINCT150:
-      return [](size_t id) { return spark_dsg::colormaps::distinct150Id(id); };
-    case DiscretePalette::RAINBOW:
-    default:
-      return [](size_t id) { return spark_dsg::colormaps::rainbowId(id); };
-  }
-}
+REGISTER_CONTINUOUS(GrayPalette, "gray");
+REGISTER_CONTINUOUS(QualityPalette, "quality");
+REGISTER_CONTINUOUS(IronbowPalette, "ironbow");
+REGISTER_CONTINUOUS(RainbowPalette, "rainbow");
+REGISTER_CONTINUOUS(SpectrumPalette, "spectrum");
+REGISTER_CONTINUOUS(HLSPalette, "hls");
+REGISTER_CONTINUOUS(DivergentPalette, "divergent");
+REGISTER_DISCRETE(ColorbrewerPalette, "colorbrewer");
+REGISTER_DISCRETE(Distinct150Palette, "distinct150");
+REGISTER_DISCRETE(ChesapeakeColorPalette, "chesapeake");
+REGISTER_DISCRETE(RainbowIdPalette, "rainbow");
+REGISTER_DISCRETE(PaletteFromCsvFile, "csv");
 
 static const auto enum_init =
     config::Enum<NamedColors>::Initializer(std::map<NamedColors, std::string>{
@@ -135,11 +135,19 @@ std_msgs::msg::ColorRGBA makeColorMsg(const Color& color, std::optional<double> 
   return msg;
 }
 
+spark_dsg::Color ContinuousPalette::operator()(double value) const {
+  return getColor(value);
+}
+
+GrayPalette::GrayPalette(const Config&) {}
+
 spark_dsg::Color GrayPalette::getColor(double value) const {
   return spark_dsg::colormaps::gray(value);
 }
 
 void declare_config(GrayPalette::Config&) { config::name("GrayPalette::Config"); }
+
+QualityPalette::QualityPalette(const Config&) {}
 
 spark_dsg::Color QualityPalette::getColor(double value) const {
   return spark_dsg::colormaps::quality(value);
@@ -147,17 +155,26 @@ spark_dsg::Color QualityPalette::getColor(double value) const {
 
 void declare_config(QualityPalette::Config&) { config::name("QualityPalette::Config"); }
 
+IronbowPalette::IronbowPalette(const Config&) {}
+
 spark_dsg::Color IronbowPalette::getColor(double value) const {
   return spark_dsg::colormaps::ironbow(value);
 }
 
 void declare_config(IronbowPalette::Config&) { config::name("IronbowPalette::Config"); }
 
+RainbowPalette::RainbowPalette(const Config&) {}
+
 spark_dsg::Color RainbowPalette::getColor(double value) const {
   return spark_dsg::colormaps::rainbow(value);
 }
 
 void declare_config(RainbowPalette::Config&) { config::name("RainbowPalette::Config"); }
+
+SpectrumPalette::SpectrumPalette() : SpectrumPalette(Config{}) {}
+
+SpectrumPalette::SpectrumPalette(const Config& config)
+    : config(config::checkValid(config)) {}
 
 spark_dsg::Color SpectrumPalette::getColor(double value) const {
   return spark_dsg::colormaps::spectrum(value, config.colors);
@@ -169,6 +186,13 @@ void declare_config(SpectrumPalette::Config& config) {
   field(config.colors, "colors");
 }
 
+HLSPalette::HLSPalette() : HLSPalette(Config{}) {}
+
+HLSPalette::HLSPalette(const Config& config)
+    : config(config::checkValid(config)),
+      hls_start(config.start.toHLS()),
+      hls_end(config.end.toHLS()) {}
+
 spark_dsg::Color HLSPalette::getColor(double value) const {
   return spark_dsg::colormaps::hls(value, hls_start, hls_end);
 }
@@ -179,6 +203,11 @@ void declare_config(HLSPalette::Config& config) {
   field(config.start, "start");
   field(config.end, "end");
 }
+
+DivergentPalette::DivergentPalette() : DivergentPalette(Config{}) {}
+
+DivergentPalette::DivergentPalette(const Config& config)
+    : config(config::checkValid(config)) {}
 
 spark_dsg::Color DivergentPalette::getColor(double value) const {
   return spark_dsg::colormaps::divergent(value,
@@ -197,36 +226,101 @@ void declare_config(DivergentPalette::Config& config) {
   field(config.saturation, "saturation");
   field(config.luminance, "luminance");
   field(config.dark, "dark");
+  checkInRange(config.hue_low, 0.0f, 1.0f, "hue_low");
+  checkInRange(config.hue_high, 0.0f, 1.0f, "hue_high");
+  checkInRange(config.saturation, 0.0f, 1.0f, "saturation");
+  checkInRange(config.luminance, 0.0f, 1.0f, "luminance");
 }
 
-void declare_config(RangeColormap::Config& config) {
-  using namespace config;
-  name("RangeColormap::Config");
-  config.palette.setOptional();
-  field(config.palette, "palette");
+ColorbrewerPalette::ColorbrewerPalette(const Config&) {}
+
+const std::vector<Color>& ColorbrewerPalette::get() const {
+  return spark_dsg::colormaps::colorbrewerPalette();
 }
 
-void declare_config(CategoricalColormap::Config& config) {
-  using namespace config;
-  name("CategoricalColormap::Config");
-  field(config.total_classes, "total_classes");
-  enum_field(config.palette,
-             "palette",
-             {{CategoricalPalette::COLORBREWER, "colorbrewer"},
-              {CategoricalPalette::DISTINCT150, "distinct150"},
-              {CategoricalPalette::CHESAPEAKE, "chesapeake"}});
-  field(config.default_color, "default_color");
+void declare_config(ColorbrewerPalette::Config&) {
+  config::name("ColorbrewerPalette::Config");
 }
 
-void declare_config(DiscreteColormap::Config& config) {
-  using namespace config;
-  name("DiscreteColormap::Config");
-  enum_field(config.palette,
-             "palette",
-             {{DiscretePalette::COLORBREWER, "colorbrewer"},
-              {DiscretePalette::DISTINCT150, "distinct150"},
-              {DiscretePalette::RAINBOW, "rainbow"}});
+Distinct150Palette::Distinct150Palette(const Config&) {}
+
+const std::vector<Color>& Distinct150Palette::get() const {
+  return spark_dsg::colormaps::distinct150Palette();
 }
+
+void declare_config(Distinct150Palette::Config&) {
+  config::name("Distinct150Palette::Config");
+}
+
+ChesapeakeColorPalette::ChesapeakeColorPalette(const Config&) {}
+
+const std::vector<Color>& ChesapeakeColorPalette::get() const {
+  return spark_dsg::colormaps::chesapeakePalette();
+}
+
+void declare_config(ChesapeakeColorPalette::Config&) {
+  config::name("ChesapeakeColorPalette::Config");
+}
+
+RainbowIdPalette::RainbowIdPalette(const Config& config)
+    : config(config::checkValid(config)) {
+  for (size_t i = 0; i < 255; ++i) {
+    colors_.push_back(spark_dsg::colormaps::rainbowId(i, config.ids_per_revolution));
+  }
+}
+
+const std::vector<Color>& RainbowIdPalette::get() const { return colors_; }
+
+void declare_config(RainbowIdPalette::Config& config) {
+  using namespace config;
+  name("RainbowIdPalette::Config");
+  field(config.ids_per_revolution, "ids_per_revolution");
+  check(config.ids_per_revolution, GT, 0, "ids_per_revolution");
+}
+
+PaletteFromCsvFile::PaletteFromCsvFile(const Config& config)
+    : config(config::checkValid(config)) {
+  std::ifstream file(config.filepath);
+  if (!file.is_open()) {
+    LOG(ERROR) << "Could not open csv file '" << config.filepath << "'.";
+    return;
+  }
+
+  // Read all the data.
+  std::string line, word;
+  std::vector<std::string> row;
+  bool is_header = config.has_header;
+  while (std::getline(file, line)) {
+    row.clear();
+    std::stringstream str(line);
+    while (std::getline(str, word, config.separator)) {
+      row.push_back(word);
+    }
+
+    if (is_header) {
+      is_header = false;
+      continue;  // TODO(nathan) consider printing header
+    }
+
+    const auto red = std::stoi(row[config.rgb_columns[0]]);
+    const auto green = std::stoi(row[config.rgb_columns[1]]);
+    const auto blue = std::stoi(row[config.rgb_columns[2]]);
+    colors_.push_back(Color(red, green, blue));
+  }
+}
+
+const std::vector<Color>& PaletteFromCsvFile::get() const { return colors_; }
+
+void declare_config(PaletteFromCsvFile::Config& config) {
+  using namespace config;
+  name("PaletteFromCsvFile::Config");
+  field(config.has_header, "has_header");
+  field(config.rgb_columns, "rgb_columns");
+  field<Path::Absolute>(config.filepath, "filepath");
+  check<Path::Exists>(config.filepath, "filepath");
+}
+
+RangeColormap::RangeColormap() : RangeColormap(Config{}) {}
 
 RangeColormap::RangeColormap(const Config& config)
     : config(config::checkValid(config)), palette_(config.palette.create()) {}
@@ -236,31 +330,79 @@ Color RangeColormap::getColor(double value, double min, double max) const {
   return palette_ ? palette_->getColor(ratio) : spark_dsg::colormaps::ironbow(ratio);
 }
 
-DiscreteColormap::DiscreteColormap() : DiscreteColormap(Config()) {}
-
-DiscreteColormap::DiscreteColormap(const Config& config)
-    : config(config::checkValid(config)), colormap(lookupColormap(config.palette)) {}
-
-Color DiscreteColormap::getColor(size_t id) const { return colormap(id); }
-
-CategoricalColormap::CategoricalColormap() : CategoricalColormap(Config()) {}
-
-CategoricalColormap::CategoricalColormap(const Config& config)
-    : config(config::checkValid(config)),
-      colors(lookupColormap(config.palette)),
-      total_classes(config.total_classes ? config.total_classes : colors.size()) {
-  LOG_IF(WARNING, total_classes > colors.size())
-      << "Colormap too small for number of labels: " << total_classes
-      << " (colors: " << colors.size() << ")";
+spark_dsg::Color RangeColormap::operator()(double value, double min, double max) const {
+  return getColor(value, min, max);
 }
 
-Color CategoricalColormap::getColor(size_t category) const {
-  const bool color_out_of_bounds = total_classes > 0 && category >= total_classes;
-  if (color_out_of_bounds || category >= colors.size()) {
+void declare_config(RangeColormap::Config& config) {
+  using namespace config;
+  name("RangeColormap::Config");
+  config.palette.setOptional();
+  field(config.palette, "palette");
+}
+
+DiscreteColormap::DiscreteColormap() : DiscreteColormap(Config{}) {}
+
+DiscreteColormap::DiscreteColormap(const Config& config)
+    : config(config::checkValid(config)), palette_(config.palette.create()) {}
+
+Color DiscreteColormap::getColor(size_t value) const {
+  if (!palette_) {
+    return spark_dsg::colormaps::rainbowId(value);
+  }
+
+  const auto& colors = palette_->get();
+  return colors[value % colors.size()];
+}
+
+spark_dsg::Color DiscreteColormap::operator()(size_t value) const {
+  return getColor(value);
+}
+
+void declare_config(DiscreteColormap::Config& config) {
+  using namespace config;
+  name("DiscreteColormap::Config");
+  config.palette.setOptional();
+  field(config.palette, "palette");
+}
+
+CategoricalColormap::CategoricalColormap() : CategoricalColormap(Config{}) {}
+
+CategoricalColormap::CategoricalColormap(const Config& config)
+    : config(config::checkValid(config)), palette_(config.palette.create()) {}
+
+Color CategoricalColormap::getColor(size_t category, size_t total_classes) const {
+  if (total_classes && category >= total_classes) {
     return config.default_color;
   }
 
-  return colors.at(category);
+  if (!palette_) {
+    return spark_dsg::colormaps::rainbowId(category);
+  }
+
+  const auto& colors = palette_->get();
+  if (config.wrap_colors) {
+    return colors[category % colors.size()];
+  }
+
+  return category < colors.size() ? colors[category] : config.default_color;
+}
+
+spark_dsg::Color CategoricalColormap::operator()(size_t category,
+                                                 size_t total_classes) const {
+  return getColor(category, total_classes);
+}
+
+void declare_config(CategoricalColormap::Config& config) {
+  using namespace config;
+  name("CategoricalColormap::Config");
+  config.palette.setOptional();
+  field(config.palette, "palette");
+  field(config.default_color, "default_color");
+  field(config.wrap_colors, "wrap_colors");
 }
 
 }  // namespace hydra::visualizer
+
+#undef REGISTER_CONTINUOUS
+#undef REGISTER_DISCRETE

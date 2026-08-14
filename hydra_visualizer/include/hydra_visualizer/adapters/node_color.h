@@ -43,10 +43,6 @@
 
 namespace hydra {
 
-#define REGISTER_COLOR_ADAPTER(adapter)    \
-  inline static const auto registration_ = \
-      config::RegistrationWithConfig<NodeColorAdapter, adapter, Config>(#adapter)
-
 struct NodeColorAdapter {
   using Ptr = std::shared_ptr<NodeColorAdapter>;
 
@@ -81,9 +77,6 @@ struct AttributeColorAdapter : NodeColorAdapter {
   explicit AttributeColorAdapter(const Config& config);
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
-
- private:
-  REGISTER_COLOR_ADAPTER(AttributeColorAdapter);
 };
 
 void declare_config(AttributeColorAdapter::Config& config);
@@ -96,9 +89,6 @@ struct UniformColorAdapter : NodeColorAdapter {
   explicit UniformColorAdapter(const Config& config);
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
-
- private:
-  REGISTER_COLOR_ADAPTER(UniformColorAdapter);
 };
 
 void declare_config(UniformColorAdapter::Config& config);
@@ -114,8 +104,6 @@ struct LabelColorAdapter : NodeColorAdapter {
 
  private:
   const visualizer::CategoricalColormap colormap_;
-
-  REGISTER_COLOR_ADAPTER(LabelColorAdapter);
 };
 
 void declare_config(LabelColorAdapter::Config& config);
@@ -131,8 +119,6 @@ struct IdColorAdapter : NodeColorAdapter {
 
  private:
   const visualizer::DiscreteColormap colormap_;
-
-  REGISTER_COLOR_ADAPTER(IdColorAdapter);
 };
 
 void declare_config(IdColorAdapter::Config& config);
@@ -141,7 +127,8 @@ struct ParentColorAdapter : NodeColorAdapter {
   struct Config {
     spark_dsg::Color default_color;
     config::VirtualConfig<NodeColorAdapter> parent_adapter{
-        IdColorAdapter::Config{visualizer::DiscretePalette::COLORBREWER}};
+        IdColorAdapter::Config{config::VirtualConfig<visualizer::DiscretePalette>{
+            visualizer::ColorbrewerPalette::Config{}}}};
   } const config;
 
   explicit ParentColorAdapter(const Config& config);
@@ -150,8 +137,6 @@ struct ParentColorAdapter : NodeColorAdapter {
 
  private:
   const NodeColorAdapter::Ptr parent_adapter_;
-
-  REGISTER_COLOR_ADAPTER(ParentColorAdapter);
 };
 
 void declare_config(ParentColorAdapter::Config& config);
@@ -165,15 +150,11 @@ struct StatusFunctor {
 struct IsActiveFunctor : StatusFunctor {
   virtual bool eval(const spark_dsg::DynamicSceneGraph& graph,
                     const spark_dsg::SceneGraphNode& node) const override;
-  inline static const auto registration =
-      config::Registration<StatusFunctor, IsActiveFunctor>("is_active");
 };
 
 struct HasActiveMeshFunctor : StatusFunctor {
   virtual bool eval(const spark_dsg::DynamicSceneGraph& graph,
                     const spark_dsg::SceneGraphNode& node) const override;
-  inline static const auto registration =
-      config::Registration<StatusFunctor, HasActiveMeshFunctor>("has_active_mesh");
 };
 
 struct StatusColorAdapter : NodeColorAdapter {
@@ -189,7 +170,6 @@ struct StatusColorAdapter : NodeColorAdapter {
 
  private:
   std::unique_ptr<StatusFunctor> functor_;
-  REGISTER_COLOR_ADAPTER(StatusColorAdapter);
 };
 
 void declare_config(StatusColorAdapter::Config& config);
@@ -206,9 +186,6 @@ struct FrontierColorAdapter : NodeColorAdapter {
   explicit FrontierColorAdapter(const Config& config);
   spark_dsg::Color getColor(const spark_dsg::DynamicSceneGraph& graph,
                             const spark_dsg::SceneGraphNode& node) const override;
-
- private:
-  REGISTER_COLOR_ADAPTER(FrontierColorAdapter);
 };
 
 void declare_config(FrontierColorAdapter::Config& config);
@@ -224,8 +201,6 @@ struct PartitionColorAdapter : NodeColorAdapter {
 
  private:
   const visualizer::DiscreteColormap colormap_;
-
-  REGISTER_COLOR_ADAPTER(PartitionColorAdapter);
 };
 
 void declare_config(PartitionColorAdapter::Config& config);
@@ -239,17 +214,11 @@ struct ValueFunctor {
 struct DistanceFunctor : ValueFunctor {
   double eval(const spark_dsg::DynamicSceneGraph& graph,
               const spark_dsg::SceneGraphNode& node) const override;
-
-  inline static const auto registration =
-      config::Registration<ValueFunctor, DistanceFunctor>("place_distance");
 };
 
 struct LastUpdatedFunctor : ValueFunctor {
   double eval(const spark_dsg::DynamicSceneGraph& graph,
               const spark_dsg::SceneGraphNode& node) const override;
-
-  inline static const auto registration =
-      config::Registration<ValueFunctor, LastUpdatedFunctor>("last_updated");
 };
 
 struct ValueColorAdapter : NodeColorAdapter {
@@ -269,7 +238,6 @@ struct ValueColorAdapter : NodeColorAdapter {
   double max_value_;
   std::unique_ptr<ValueFunctor> functor_;
   const visualizer::RangeColormap colormap_;
-  REGISTER_COLOR_ADAPTER(ValueColorAdapter);
 };
 
 void declare_config(ValueColorAdapter::Config& config);
@@ -285,11 +253,8 @@ struct LabelDistributionAdapter : NodeColorAdapter {
 
  private:
   const visualizer::CategoricalColormap colormap_;
-  REGISTER_COLOR_ADAPTER(LabelDistributionAdapter);
 };
 
 void declare_config(LabelDistributionAdapter::Config& config);
-
-#undef REGISTER_COLOR_ADAPTER
 
 }  // namespace hydra
