@@ -33,9 +33,9 @@
  * purposes notwithstanding any copyright notation herein.
  * -------------------------------------------------------------------------- */
 #pragma once
-#include <hydra/places/graph_extractor.h>
-#include <hydra/places/gvd_graph.h>
-#include <hydra/places/gvd_voxel.h>
+#include <hydra/places/gvd_places/graph_extractor.h>
+#include <hydra/places/gvd_places/gvd_graph.h>
+#include <hydra/places/gvd_places/gvd_voxel.h>
 #include <hydra_visualizer/color/colormap_utilities.h>
 
 #include <visualization_msgs/msg/marker.hpp>
@@ -43,7 +43,6 @@
 
 namespace hydra {
 
-using CompressedNodeMap = std::unordered_map<uint64_t, places::CompressedNode>;
 using ClusterRemapping = std::unordered_map<uint64_t, uint64_t>;
 using MarkerMsg = visualization_msgs::msg::Marker;
 using MarkerArrayMsg = visualization_msgs::msg::MarkerArray;
@@ -55,14 +54,10 @@ enum class GvdVisualizationMode : int {
 };
 
 struct GvdVisualizerConfig {
-  //! @brief show voxel block outlines
-  bool show_block_outlines = true;
   //! @brief scale for block outlines
   double block_outline_scale = 0.02;
   //! @brief alpha of the GVD
   double gvd_alpha = 0.6;
-  //! @brief min alpha of the GVD
-  double gvd_min_alpha = 0.6;
   //! @brief distance colormap min
   double gvd_min_distance = 0.2;
   //! @brief distance colormap max
@@ -72,13 +67,11 @@ struct GvdVisualizerConfig {
   //! @brief basis colormap min
   int min_num_basis = 1;
   //! @brief basis colormap max
-  int max_num_basis = 26;
+  int max_num_basis = 10;
   //! @brief visualization mode
   GvdVisualizationMode gvd_mode = GvdVisualizationMode::DEFAULT;
   //! @brief scale for wireframe
   double gvd_graph_scale = 0.005;
-  //! @brief alpha for spheres
-  double freespace_sphere_alpha = 0.15;
   //! @brief alpha of the ESDF
   double esdf_alpha = 0.6;
   //! @brief height of ESDf slice
@@ -105,24 +98,35 @@ MarkerMsg drawGvdSurface(const GvdVisualizerConfig& config,
                          const places::GvdLayer& layer,
                          const std::string& ns);
 
-MarkerMsg drawGvdError(const GvdVisualizerConfig& config,
-                       const visualizer::RangeColormap& colormap,
-                       const places::GvdLayer& lhs,
-                       const places::GvdLayer& rhs,
-                       double threshold);
+MarkerArrayMsg drawGvdWireframe(const places::GvdGraph& graph,
+                                const GvdVisualizerConfig& config,
+                                const visualizer::RangeColormap& cmap,
+                                const std::string& ns,
+                                size_t marker_id = 0);
 
-MarkerArrayMsg drawGvdGraph(const places::GvdGraph& graph,
-                            const GvdVisualizerConfig& config,
-                            const visualizer::RangeColormap& cmap,
-                            const std::string& ns,
-                            size_t marker_id = 0);
+MarkerArrayMsg drawGvdActive(const places::GvdGraph& graph,
+                             const GvdVisualizerConfig& config,
+                             const std::string& ns,
+                             size_t marker_id = 0);
+
+MarkerArrayMsg drawGvdActiveCluster(const places::GvdGraph& graph,
+                                    const GvdVisualizerConfig& config,
+                                    const std::string& ns,
+                                    size_t marker_id = 0);
 
 MarkerArrayMsg drawGvdClusters(const places::GvdGraph& graph,
-                               const CompressedNodeMap& clusters,
-                               const ClusterRemapping& remapping,
                                const GvdVisualizerConfig& config,
                                const std::string& ns,
                                const visualizer::DiscreteColormap& cmap = {},
                                size_t marker_id = 0);
+
+MarkerArrayMsg drawCompressedGraph(const places::GraphExtractor::LocalGraph& graph,
+                                   const GvdVisualizerConfig& config,
+                                   const visualizer::RangeColormap& cmap,
+                                   const std::string& ns,
+                                   double node_scale = 0.2,
+                                   double edge_scale = 0.01,
+                                   double alpha = 1.0,
+                                   size_t marker_id = 0);
 
 }  // namespace hydra

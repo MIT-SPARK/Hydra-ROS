@@ -42,15 +42,10 @@
 #include <hydra_visualizer/color/colormap_utilities.h>
 #include <spark_dsg/colormaps.h>
 
-#include "hydra_ros/frontend/gvd_visualization_utilities.h"
-#include "hydra_ros/visualizer/voxel_drawing.h"
-
 namespace hydra {
 
+using spark_dsg::Color;
 using visualization_msgs::msg::Marker;
-using visualization_msgs::msg::MarkerArray;
-using visualizer::ContinuousPalette;
-using visualizer::DivergentPalette;
 using visualizer::RangeColormap;
 
 void declare_config(TraversabilityVisualizer::Config& config) {
@@ -176,6 +171,7 @@ Color TraversabilityVisualizer::debugColor(float value) const {
   if (value < 0.0f) {
     return Color::black();
   }
+
   return spark_dsg::colormaps::rainbowId(static_cast<int>(value), 10);
 }
 

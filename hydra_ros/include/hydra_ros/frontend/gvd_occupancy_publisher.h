@@ -34,7 +34,7 @@
  * -------------------------------------------------------------------------- */
 #pragma once
 #include <hydra/frontend/gvd_place_extractor.h>
-#include <hydra/places/gvd_voxel.h>
+#include <hydra/places/gvd_places/gvd_voxel.h>
 
 #include "hydra_ros/utils/occupancy_publisher.h"
 

@@ -18,7 +18,7 @@ launch:
       pkg: hydra_visualizer
       exec: hydra_visualizer_node
       name: $(var visualizer_ns)
-      launch-prefix: $(if $(var debug) 'gdbserver localhost:3000')
+      launch-prefix: $(if $(var debug) 'gdbserver localhost:0')
       on_exit: shutdown
       args: >
         --config-utilities-file $(var visualizer_config_path)
