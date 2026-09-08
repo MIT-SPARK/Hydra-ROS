@@ -42,6 +42,7 @@
 namespace hydra {
 
 using semantic_inference_msgs::msg::FeatureImage;
+using semantic_inference_msgs::msg::FeatureVectorStamped;
 using sensor_msgs::msg::Image;
 
 ColorSubscriber::ColorSubscriber() = default;
@@ -147,6 +148,28 @@ void FeatureSubscriber::fillInput(const MsgType& msg, ImageInputPacket& packet) 
   }
 }
 
+WholeImageFeatureSubscriber::WholeImageFeatureSubscriber() = default;
+
+WholeImageFeatureSubscriber::WholeImageFeatureSubscriber(ianvs::NodeHandle nh,
+                                                          uint32_t queue_size)
+    : impl_(std::make_shared<FilterSub<FeatureVectorStamped>>(
+          nh, "clip_feature", queue_size)) {}
+
+WholeImageFeatureSubscriber::~WholeImageFeatureSubscriber() = default;
+
+WholeImageFeatureSubscriber::Filter& WholeImageFeatureSubscriber::getFilter() const {
+  return *CHECK_NOTNULL(impl_);
+}
+
+void WholeImageFeatureSubscriber::fillInput(const MsgType& msg,
+                                             ImageInputPacket& packet) const {
+  const auto& vec = msg.feature.data;
+  if (vec.empty()) {
+    return;
+  }
+  packet.input_feature = Eigen::Map<const hydra::FeatureVector>(vec.data(), vec.size());
+}
+
 void declare_config(RGBDImageReceiver::Config& config) {
   using namespace config;
   name("RGBDImageReceiver::Config");
@@ -199,6 +222,16 @@ OpenSetImageReceiver::OpenSetImageReceiver(const Config& config,
                                            const std::string& sensor_name)
     : ImageReceiverImpl<FeatureSubscriber>(config, sensor_name) {}
 
+void declare_config(ClosedSetWithClipImageReceiver::Config& config) {
+  using namespace config;
+  name("ClosedSetWithClipImageReceiver::Config");
+  base<RosDataReceiver::Config>(config);
+}
+
+ClosedSetWithClipImageReceiver::ClosedSetWithClipImageReceiver(
+    const Config& config, const std::string& sensor_name)
+    : ImageWithClipReceiverImpl<LabelSubscriber>(config, sensor_name) {}
+
 namespace {
 
 static const auto no_semantic_registration =
@@ -218,6 +251,12 @@ static const auto open_registration =
                                    OpenSetImageReceiver,
                                    OpenSetImageReceiver::Config,
                                    std::string>("OpenSetImageReceiver");
+
+static const auto closed_clip_registration =
+    config::RegistrationWithConfig<DataReceiver,
+                                   ClosedSetWithClipImageReceiver,
+                                   ClosedSetWithClipImageReceiver::Config,
+                                   std::string>("ClosedSetWithClipImageReceiver");
 
 }  // namespace
 

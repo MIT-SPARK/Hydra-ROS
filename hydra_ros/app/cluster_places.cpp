@@ -18,6 +18,7 @@
 #include <hydra/openset/embedding_distances.h>
 #include <hydra/rooms/room_finder.h>
 #include <hydra/utils/daaam_labels.h>
+#include <hydra/utils/vmf_distance.h>
 #include <ianvs/node_init.h>
 #include <spark_dsg/dynamic_scene_graph.h>
 #include <spark_dsg/scene_graph_layer.h>
@@ -369,6 +370,14 @@ class Clusterer {
     const auto& layer = merged_graph_->getLayer(config.places_layer);
     graph_updated_ = true;
 
+    // vMF path: per-node sufficient statistics fully determine the feature.
+    // The MergeLabelStrategy switches below are moot here -- there is a single
+    // distribution per node.
+    if (config.daaam_labels.use_vmf) {
+      computeFeaturesVmf(config, layer);
+      return;
+    }
+
     size_t num_with_id = 0;
     size_t num_with_feature = 0;
     // Parse all nodes.
@@ -504,6 +513,110 @@ class Clusterer {
         } else {
           attrs.distance = 0.0;  // No neighbors
         }
+      }
+    }
+  }
+
+  void computeFeaturesVmf(const Config& config, const SceneGraphLayer& layer) {
+    // Per-node sufficient statistics already describe the feature distribution.
+    // We just need to color/mark valid nodes, then score each edge via
+    // DaaamLabels::getNodeScore (which dispatches to the vMF metric internally).
+    size_t num_with_id = 0;
+    size_t num_with_feature = 0;
+    for (const auto& [_, node] : layer.nodes()) {
+      auto& attrs = node->attributes<TraversabilityNodeAttributes>();
+      attrs.distance = 0.0;
+      attrs.is_predicted = false;
+
+      if (attrs.label_weights.empty()) {
+        attrs.semantic_label = 0;
+        attrs.color = Color::gray();
+        // Fall through: a node could have vMF stats without any labels.
+      } else {
+        num_with_id++;
+        attrs.semantic_label = hydra::getMaxDaaamLabel(attrs.label_weights).first;
+      }
+
+      if (attrs.vmf_observation_count == 0u || attrs.vmf_feature_sum.size() == 0) {
+        attrs.color = Color::red();
+        continue;
+      }
+      num_with_feature++;
+      attrs.color = Color::green();
+      attrs.is_predicted = true;
+    }
+    LOG(INFO) << "[vMF] Parsed " << layer.nodes().size() << " place nodes, "
+              << num_with_id << " with a label_weights ID, " << num_with_feature
+              << " with vMF observations.";
+
+    size_t num_invalid = 0;
+    std::vector<float> distances;
+    distances.reserve(layer.edges().size());
+    std::unordered_map<NodeId, std::vector<double>> node_neighbor_scores;
+    for (auto& [_, edge] : layer.edges()) {
+      edge.info->weighted = true;
+      auto& source_attrs =
+          layer.getNode(edge.source).attributes<TraversabilityNodeAttributes>();
+      auto& target_attrs =
+          layer.getNode(edge.target).attributes<TraversabilityNodeAttributes>();
+      if (!source_attrs.is_predicted || !target_attrs.is_predicted) {
+        edge.info->weight = 0.0f;
+        num_invalid++;
+        continue;
+      }
+      const double score =
+          DaaamLabels::getNodeScore(*merged_graph_, source_attrs, target_attrs);
+      edge.info->weight = score;
+      node_neighbor_scores[edge.source].push_back(score);
+      node_neighbor_scores[edge.target].push_back(score);
+      distances.push_back(score);
+    }
+
+    double min_score = std::numeric_limits<double>::max();
+    double max_score = std::numeric_limits<double>::lowest();
+    double sum = 0.0, sum_sq = 0.0;
+    for (const auto& d : distances) {
+      min_score = std::min<double>(min_score, d);
+      max_score = std::max<double>(max_score, d);
+      sum += d;
+      sum_sq += d * d;
+    }
+    mean_edge_score_ = distances.empty() ? 0.0 : sum / distances.size();
+    double stddev = 0.0;
+    if (!distances.empty()) {
+      stddev = std::sqrt(sum_sq / distances.size() - mean_edge_score_ * mean_edge_score_);
+    }
+    LOG(INFO) << "[vMF] Computed scores for " << layer.edges().size()
+              << " place edges, of which " << num_invalid
+              << " invalid. min: " << min_score << ", max: " << max_score
+              << ", mean: " << mean_edge_score_ << ", stddev: " << stddev;
+
+    for (const auto& [node_id, node] : layer.nodes()) {
+      auto& attrs = node->attributes<TraversabilityNodeAttributes>();
+      if (!attrs.is_predicted) {
+        attrs.distance = 0.0;
+        continue;
+      }
+      // Under vMF, SELF_CONSISTENCY is the node's own r_bar (mean resultant
+      // length). r_bar in [0, 1] measures how directionally concentrated the
+      // node's vMF distribution is -- which is exactly self-consistency for
+      // a single distribution. Other aggregations fall through to the
+      // neighbor-score aggregator as in the legacy path.
+      if (config.node_distance_aggregation ==
+          NodeDistanceAggregation::SELF_CONSISTENCY) {
+        const auto stats = hydra::computeVmfStats(
+            attrs.vmf_feature_sum,
+            attrs.vmf_observation_count,
+            DaaamLabels::instance().config.vmf_kappa_max);
+        attrs.distance = stats.valid ? static_cast<double>(stats.r_bar) : 0.0;
+        continue;
+      }
+      auto it = node_neighbor_scores.find(node_id);
+      if (it != node_neighbor_scores.end() && !it->second.empty()) {
+        attrs.distance =
+            aggregateNodeDistance(it->second, config.node_distance_aggregation);
+      } else {
+        attrs.distance = 0.0;
       }
     }
   }

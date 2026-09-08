@@ -39,6 +39,7 @@
 
 #include <rclcpp/time.hpp>
 #include <semantic_inference_msgs/msg/feature_image.hpp>
+#include <semantic_inference_msgs/msg/feature_vector_stamped.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
 #include "hydra_ros/input/ros_data_receiver.h"
@@ -118,6 +119,30 @@ struct FeatureSubscriber {
 
  private:
   std::shared_ptr<FilterSub<semantic_inference_msgs::msg::FeatureImage>> impl_;
+};
+
+/**
+ * @brief Subscribes to a per-frame whole-image CLIP feature on
+ *        <sensor_ns>/clip_feature and fills SensorInputPacket::input_feature.
+ *        Used by ClosedSetWithClipImageReceiver to feed DAAAM-published
+ *        PE-Core features into the active window for per-place vMF
+ *        accumulation.
+ */
+struct WholeImageFeatureSubscriber {
+ public:
+  using MsgType = semantic_inference_msgs::msg::FeatureVectorStamped;
+  using Filter = message_filters::SimpleFilter<MsgType>;
+
+  WholeImageFeatureSubscriber();
+  explicit WholeImageFeatureSubscriber(ianvs::NodeHandle nh,
+                                        uint32_t queue_size = 1);
+  virtual ~WholeImageFeatureSubscriber();
+
+  Filter& getFilter() const;
+  void fillInput(const MsgType& msg, ImageInputPacket& packet) const;
+
+ private:
+  std::shared_ptr<FilterSub<MsgType>> impl_;
 };
 
 template <typename SemanticT>
@@ -221,5 +246,95 @@ class OpenSetImageReceiver : public ImageReceiverImpl<FeatureSubscriber> {
 };
 
 void declare_config(OpenSetImageReceiver::Config& config);
+
+/**
+ * @brief 4-way synchronized receiver: (color, depth, labels, clip_feature).
+ *        Mirrors ImageReceiverImpl but adds a WholeImageFeatureSubscriber that
+ *        fills SensorInputPacket::input_feature so the active window can pass
+ *        the per-frame CLIP feature to extractSemanticLabels for vMF
+ *        accumulation.
+ */
+template <typename SemanticT>
+class ImageWithClipReceiverImpl : public RosDataReceiver {
+ public:
+  using SemanticMsgPtr = typename SemanticT::MsgType::ConstPtr;
+  using ClipMsgPtr =
+      typename WholeImageFeatureSubscriber::MsgType::ConstPtr;
+  using Policy = message_filters::sync_policies::ApproximateTime<
+      sensor_msgs::msg::Image,
+      sensor_msgs::msg::Image,
+      typename SemanticT::MsgType,
+      typename WholeImageFeatureSubscriber::MsgType>;
+  using Synchronizer = message_filters::Synchronizer<Policy>;
+
+  ImageWithClipReceiverImpl(const RosDataReceiver::Config& config,
+                            const std::string& sensor_name);
+  virtual ~ImageWithClipReceiverImpl() = default;
+
+ protected:
+  bool initImpl() override;
+
+  void callback(
+      const sensor_msgs::msg::Image::ConstSharedPtr& color,
+      const sensor_msgs::msg::Image::ConstSharedPtr& depth,
+      const SemanticMsgPtr& labels,
+      const WholeImageFeatureSubscriber::MsgType::ConstSharedPtr& clip);
+
+  ColorSubscriber color_sub_;
+  DepthSubscriber depth_sub_;
+  SemanticT semantic_sub_;
+  WholeImageFeatureSubscriber clip_sub_;
+  std::unique_ptr<Synchronizer> sync_;
+};
+
+template <typename SemanticT>
+ImageWithClipReceiverImpl<SemanticT>::ImageWithClipReceiverImpl(
+    const Config& config, const std::string& sensor_name)
+    : RosDataReceiver(config, sensor_name) {}
+
+template <typename SemanticT>
+bool ImageWithClipReceiverImpl<SemanticT>::initImpl() {
+  color_sub_ = ColorSubscriber(ianvs::NodeHandle::this_node(ns_));
+  depth_sub_ = DepthSubscriber(ianvs::NodeHandle::this_node(ns_));
+  semantic_sub_ = SemanticT(ianvs::NodeHandle::this_node(ns_));
+  clip_sub_ = WholeImageFeatureSubscriber(ianvs::NodeHandle::this_node(ns_));
+  sync_.reset(new Synchronizer(Policy(config.queue_size),
+                               color_sub_.getFilter(),
+                               depth_sub_.getFilter(),
+                               semantic_sub_.getFilter(),
+                               clip_sub_.getFilter()));
+  sync_->registerCallback(&ImageWithClipReceiverImpl<SemanticT>::callback, this);
+  return true;
+}
+
+template <typename SemanticT>
+void ImageWithClipReceiverImpl<SemanticT>::callback(
+    const sensor_msgs::msg::Image::ConstSharedPtr& color,
+    const sensor_msgs::msg::Image::ConstSharedPtr& depth,
+    const SemanticMsgPtr& labels,
+    const WholeImageFeatureSubscriber::MsgType::ConstSharedPtr& clip) {
+  const auto timestamp_ns = rclcpp::Time(color->header.stamp).nanoseconds();
+  if (!checkInputTimestamp(timestamp_ns)) {
+    return;
+  }
+
+  auto packet = std::make_shared<ImageInputPacket>(timestamp_ns, sensor_name_);
+  color_sub_.fillInput(*color, *packet);
+  depth_sub_.fillInput(*depth, *packet);
+  semantic_sub_.fillInput(*labels, *packet);
+  clip_sub_.fillInput(*clip, *packet);
+  queue.push(packet);
+}
+
+class ClosedSetWithClipImageReceiver
+    : public ImageWithClipReceiverImpl<LabelSubscriber> {
+ public:
+  struct Config : RosDataReceiver::Config {};
+  ClosedSetWithClipImageReceiver(const Config& config,
+                                 const std::string& sensor_name);
+  virtual ~ClosedSetWithClipImageReceiver() = default;
+};
+
+void declare_config(ClosedSetWithClipImageReceiver::Config& config);
 
 }  // namespace hydra
