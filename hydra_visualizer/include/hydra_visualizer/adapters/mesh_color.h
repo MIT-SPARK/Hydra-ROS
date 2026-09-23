@@ -216,14 +216,15 @@ void declare_config(SplitMeshColoring::Config& config);
  * @brief Functor to color a mesh based on the fusion count of each vertex.
  * - Grey: never fused (count == 0)
  * - Blue -> green gradient over fused vertices: blue = one visit, green = max_count visits or
- *   more (default max_count 0: the most visited vertex of the current mesh, recomputed per setMesh).
+ *   more (default max_count 0: the 90th percentile of the current mesh, recomputed per setMesh).
  *   The value is the number of observation windows merged into the vertex (use_observation_windows,
  *   default), i.e. how many visits the surviving surface accumulated, or the raw fusion_count, which
  *   counts fusion steps the vertex index survived in scope and restarts at 1 after every merge.
  */
 struct FusionCountMeshColoring : public MeshColoring {
   struct Config {
-    //! Value shown as fully green. 0: normalize to the max value of each mesh.
+    //! Value shown as fully green. 0: normalize to the 90th percentile of the fused vertices of
+    //! each mesh (the maximum is a long tail that would leave almost everything blue).
     uint32_t max_count = 0;
     //! Color by the number of observation windows (visits merged into the vertex) instead of the
     //! raw fusion count.

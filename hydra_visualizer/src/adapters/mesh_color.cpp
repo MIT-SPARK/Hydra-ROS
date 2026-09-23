@@ -1,6 +1,7 @@
 #include "hydra_visualizer/adapters/mesh_color.h"
 
 #include <algorithm>
+#include <vector>
 #include <config_utilities/config.h>
 #include <config_utilities/types/eigen_matrix.h>
 #include <config_utilities/validation.h>
@@ -183,18 +184,27 @@ uint32_t FusionCountMeshColoring::value(const Mesh& mesh, size_t i) const {
 }
 
 void FusionCountMeshColoring::setMesh(const Mesh& mesh) {
-  // Normalize to a fixed value if configured, else to the max value among the fused vertices.
+  // Normalize to a fixed value if configured, else to the 90th percentile of the value among the
+  // fused vertices: the maximum is a long tail (a few vertices reach 15+ visits) that would squash
+  // everything else into blue.
   max_count_ = std::max<uint32_t>(1, config_.max_count);
   if (config_.max_count > 0 || !mesh.has_fusion_counts || mesh.fusion_counts.empty()) {
     return;
   }
   const size_t n = std::min(mesh.fusion_counts.size(), mesh.numVertices());
+  std::vector<uint32_t> values;
+  values.reserve(n);
   for (size_t i = 0; i < n; ++i) {
-    if (mesh.fusion_counts[i] == 0) {
-      continue;
+    if (mesh.fusion_counts[i] != 0) {
+      values.push_back(value(mesh, i));
     }
-    max_count_ = std::max(max_count_, value(mesh, i));
   }
+  if (values.empty()) {
+    return;
+  }
+  const size_t k = static_cast<size_t>(0.9 * static_cast<double>(values.size() - 1));
+  std::nth_element(values.begin(), values.begin() + k, values.end());
+  max_count_ = std::max<uint32_t>(2, values[k]);
 }
 
 Color FusionCountMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const {
