@@ -90,6 +90,13 @@ PoseStatus lookupTransform(const tf2_ros::Buffer& buffer,
       break;
     }
 
+    // Waiting only helps while the transform has not arrived YET. A stamp older than the oldest
+    // buffered transform can never become available, so fail right away instead of blocking the
+    // input for the whole retry budget (e.g. sensor data from before an odometry source started).
+    if (err_str.find("extrapolation into the past") != std::string::npos) {
+      break;
+    }
+
     ++attempt_number;
     tf_wait_rate.sleep();
     // TODO(nathan) spin if needed
