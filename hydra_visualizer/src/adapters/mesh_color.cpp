@@ -1,5 +1,6 @@
 #include "hydra_visualizer/adapters/mesh_color.h"
 
+#include <algorithm>
 #include <config_utilities/config.h>
 #include <config_utilities/types/eigen_matrix.h>
 #include <config_utilities/validation.h>
@@ -164,24 +165,35 @@ Color SplitMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const {
   return mesh.has_colors ? mesh.color(i) : config.default_color;
 }
 
-void declare_config(FusionCountMeshColoring::Config&) {
+void declare_config(FusionCountMeshColoring::Config& config) {
   config::name("FusionCountMeshColoring::Config");
+  config::field(config.max_count, "max_count");
+  config::field(config.use_observation_windows, "use_observation_windows");
 }
 
 FusionCountMeshColoring::FusionCountMeshColoring() : FusionCountMeshColoring(Config()) {}
 
-FusionCountMeshColoring::FusionCountMeshColoring(const Config&) {}
+FusionCountMeshColoring::FusionCountMeshColoring(const Config& config) : config_(config) {}
+
+uint32_t FusionCountMeshColoring::value(const Mesh& mesh, size_t i) const {
+  if (config_.use_observation_windows) {
+    return static_cast<uint32_t>(mesh.observationWindowsOf(i).size());
+  }
+  return mesh.fusion_counts[i];
+}
 
 void FusionCountMeshColoring::setMesh(const Mesh& mesh) {
-  // Normalize to the max fusion count of the current mesh (per step).
-  max_count_ = 1;
-  if (!mesh.has_fusion_counts || mesh.fusion_counts.empty()) {
+  // Normalize to a fixed value if configured, else to the max value among the fused vertices.
+  max_count_ = std::max<uint32_t>(1, config_.max_count);
+  if (config_.max_count > 0 || !mesh.has_fusion_counts || mesh.fusion_counts.empty()) {
     return;
   }
-  for (const auto count : mesh.fusion_counts) {
-    if (count > max_count_) {
-      max_count_ = count;
+  const size_t n = std::min(mesh.fusion_counts.size(), mesh.numVertices());
+  for (size_t i = 0; i < n; ++i) {
+    if (mesh.fusion_counts[i] == 0) {
+      continue;
     }
+    max_count_ = std::max(max_count_, value(mesh, i));
   }
 }
 
@@ -190,18 +202,18 @@ Color FusionCountMeshColoring::getVertexColor(const Mesh& mesh, size_t i) const 
     return Color::gray();
   }
 
-  // Grey: never fused. Green (1 fusion) -> red (most fused this step).
-  const uint32_t count = mesh.fusion_counts[i];
-  if (count == 0) {
+  // Grey: never fused. Blue (one visit) -> green (max_count visits or more).
+  if (mesh.fusion_counts[i] == 0) {
     return Color::gray();
   }
+  const uint32_t count = std::max<uint32_t>(1, value(mesh, i));
   const float t =
       max_count_ > 1
           ? std::min(1.0f, static_cast<float>(count - 1) / static_cast<float>(max_count_ - 1))
-          : 0.0f;
-  return Color(static_cast<uint8_t>(255.0f * t),
-               static_cast<uint8_t>(255.0f * (1.0f - t)),
-               0);
+          : 1.0f;
+  return Color(0,
+               static_cast<uint8_t>(255.0f * t),
+               static_cast<uint8_t>(255.0f * (1.0f - t)));
 }
 
 void declare_config(TemporalIslandMeshColoring::Config&) {

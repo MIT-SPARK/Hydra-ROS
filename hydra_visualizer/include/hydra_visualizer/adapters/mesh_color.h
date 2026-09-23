@@ -215,12 +215,20 @@ void declare_config(SplitMeshColoring::Config& config);
 /**
  * @brief Functor to color a mesh based on the fusion count of each vertex.
  * - Grey: never fused (count == 0)
- * - Green -> red gradient over counts >= 1, normalized to the max fusion
- *   count of the current mesh (recomputed per setMesh, i.e. per step):
- *   green = 1 fusion, red = most fused this step.
+ * - Blue -> green gradient over fused vertices: blue = one visit, green = max_count visits or
+ *   more (default max_count 0: the most visited vertex of the current mesh, recomputed per setMesh).
+ *   The value is the number of observation windows merged into the vertex (use_observation_windows,
+ *   default), i.e. how many visits the surviving surface accumulated, or the raw fusion_count, which
+ *   counts fusion steps the vertex index survived in scope and restarts at 1 after every merge.
  */
 struct FusionCountMeshColoring : public MeshColoring {
-  struct Config {};
+  struct Config {
+    //! Value shown as fully green. 0: normalize to the max value of each mesh.
+    uint32_t max_count = 0;
+    //! Color by the number of observation windows (visits merged into the vertex) instead of the
+    //! raw fusion count.
+    bool use_observation_windows = true;
+  };
   FusionCountMeshColoring();
   explicit FusionCountMeshColoring(const Config&);
   virtual ~FusionCountMeshColoring() = default;
@@ -229,6 +237,9 @@ struct FusionCountMeshColoring : public MeshColoring {
   spark_dsg::Color getVertexColor(const spark_dsg::Mesh& mesh, size_t i) const override;
 
  private:
+  uint32_t value(const spark_dsg::Mesh& mesh, size_t i) const;
+
+  const Config config_;
   uint32_t max_count_ = 1;
 
   inline static const auto registration_ =
